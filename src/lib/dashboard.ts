@@ -143,10 +143,10 @@ export function dashboardModules(): DashboardModule[] {
       description: "Structured governance meetings, minutes and decisions are active.",
     },
     {
-      name: "KPI Dashboard",
+      name: "KPIs and inspection readiness",
       href: "/kpis",
       status: "ready",
-      description: "Monthly KPI targets, RAG status and trend reporting are active.",
+      description: "KPI reporting and internal inspection-evidence readiness controls are active.",
     },
   ];
 }

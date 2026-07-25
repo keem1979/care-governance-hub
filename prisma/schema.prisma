@@ -183,6 +183,22 @@ enum KpiRagStatus {
   RED
 }
 
+enum CqcKeyQuestion {
+  SAFE
+  EFFECTIVE
+  CARING
+  RESPONSIVE
+  WELL_LED
+}
+
+enum InspectionEvidenceStatus {
+  NO_EVIDENCE
+  LIMITED_EVIDENCE
+  EVIDENCE_AVAILABLE
+  EVIDENCE_REVIEWED
+  IMPROVEMENT_REQUIRED
+}
+
 model Organisation {
   id         String    @id @default(uuid()) @db.Uuid
   name       String
@@ -192,22 +208,23 @@ model Organisation {
   updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
 
-  locations           ServiceLocation[]
-  memberships         OrganisationMembership[]
-  activities          ActivityLog[]
-  policies            Policy[]
-  evidenceItems       Evidence[]
-  auditTemplates      AuditTemplate[]
-  audits              Audit[]
-  registerDefinitions RegisterDefinition[]
-  registerEntries     RegisterEntry[]
-  risks               Risk[]
-  actions             Action[]
-  meetings            GovernanceMeeting[]
-  calendarItems       CalendarItem[]
-  calendarReminders   CalendarReminder[]
-  kpiDefinitions      KpiDefinition[]
-  kpiEntries          KpiEntry[]
+  locations              ServiceLocation[]
+  memberships            OrganisationMembership[]
+  activities             ActivityLog[]
+  policies               Policy[]
+  evidenceItems          Evidence[]
+  auditTemplates         AuditTemplate[]
+  audits                 Audit[]
+  registerDefinitions    RegisterDefinition[]
+  registerEntries        RegisterEntry[]
+  risks                  Risk[]
+  actions                Action[]
+  meetings               GovernanceMeeting[]
+  calendarItems          CalendarItem[]
+  calendarReminders      CalendarReminder[]
+  kpiDefinitions         KpiDefinition[]
+  kpiEntries             KpiEntry[]
+  complianceRequirements ComplianceRequirement[]
 }
 
 model ServiceLocation {
@@ -223,17 +240,18 @@ model ServiceLocation {
   updatedAt      DateTime  @updatedAt
   archivedAt     DateTime?
 
-  organisation    Organisation         @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  assignments     MembershipLocation[]
-  activities      ActivityLog[]
-  evidenceItems   Evidence[]
-  audits          Audit[]
-  registerEntries RegisterEntry[]
-  risks           Risk[]
-  actions         Action[]
-  meetings        GovernanceMeeting[]
-  calendarItems   CalendarItem[]
-  kpiEntries      KpiEntry[]
+  organisation           Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  assignments            MembershipLocation[]
+  activities             ActivityLog[]
+  evidenceItems          Evidence[]
+  audits                 Audit[]
+  registerEntries        RegisterEntry[]
+  risks                  Risk[]
+  actions                Action[]
+  meetings               GovernanceMeeting[]
+  calendarItems          CalendarItem[]
+  kpiEntries             KpiEntry[]
+  complianceRequirements ComplianceRequirement[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -280,6 +298,8 @@ model User {
   calendarItemsCreated   CalendarItem[]           @relation("CalendarItemCreator")
   calendarReminders      CalendarReminder[]
   kpiEntriesCreated      KpiEntry[]               @relation("KpiEntryCreator")
+  inspectionOwned        ComplianceRequirement[]  @relation("InspectionOwner")
+  inspectionCreated      ComplianceRequirement[]  @relation("InspectionCreator")
 }
 
 model Policy {
@@ -360,18 +380,19 @@ model Evidence {
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
 
-  organisation   Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  location       ServiceLocation?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  owner          User                    @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  uploadedBy     User                    @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-  currentVersion EvidenceVersion?        @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
-  versions       EvidenceVersion[]       @relation("EvidenceVersions")
-  auditResponses AuditResponse[]
-  registerLinks  RegisterEntryEvidence[]
-  riskLinks      RiskEvidence[]
-  actionLinks    ActionEvidence[]
-  meetingLinks   MeetingEvidence[]
-  kpiLinks       KpiEvidence[]
+  organisation    Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location        ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner           User                            @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  uploadedBy      User                            @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  currentVersion  EvidenceVersion?                @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions        EvidenceVersion[]               @relation("EvidenceVersions")
+  auditResponses  AuditResponse[]
+  registerLinks   RegisterEntryEvidence[]
+  riskLinks       RiskEvidence[]
+  actionLinks     ActionEvidence[]
+  meetingLinks    MeetingEvidence[]
+  kpiLinks        KpiEvidence[]
+  inspectionLinks ComplianceRequirementEvidence[]
 
   @@index([organisationId, status])
   @@index([organisationId, category])
@@ -454,13 +475,14 @@ model Audit {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  organisation Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  template     AuditTemplate   @relation(fields: [templateId], references: [id], onDelete: Restrict)
-  auditor      User            @relation("AuditAuditor", fields: [auditorId], references: [id], onDelete: Restrict)
-  location     ServiceLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  signedOffBy  User?           @relation("AuditSignoff", fields: [signedOffById], references: [id], onDelete: SetNull)
-  responses    AuditResponse[]
-  findings     AuditFinding[]
+  organisation    Organisation                 @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  template        AuditTemplate                @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  auditor         User                         @relation("AuditAuditor", fields: [auditorId], references: [id], onDelete: Restrict)
+  location        ServiceLocation              @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  signedOffBy     User?                        @relation("AuditSignoff", fields: [signedOffById], references: [id], onDelete: SetNull)
+  responses       AuditResponse[]
+  findings        AuditFinding[]
+  inspectionLinks ComplianceRequirementAudit[]
 
   @@index([organisationId, status])
   @@index([organisationId, auditDate])
@@ -544,13 +566,14 @@ model RegisterEntry {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  organisation  Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  definition    RegisterDefinition      @relation(fields: [definitionId], references: [id], onDelete: Restrict)
-  location      ServiceLocation?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  owner         User?                   @relation("RegisterEntryOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  createdBy     User                    @relation("RegisterEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  evidenceLinks RegisterEntryEvidence[]
-  history       RegisterEntryHistory[]
+  organisation    Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  definition      RegisterDefinition              @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  location        ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner           User?                           @relation("RegisterEntryOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy       User                            @relation("RegisterEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  evidenceLinks   RegisterEntryEvidence[]
+  history         RegisterEntryHistory[]
+  inspectionLinks ComplianceRequirementRegister[]
 
   @@unique([organisationId, definitionId, reference])
   @@index([organisationId, definitionId, status])
@@ -685,13 +708,14 @@ model Action {
   createdAt                 DateTime         @default(now())
   updatedAt                 DateTime         @updatedAt
 
-  organisation  Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  location      ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  owner         User             @relation("ActionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  createdBy     User             @relation("ActionCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  verifiedBy    User?            @relation("ActionVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
-  updates       ActionUpdate[]
-  evidenceLinks ActionEvidence[]
+  organisation    Organisation                  @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location        ServiceLocation?              @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner           User                          @relation("ActionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy       User                          @relation("ActionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  verifiedBy      User?                         @relation("ActionVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  updates         ActionUpdate[]
+  evidenceLinks   ActionEvidence[]
+  inspectionLinks ComplianceRequirementAction[]
 
   @@unique([organisationId, reference])
   @@index([organisationId, status, priority])
@@ -915,6 +939,82 @@ model KpiEvidence {
 
   @@id([entryId, evidenceId])
   @@index([evidenceId])
+}
+
+model ComplianceRequirement {
+  id               String                   @id @default(uuid()) @db.Uuid
+  organisationId   String                   @db.Uuid
+  locationId       String?                  @db.Uuid
+  keyQuestion      CqcKeyQuestion
+  qualityStatement String?
+  title            String
+  explanation      String
+  evidenceExamples String[]                 @default([])
+  ownerId          String?                  @db.Uuid
+  reviewDate       DateTime?
+  evidenceStatus   InspectionEvidenceStatus @default(NO_EVIDENCE)
+  confidenceNote   String?
+  createdById      String                   @db.Uuid
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  organisation  Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  location      ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner         User?                           @relation("InspectionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy     User                            @relation("InspectionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  evidenceLinks ComplianceRequirementEvidence[]
+  auditLinks    ComplianceRequirementAudit[]
+  registerLinks ComplianceRequirementRegister[]
+  actionLinks   ComplianceRequirementAction[]
+
+  @@index([organisationId, keyQuestion, evidenceStatus])
+  @@index([organisationId, reviewDate])
+  @@index([locationId])
+  @@index([ownerId])
+}
+
+model ComplianceRequirementEvidence {
+  requirementId String @db.Uuid
+  evidenceId    String @db.Uuid
+
+  requirement ComplianceRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  evidence    Evidence              @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([requirementId, evidenceId])
+  @@index([evidenceId])
+}
+
+model ComplianceRequirementAudit {
+  requirementId String @db.Uuid
+  auditId       String @db.Uuid
+
+  requirement ComplianceRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  audit       Audit                 @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@id([requirementId, auditId])
+  @@index([auditId])
+}
+
+model ComplianceRequirementRegister {
+  requirementId   String @db.Uuid
+  registerEntryId String @db.Uuid
+
+  requirement   ComplianceRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  registerEntry RegisterEntry         @relation(fields: [registerEntryId], references: [id], onDelete: Cascade)
+
+  @@id([requirementId, registerEntryId])
+  @@index([registerEntryId])
+}
+
+model ComplianceRequirementAction {
+  requirementId String @db.Uuid
+  actionId      String @db.Uuid
+
+  requirement ComplianceRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  action      Action                @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@id([requirementId, actionId])
+  @@index([actionId])
 }
 
 model EvidenceVersion {

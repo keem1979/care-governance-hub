@@ -1,0 +1,8 @@
+export const CQC_KEY_QUESTIONS = ["SAFE", "EFFECTIVE", "CARING", "RESPONSIVE", "WELL_LED"] as const;
+export const INSPECTION_EVIDENCE_STATUSES = ["NO_EVIDENCE", "LIMITED_EVIDENCE", "EVIDENCE_AVAILABLE", "EVIDENCE_REVIEWED", "IMPROVEMENT_REQUIRED"] as const;
+export const INSPECTION_DISCLAIMER = "This readiness assessment is an internal governance tool. It is not an official CQC assessment, rating or guarantee of inspection outcome.";
+export function inspectionLabel(value: string) { return value.replaceAll("_", " ").toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()); }
+export function evidenceCoverage(status: string) { return status === "EVIDENCE_REVIEWED" ? 100 : status === "EVIDENCE_AVAILABLE" ? 75 : status === "LIMITED_EVIDENCE" ? 40 : status === "IMPROVEMENT_REQUIRED" ? 25 : 0; }
+export function readinessSummary(statuses: string[]) { if (!statuses.length) return { coverage: 0, reviewed: 0, gaps: 0 }; return { coverage: Math.round(statuses.reduce((sum, status) => sum + evidenceCoverage(status), 0) / statuses.length), reviewed: statuses.filter((status) => status === "EVIDENCE_REVIEWED").length, gaps: statuses.filter((status) => ["NO_EVIDENCE", "LIMITED_EVIDENCE", "IMPROVEMENT_REQUIRED"].includes(status)).length }; }
+export function inspectionScopeWhere(context: { organisation: { id: string }; allLocations: boolean; locations: { id: string }[] }) { return { organisationId: context.organisation.id, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item) => item.id) } }] }) }; }
+export function splitEvidenceExamples(value: FormDataEntryValue | null) { return String(value ?? "").split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean).slice(0, 20); }
