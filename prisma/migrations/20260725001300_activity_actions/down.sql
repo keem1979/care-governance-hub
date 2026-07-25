@@ -1,0 +1,4 @@
+-- PostgreSQL enum values cannot be safely removed while they may be referenced.
+-- Roll back application code first, migrate any rows using the new values,
+-- then recreate the enum without DOWNLOAD, REPORT_GENERATION, APPROVAL,
+-- STATUS_CHANGE and CLOSE during a planned maintenance window.

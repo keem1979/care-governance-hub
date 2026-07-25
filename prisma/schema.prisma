@@ -24,6 +24,11 @@ enum ActivityAction {
   LOGIN_FAILED
   LOGOUT
   PERMISSION_CHANGE
+  DOWNLOAD
+  REPORT_GENERATION
+  APPROVAL
+  STATUS_CHANGE
+  CLOSE
 }
 
 enum PolicyWorkflowStatus {
