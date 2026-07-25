@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { VoiceDictation } from "@/components/voice-dictation";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -35,7 +36,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <VoiceDictation />
+      </body>
     </html>
   );
 }
