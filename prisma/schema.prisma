@@ -154,6 +154,24 @@ enum MeetingAttendance {
   ABSENT
 }
 
+enum CalendarItemStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum CalendarItemType {
+  CERTIFICATE_EXPIRY
+  INSURANCE_EXPIRY
+  TRAINING_EXPIRY
+  SUPERVISION_DEADLINE
+  APPRAISAL_DEADLINE
+  SERVICE_REVIEW
+  BUSINESS_CONTINUITY_TEST
+  OTHER
+}
+
 model Organisation {
   id         String    @id @default(uuid()) @db.Uuid
   name       String
@@ -175,6 +193,8 @@ model Organisation {
   risks               Risk[]
   actions             Action[]
   meetings            GovernanceMeeting[]
+  calendarItems       CalendarItem[]
+  calendarReminders   CalendarReminder[]
 }
 
 model ServiceLocation {
@@ -199,6 +219,7 @@ model ServiceLocation {
   risks           Risk[]
   actions         Action[]
   meetings        GovernanceMeeting[]
+  calendarItems   CalendarItem[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -241,6 +262,9 @@ model User {
   meetingsCreated        GovernanceMeeting[]      @relation("MeetingCreator")
   meetingsApproved       GovernanceMeeting[]      @relation("MeetingApprover")
   meetingAttendance      MeetingAttendee[]
+  calendarItemsOwned     CalendarItem[]           @relation("CalendarItemOwner")
+  calendarItemsCreated   CalendarItem[]           @relation("CalendarItemCreator")
+  calendarReminders      CalendarReminder[]
 }
 
 model Policy {
@@ -773,6 +797,47 @@ model MeetingEvidence {
 
   @@id([meetingId, evidenceId])
   @@index([evidenceId])
+}
+
+model CalendarItem {
+  id             String             @id @default(uuid()) @db.Uuid
+  organisationId String             @db.Uuid
+  locationId     String?            @db.Uuid
+  title          String
+  description    String?
+  itemType       CalendarItemType
+  dueDate        DateTime
+  ownerId        String?            @db.Uuid
+  riskLevel      String?
+  status         CalendarItemStatus @default(PENDING)
+  archivedAt     DateTime?
+  createdById    String             @db.Uuid
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner        User?            @relation("CalendarItemOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy    User             @relation("CalendarItemCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, dueDate, status])
+  @@index([locationId])
+  @@index([ownerId])
+}
+
+model CalendarReminder {
+  id             String   @id @default(uuid()) @db.Uuid
+  organisationId String   @db.Uuid
+  userId         String   @db.Uuid
+  eventKey       String
+  offsetDays     Int
+  createdAt      DateTime @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventKey, offsetDays])
+  @@index([organisationId, userId])
 }
 
 model EvidenceVersion {
