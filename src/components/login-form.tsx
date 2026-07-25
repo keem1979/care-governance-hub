@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const hydrated = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,9 +81,13 @@ export function LoginForm() {
       <button
         className="w-full rounded-xl bg-brand px-4 py-3 font-semibold text-white shadow-sm transition hover:bg-brand-dark disabled:cursor-wait disabled:opacity-60"
         type="submit"
-        disabled={pending}
+        disabled={pending || !hydrated}
       >
-        {pending ? "Signing in…" : "Sign in securely"}
+        {!hydrated
+          ? "Preparing secure sign-in…"
+          : pending
+            ? "Signing in…"
+            : "Sign in securely"}
       </button>
     </form>
   );

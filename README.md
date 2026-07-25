@@ -4,9 +4,9 @@ Care Governance Hub is a secure, multi-tenant governance and compliance workspac
 for UK adult social care providers. It helps teams organise evidence and understand
 what is ready, missing, or urgent without claiming to predict an official CQC rating.
 
-This repository currently contains **Milestone 1 only**: authentication, tenancy,
-roles and permissions, service locations, the application shell, fictional
-foundation seed data, and core documentation.
+This repository contains the Milestone 1 foundation plus the first completed
+post-foundation item: a tenant-scoped governance dashboard. Domain modules that
+have not yet been built are represented with explicit no-data states.
 
 ## Technology
 

@@ -48,3 +48,11 @@ Add each later domain under its own service/data-access module. Domain tables mu
 carry `organisationId`; add `locationId` for service-specific records. Use
 specialised relational tables for structured reporting. File storage must be behind
 an interface and must never expose permanent public object URLs.
+
+## Dashboard-first module decision
+
+The dashboard is being completed before the later domain modules at the user's
+request. It renders real tenant-scoped foundation activity and permissions. Counts,
+readiness language, completion percentages, deadlines, risks, audits and trends
+remain explicit no-data states until their source modules exist. This prevents the
+dashboard from inventing governance evidence or implying an official CQC rating.
