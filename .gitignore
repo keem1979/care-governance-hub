@@ -19,6 +19,8 @@
 /.next/
 /out/
 /src/generated/prisma/
+/dist/
+/.wrangler/
 
 # production
 /build
