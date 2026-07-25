@@ -1,0 +1,8 @@
+export type RegisterField={key:string;label:string;type:"text"|"date"|"textarea"|"boolean"|"number";required?:boolean};
+export const REGISTER_STATUSES=["OPEN","IN_REVIEW","AWAITING_ACTION","CLOSED","ARCHIVED"] as const;
+export const REGISTER_RISK_LEVELS=["LOW","MEDIUM","HIGH","CRITICAL"] as const;
+export function parseRegisterFields(value:unknown):RegisterField[]{if(!Array.isArray(value))return[];return value.filter((item):item is RegisterField=>Boolean(item&&typeof item==="object"&&"key" in item&&"label" in item&&"type" in item));}
+export function registerStatusLabel(value:string){return value.replaceAll("_"," ").toLowerCase().replace(/^\w/,(letter)=>letter.toUpperCase());}
+export function makeRegisterReference(key:string,now=new Date(),random=Math.floor(Math.random()*1000)){const prefix=key.split("-").map((part)=>part[0]).join("").toUpperCase().slice(0,4);const date=`${now.getUTCFullYear()}${String(now.getUTCMonth()+1).padStart(2,"0")}${String(now.getUTCDate()).padStart(2,"0")}`;return `${prefix}-${date}-${String(random).padStart(3,"0")}`;}
+export function registerScopeWhere(context:{organisation:{id:string};allLocations:boolean;locations:{id:string}[]}){return{organisationId:context.organisation.id,...(context.allLocations?{}:{OR:[{locationId:null},{locationId:{in:context.locations.map((item)=>item.id)}}]})};}
+export function collectRegisterData(form:FormData,fields:RegisterField[]):Record<string,string|boolean>{return Object.fromEntries(fields.map((field)=>{const value=form.get(`field_${field.key}`);return[field.key,field.type==="boolean"?value==="true":String(value??"").trim()];}));}

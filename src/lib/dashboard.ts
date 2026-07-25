@@ -35,7 +35,7 @@ export function reportingMonth(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number }): DashboardSummary[] {
   return [
     {
       label: "Policies due for review",
@@ -69,22 +69,22 @@ export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits
       label: "Open complaints",
       href: "/registers",
       icon: HeartHandshake,
-      value: null,
-      qualifier: "Complaints register not yet built",
+      value: counts?.openComplaints ?? null,
+      qualifier: counts ? "Not closed or archived" : "Register data unavailable",
     },
     {
       label: "Open safeguarding matters",
       href: "/registers",
       icon: ShieldAlert,
-      value: null,
-      qualifier: "Safeguarding register not yet built",
+      value: counts?.openSafeguarding ?? null,
+      qualifier: counts ? "Not closed or archived" : "Register data unavailable",
     },
     {
       label: "Incidents awaiting review",
       href: "/registers",
       icon: Siren,
-      value: null,
-      qualifier: "Incident register not yet built",
+      value: counts?.incidentsAwaitingReview ?? null,
+      qualifier: counts ? "Open, in review or awaiting action" : "Register data unavailable",
     },
     {
       label: "Risks overdue for review",
@@ -127,8 +127,8 @@ export function dashboardModules(): DashboardModule[] {
     {
       name: "Registers and risks",
       href: "/registers",
-      status: "no-data",
-      description: "No data recorded.",
+      status: "ready",
+      description: "Operational registers are active; Risk Register is separate.",
     },
     {
       name: "Audits and actions",

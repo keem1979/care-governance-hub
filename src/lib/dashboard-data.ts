@@ -16,6 +16,9 @@ export type DashboardCounts = {
   overdueAudits: number;
   trainingEvidenceExpiring: number;
   documentsExpiring: number;
+  openComplaints: number;
+  openSafeguarding: number;
+  incidentsAwaitingReview: number;
 };
 
 export async function getDashboardCounts(context: AuthorisedContext): Promise<DashboardCounts> {
@@ -25,13 +28,16 @@ export async function getDashboardCounts(context: AuthorisedContext): Promise<Da
   const locationScope = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map(({ id }) => id) } }] };
   const auditLocationScope = context.allLocations ? {} : { locationId: { in: context.locations.map(({ id }) => id) } };
   try {
-    const [policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring] = await Promise.all([
+    const [policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview] = await Promise.all([
       db.policy.count({ where: { organisationId: context.organisation.id, status: "APPROVED", nextReviewDate: { lte: inThirtyDays } } }),
       db.audit.count({ where: { organisationId: context.organisation.id, status: { in: ["DRAFT","IN_PROGRESS","AWAITING_REVIEW"] }, reviewDate: { lt: now }, ...auditLocationScope } }),
       db.evidence.count({ where: { organisationId: context.organisation.id, status: "ACTIVE", category: { in: ["Training", "Competencies"] }, reviewExpiryDate: { gte: now, lte: inThirtyDays }, ...locationScope } }),
       db.evidence.count({ where: { organisationId: context.organisation.id, status: "ACTIVE", reviewExpiryDate: { gte: now, lte: inThirtyDays }, ...locationScope } }),
+      db.registerEntry.count({ where: { organisationId: context.organisation.id, definition: { key: "complaints" }, status: { notIn: ["CLOSED","ARCHIVED"] }, ...locationScope } }),
+      db.registerEntry.count({ where: { organisationId: context.organisation.id, definition: { key: "safeguarding" }, status: { notIn: ["CLOSED","ARCHIVED"] }, ...locationScope } }),
+      db.registerEntry.count({ where: { organisationId: context.organisation.id, definition: { key: "incidents" }, status: { in: ["OPEN","IN_REVIEW","AWAITING_ACTION"] }, ...locationScope } }),
     ]);
-    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring };
+    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview };
   } finally { await db.$disconnect(); }
 }
 

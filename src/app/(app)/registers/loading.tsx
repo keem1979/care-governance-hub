@@ -1,0 +1,1 @@
+export default function RegistersLoading(){return <main className="space-y-5" aria-busy="true"><div className="h-20 animate-pulse rounded-2xl bg-slate-200"/><div className="grid gap-4 md:grid-cols-3">{[1,2,3,4,5,6].map((item)=><div key={item} className="h-32 animate-pulse rounded-2xl bg-slate-200"/>)}</div></main>}
