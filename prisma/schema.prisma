@@ -26,6 +26,20 @@ enum ActivityAction {
   PERMISSION_CHANGE
 }
 
+enum PolicyWorkflowStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  ARCHIVED
+}
+
+enum PolicyApprovalStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Organisation {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
@@ -38,6 +52,7 @@ model Organisation {
   locations   ServiceLocation[]
   memberships OrganisationMembership[]
   activities  ActivityLog[]
+  policies    Policy[]
 }
 
 model ServiceLocation {
@@ -74,6 +89,65 @@ model User {
   memberships OrganisationMembership[]
   sessions    Session[]
   activities  ActivityLog[]
+  policiesOwned Policy[] @relation("PolicyOwner")
+  policiesCreated Policy[] @relation("PolicyCreator")
+  policiesApproved Policy[] @relation("PolicyApprover")
+  policyVersions PolicyVersion[]
+}
+
+model Policy {
+  id                    String               @id @default(uuid()) @db.Uuid
+  organisationId        String               @db.Uuid
+  title                 String
+  category              String
+  ownerId               String               @db.Uuid
+  currentVersionId      String?              @unique @db.Uuid
+  effectiveDate         DateTime?
+  lastReviewDate        DateTime?
+  nextReviewDate        DateTime?
+  approvalStatus        PolicyApprovalStatus @default(NOT_SUBMITTED)
+  approvedById          String?              @db.Uuid
+  approvedAt            DateTime?
+  tags                  String[]             @default([])
+  complianceAreas       String[]             @default([])
+  notes                 String?
+  status                PolicyWorkflowStatus @default(DRAFT)
+  archivedAt            DateTime?
+  createdById           String               @db.Uuid
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  organisation          Organisation  @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  owner                 User          @relation("PolicyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy             User          @relation("PolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy            User?         @relation("PolicyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  currentVersion        PolicyVersion? @relation("CurrentPolicyVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions              PolicyVersion[] @relation("PolicyVersions")
+
+  @@index([organisationId, status])
+  @@index([organisationId, nextReviewDate])
+  @@index([organisationId, category])
+}
+
+model PolicyVersion {
+  id              String   @id @default(uuid()) @db.Uuid
+  policyId        String   @db.Uuid
+  versionNumber   String
+  storageKey      String   @unique
+  fileName        String
+  contentType     String
+  sizeBytes       Int
+  checksum        String
+  changeNotes     String?
+  uploadedById    String   @db.Uuid
+  createdAt       DateTime @default(now())
+
+  policy          Policy   @relation("PolicyVersions", fields: [policyId], references: [id], onDelete: Cascade)
+  currentFor      Policy?  @relation("CurrentPolicyVersion")
+  uploadedBy      User     @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@unique([policyId, versionNumber])
+  @@index([policyId, createdAt])
 }
 
 model Role {

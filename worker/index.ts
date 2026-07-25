@@ -19,6 +19,17 @@ interface WorkerEnv {
       };
     };
   };
+  POLICY_FILES: PolicyFileBucket;
+}
+
+declare global {
+  interface PolicyFileBucket {
+    put(key: string, value: ArrayBuffer): Promise<unknown>;
+    get(key: string): Promise<{ body: ReadableStream } | null>;
+    delete(key: string): Promise<void>;
+  }
+  // The bucket binding is stable for the lifetime of a worker isolate.
+  var __POLICY_FILES__: PolicyFileBucket | undefined;
 }
 
 interface WorkerContext {
@@ -32,6 +43,7 @@ const worker = {
     env: WorkerEnv,
     context: WorkerContext,
   ): Promise<Response> {
+    globalThis.__POLICY_FILES__ = env.POLICY_FILES;
     const url = new URL(request.url);
     if (url.pathname === "/_vinext/image") {
       return handleImageOptimization(
