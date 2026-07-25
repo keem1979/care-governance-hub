@@ -107,6 +107,9 @@ export function AppShell({
                 <li key={href}>
                   <Link
                     href={href}
+                    prefetch={false}
+                    onMouseEnter={() => router.prefetch(href)}
+                    onFocus={() => router.prefetch(href)}
                     onClick={() => setOpen(false)}
                     aria-current={active ? "page" : undefined}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
