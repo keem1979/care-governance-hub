@@ -1,6 +1,6 @@
 import { compare } from "bcryptjs";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createDb } from "@/lib/db";
 import { getServerEnv } from "@/lib/env";
 import {
   clearLoginAttempts,
@@ -39,7 +39,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const user = await db.user.findUnique({
+  const db = createDb();
+  try {
+    const user = await db.user.findUnique({
     where: { email: parsed.data.email },
     select: {
       id: true,
@@ -53,55 +55,60 @@ export async function POST(request: Request): Promise<NextResponse> {
     },
   });
 
-  const valid =
-    user?.isActive === true &&
-    user.memberships.length > 0 &&
-    (await compare(parsed.data.password, user.passwordHash));
+    const valid =
+      user?.isActive === true &&
+      user.memberships.length > 0 &&
+      (await compare(parsed.data.password, user.passwordHash));
 
-  if (!valid || !user) {
-    return NextResponse.json(
-      { error: "Email address or password is incorrect." },
-      { status: 401 },
+    if (!valid || !user) {
+      return NextResponse.json(
+        { error: "Email address or password is incorrect." },
+        { status: 401 },
+      );
+    }
+
+    const expiresAt = new Date(
+      Date.now() + env.SESSION_TTL_HOURS * 60 * 60 * 1000,
     );
+    const userAgent = request.headers.get("user-agent")?.slice(0, 250) ?? null;
+    const session = await db.$transaction(async (tx) => {
+      const created = await tx.session.create({
+        data: { userId: user.id, expiresAt, userAgent },
+        select: { id: true },
+      });
+      await tx.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+      await tx.activityLog.create({
+        data: {
+          organisationId: user.memberships[0].organisationId,
+          userId: user.id,
+          action: "LOGIN",
+          recordType: "Session",
+          recordId: created.id,
+          summary: "User signed in.",
+        },
+      });
+      return created;
+    });
+
+    clearLoginAttempts(fingerprint);
+    const token = await signSession(
+      { userId: user.id, sessionId: session.id, expiresAt: expiresAt.getTime() },
+      env.SESSION_SECRET,
+    );
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires: expiresAt,
+      priority: "high",
+    });
+    return response;
+  } finally {
+    await db.$disconnect();
   }
-
-  const expiresAt = new Date(Date.now() + env.SESSION_TTL_HOURS * 60 * 60 * 1000);
-  const userAgent = request.headers.get("user-agent")?.slice(0, 250) ?? null;
-  const session = await db.$transaction(async (tx) => {
-    const created = await tx.session.create({
-      data: { userId: user.id, expiresAt, userAgent },
-      select: { id: true },
-    });
-    await tx.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
-    await tx.activityLog.create({
-      data: {
-        organisationId: user.memberships[0].organisationId,
-        userId: user.id,
-        action: "LOGIN",
-        recordType: "Session",
-        recordId: created.id,
-        summary: "User signed in.",
-      },
-    });
-    return created;
-  });
-
-  clearLoginAttempts(fingerprint);
-  const token = await signSession(
-    { userId: user.id, sessionId: session.id, expiresAt: expiresAt.getTime() },
-    env.SESSION_SECRET,
-  );
-  const response = NextResponse.json({ ok: true });
-  response.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    expires: expiresAt,
-    priority: "high",
-  });
-  return response;
 }

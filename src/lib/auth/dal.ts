@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { createDb } from "@/lib/db";
 import { getServerEnv } from "@/lib/env";
 import { hasPermission, type PermissionKey } from "@/lib/permissions";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
@@ -25,7 +25,9 @@ export const getAuthorisedContext = cache(
     const claims = await verifySessionToken(token, getServerEnv().SESSION_SECRET);
     if (!claims) return null;
 
-    const session = await db.session.findFirst({
+    const db = createDb();
+    try {
+      const session = await db.session.findFirst({
       where: {
         id: claims.sessionId,
         userId: claims.userId,
@@ -73,37 +75,40 @@ export const getAuthorisedContext = cache(
       },
     });
 
-    const membership = session?.user.memberships[0];
-    if (!session || !membership) return null;
+      const membership = session?.user.memberships[0];
+      if (!session || !membership) return null;
 
-    const locations = membership.allLocations
-      ? await db.serviceLocation.findMany({
-          where: {
-            organisationId: membership.organisation.id,
-            isActive: true,
-            archivedAt: null,
-          },
-          orderBy: { name: "asc" },
-          select: { id: true, name: true, code: true },
-        })
-      : membership.locations.map(({ location }) => location);
+      const locations = membership.allLocations
+        ? await db.serviceLocation.findMany({
+            where: {
+              organisationId: membership.organisation.id,
+              isActive: true,
+              archivedAt: null,
+            },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, code: true },
+          })
+        : membership.locations.map(({ location }) => location);
 
-    return {
-      user: {
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-      },
-      sessionId: session.id,
-      organisation: membership.organisation,
-      membershipId: membership.id,
-      role: { key: membership.role.key, name: membership.role.name },
-      permissions: membership.role.permissions.map(
-        ({ permission }) => permission.key,
-      ),
-      allLocations: membership.allLocations,
-      locations,
-    };
+      return {
+        user: {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+        },
+        sessionId: session.id,
+        organisation: membership.organisation,
+        membershipId: membership.id,
+        role: { key: membership.role.key, name: membership.role.name },
+        permissions: membership.role.permissions.map(
+          ({ permission }) => permission.key,
+        ),
+        allLocations: membership.allLocations,
+        locations,
+      };
+    } finally {
+      await db.$disconnect();
+    }
   },
 );
 
