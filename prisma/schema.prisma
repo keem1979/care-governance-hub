@@ -199,6 +199,12 @@ enum InspectionEvidenceStatus {
   IMPROVEMENT_REQUIRED
 }
 
+enum TemplateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model Organisation {
   id         String    @id @default(uuid()) @db.Uuid
   name       String
@@ -225,6 +231,7 @@ model Organisation {
   kpiDefinitions         KpiDefinition[]
   kpiEntries             KpiEntry[]
   complianceRequirements ComplianceRequirement[]
+  templates              Template[]
 }
 
 model ServiceLocation {
@@ -300,6 +307,7 @@ model User {
   kpiEntriesCreated      KpiEntry[]               @relation("KpiEntryCreator")
   inspectionOwned        ComplianceRequirement[]  @relation("InspectionOwner")
   inspectionCreated      ComplianceRequirement[]  @relation("InspectionCreator")
+  templatesAuthored      Template[]               @relation("TemplateAuthor")
 }
 
 model Policy {
@@ -1015,6 +1023,33 @@ model ComplianceRequirementAction {
 
   @@id([requirementId, actionId])
   @@index([actionId])
+}
+
+model Template {
+  id             String         @id @default(uuid()) @db.Uuid
+  organisationId String?        @db.Uuid
+  title          String
+  category       String
+  description    String
+  version        String
+  reviewDate     DateTime?
+  authorId       String?        @db.Uuid
+  tags           String[]       @default([])
+  status         TemplateStatus @default(PUBLISHED)
+  fileName       String
+  contentType    String
+  sizeBytes      Int
+  checksum       String
+  storageKey     String?        @unique
+  bodyText       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organisation Organisation? @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  author       User?         @relation("TemplateAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, category, status])
+  @@index([title])
 }
 
 model EvidenceVersion {

@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS "Template";
+DROP TYPE IF EXISTS "TemplateStatus";
