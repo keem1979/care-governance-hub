@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
+  ArrowLeft,
   BookOpenCheck,
   CalendarDays,
   ChartNoAxesCombined,
@@ -68,6 +69,14 @@ export function AppShell({
     } finally {
       setSigningOut(false);
     }
+  }
+
+  function goBack() {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/dashboard");
   }
 
   return (
@@ -149,6 +158,16 @@ export function AppShell({
               onClick={() => setOpen(true)}
             >
               <Menu aria-hidden="true" size={21} />
+            </button>
+            <button
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-white px-2.5 py-2 text-sm font-semibold text-brand-dark transition hover:border-emerald-300 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:px-3"
+              type="button"
+              onClick={goBack}
+              aria-label="Back to previous page"
+              title="Back to previous page"
+            >
+              <ArrowLeft aria-hidden="true" size={18} />
+              <span className="hidden sm:inline">Back</span>
             </button>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
