@@ -172,6 +172,17 @@ enum CalendarItemType {
   OTHER
 }
 
+enum KpiDirection {
+  HIGHER_IS_BETTER
+  LOWER_IS_BETTER
+}
+
+enum KpiRagStatus {
+  GREEN
+  AMBER
+  RED
+}
+
 model Organisation {
   id         String    @id @default(uuid()) @db.Uuid
   name       String
@@ -195,6 +206,8 @@ model Organisation {
   meetings            GovernanceMeeting[]
   calendarItems       CalendarItem[]
   calendarReminders   CalendarReminder[]
+  kpiDefinitions      KpiDefinition[]
+  kpiEntries          KpiEntry[]
 }
 
 model ServiceLocation {
@@ -220,6 +233,7 @@ model ServiceLocation {
   actions         Action[]
   meetings        GovernanceMeeting[]
   calendarItems   CalendarItem[]
+  kpiEntries      KpiEntry[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -265,6 +279,7 @@ model User {
   calendarItemsOwned     CalendarItem[]           @relation("CalendarItemOwner")
   calendarItemsCreated   CalendarItem[]           @relation("CalendarItemCreator")
   calendarReminders      CalendarReminder[]
+  kpiEntriesCreated      KpiEntry[]               @relation("KpiEntryCreator")
 }
 
 model Policy {
@@ -356,6 +371,7 @@ model Evidence {
   riskLinks      RiskEvidence[]
   actionLinks    ActionEvidence[]
   meetingLinks   MeetingEvidence[]
+  kpiLinks       KpiEvidence[]
 
   @@index([organisationId, status])
   @@index([organisationId, category])
@@ -838,6 +854,67 @@ model CalendarReminder {
 
   @@unique([userId, eventKey, offsetDays])
   @@index([organisationId, userId])
+}
+
+model KpiDefinition {
+  id             String       @id @default(uuid()) @db.Uuid
+  organisationId String       @db.Uuid
+  name           String
+  slug           String
+  description    String?
+  unit           String
+  direction      KpiDirection
+  targetValue    Float
+  greenThreshold Float
+  amberThreshold Float
+  sortOrder      Int
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entries      KpiEntry[]
+
+  @@unique([organisationId, slug])
+  @@index([organisationId, isActive, sortOrder])
+}
+
+model KpiEntry {
+  id             String       @id @default(uuid()) @db.Uuid
+  organisationId String       @db.Uuid
+  locationId     String?      @db.Uuid
+  kpiId          String       @db.Uuid
+  reportingMonth DateTime
+  actualValue    Float
+  targetValue    Float
+  greenThreshold Float
+  amberThreshold Float
+  ragStatus      KpiRagStatus
+  notes          String?
+  createdById    String       @db.Uuid
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organisation  Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location      ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  kpi           KpiDefinition    @relation(fields: [kpiId], references: [id], onDelete: Restrict)
+  createdBy     User             @relation("KpiEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  evidenceLinks KpiEvidence[]
+
+  @@unique([kpiId, locationId, reportingMonth])
+  @@index([organisationId, reportingMonth, ragStatus])
+  @@index([locationId, reportingMonth])
+}
+
+model KpiEvidence {
+  entryId    String @db.Uuid
+  evidenceId String @db.Uuid
+
+  entry    KpiEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([entryId, evidenceId])
+  @@index([evidenceId])
 }
 
 model EvidenceVersion {

@@ -23,8 +23,8 @@ describe("dashboard configuration", () => {
   it("reports foundation plus policy and evidence controls as ready", () => {
     const modules = dashboardModules();
 
-    expect(modules.filter(({ status }) => status === "ready")).toHaveLength(5);
-    expect(modules.filter(({ status }) => status === "no-data")).toHaveLength(1);
+    expect(modules.filter(({ status }) => status === "ready")).toHaveLength(6);
+    expect(modules.filter(({ status }) => status === "no-data")).toHaveLength(0);
   });
 
   it("formats the reporting month in UK time", () => {

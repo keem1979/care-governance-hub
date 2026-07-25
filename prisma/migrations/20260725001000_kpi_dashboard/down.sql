@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS "KpiEvidence";
+DROP TABLE IF EXISTS "KpiEntry";
+DROP TABLE IF EXISTS "KpiDefinition";
+DROP TYPE IF EXISTS "KpiRagStatus";
+DROP TYPE IF EXISTS "KpiDirection";
