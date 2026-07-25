@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum ActivityAction {
+  CREATE
+  UPDATE
+  ARCHIVE
+  RESTORE
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  PERMISSION_CHANGE
+}
+
+model Organisation {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  isDemo      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  archivedAt  DateTime?
+
+  locations   ServiceLocation[]
+  memberships OrganisationMembership[]
+  activities  ActivityLog[]
+}
+
+model ServiceLocation {
+  id             String   @id @default(uuid()) @db.Uuid
+  organisationId String   @db.Uuid
+  name           String
+  code           String
+  addressLine1   String?
+  town           String?
+  postcode       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  archivedAt     DateTime?
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  assignments    MembershipLocation[]
+  activities     ActivityLog[]
+
+  @@unique([organisationId, code])
+  @@index([organisationId, isActive])
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  name         String
+  passwordHash String
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships OrganisationMembership[]
+  sessions    Session[]
+  activities  ActivityLog[]
+}
+
+model Role {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique
+  name        String
+  description String
+  isSystem    Boolean @default(true)
+
+  memberships OrganisationMembership[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String @id @default(uuid()) @db.Uuid
+  key         String @unique
+  description String
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model OrganisationMembership {
+  id             String           @id @default(uuid()) @db.Uuid
+  organisationId String           @db.Uuid
+  userId         String           @db.Uuid
+  roleId         String           @db.Uuid
+  status         MembershipStatus @default(INVITED)
+  allLocations   Boolean          @default(false)
+  invitedAt      DateTime         @default(now())
+  joinedAt       DateTime?
+  deactivatedAt  DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  locations    MembershipLocation[]
+
+  @@unique([organisationId, userId])
+  @@index([userId, status])
+}
+
+model MembershipLocation {
+  membershipId String @db.Uuid
+  locationId   String @db.Uuid
+
+  membership OrganisationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  location   ServiceLocation         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, locationId])
+  @@index([locationId])
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  userAgent String?
+  ipHash    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model ActivityLog {
+  id             String         @id @default(uuid()) @db.Uuid
+  organisationId String?        @db.Uuid
+  locationId     String?        @db.Uuid
+  userId         String?        @db.Uuid
+  action         ActivityAction
+  recordType     String
+  recordId       String?
+  summary        String
+  beforeValue    Json?
+  afterValue     Json?
+  sessionInfo    String?
+  createdAt      DateTime       @default(now())
+
+  organisation Organisation?    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, createdAt])
+  @@index([recordType, recordId])
+}
