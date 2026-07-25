@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { GovernanceAssistant } from "@/components/governance-assistant";
 import type { AuthorisedContext } from "@/lib/auth/dal";
 
 const navigation = [
@@ -168,6 +169,7 @@ export function AppShell({
         </header>
         <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
+      <GovernanceAssistant />
     </div>
   );
 }
