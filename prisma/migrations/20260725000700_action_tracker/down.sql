@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS "ActionEvidence";
+DROP TABLE IF EXISTS "ActionUpdate";
+DROP TABLE IF EXISTS "Action";
+DROP TYPE IF EXISTS "ActionSourceType";
+DROP TYPE IF EXISTS "ActionPriority";
+DROP TYPE IF EXISTS "ActionStatus";

@@ -127,3 +127,13 @@ export async function requirePermission(
   }
   return context;
 }
+
+export async function requireAnyPermission(
+  permissions: readonly PermissionKey[],
+): Promise<AuthorisedContext> {
+  const context = await requireAuthorisedContext();
+  if (!permissions.some((permission) => hasPermission(context.permissions, permission))) {
+    redirect("/forbidden");
+  }
+  return context;
+}

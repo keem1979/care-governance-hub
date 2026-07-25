@@ -35,7 +35,7 @@ export function reportingMonth(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number }): DashboardSummary[] {
   return [
     {
       label: "Policies due for review",
@@ -55,8 +55,8 @@ export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits
       label: "Open high-risk actions",
       href: "/actions",
       icon: ListTodo,
-      value: null,
-      qualifier: "Action Tracker not yet built",
+      value: counts?.openHighRiskActions ?? null,
+      qualifier: counts ? "Open high and critical priority actions" : "Action data unavailable",
     },
     {
       label: "Training evidence expiring",
@@ -132,9 +132,9 @@ export function dashboardModules(): DashboardModule[] {
     },
     {
       name: "Audits and actions",
-      href: "/audits",
+      href: "/actions",
       status: "ready",
-      description: "Audit controls are active; Action Tracker is next.",
+      description: "Audit and evidence-backed action controls are active.",
     },
     {
       name: "Governance and calendar",

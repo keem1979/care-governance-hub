@@ -303,7 +303,7 @@ export default async function DashboardPage() {
         <DashboardEmptyPanel
           icon={ListPlus}
           title="Overdue actions"
-          detail="No data recorded. Actions will appear when the Action Tracker is built."
+          detail={counts.overdueActions === 0 ? "No actions are currently overdue." : `${counts.overdueActions} action${counts.overdueActions === 1 ? "" : "s"} require overdue follow-up.`}
         />
         <DashboardEmptyPanel
           icon={BarChart3}
