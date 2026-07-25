@@ -68,7 +68,7 @@ export default async function DashboardPage() {
     },
     {
       label: "Start audit",
-      href: "/audits",
+      href: "/audits/new",
       icon: CircleGauge,
       visible: hasPermission(
         context.permissions,
