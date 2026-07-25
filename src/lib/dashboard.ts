@@ -35,14 +35,14 @@ export function reportingMonth(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; trainingEvidenceExpiring: number; documentsExpiring: number }): DashboardSummary[] {
   return [
     {
       label: "Policies due for review",
       href: "/policies",
       icon: BookOpenCheck,
-      value: null,
-      qualifier: "Policy Library not yet built",
+      value: counts?.policiesDue ?? null,
+      qualifier: counts ? "Approved policies due or overdue" : "Policy data unavailable",
     },
     {
       label: "Overdue audits",
@@ -62,8 +62,8 @@ export function dashboardSummaries(): DashboardSummary[] {
       label: "Training evidence expiring",
       href: "/evidence",
       icon: GraduationCap,
-      value: null,
-      qualifier: "Evidence Library not yet built",
+      value: counts?.trainingEvidenceExpiring ?? null,
+      qualifier: counts ? "Due within the next 30 days" : "Evidence data unavailable",
     },
     {
       label: "Open complaints",
@@ -104,8 +104,8 @@ export function dashboardSummaries(): DashboardSummary[] {
       label: "Documents expiring in 30 days",
       href: "/evidence",
       icon: FileClock,
-      value: null,
-      qualifier: "Evidence Library not yet built",
+      value: counts?.documentsExpiring ?? null,
+      qualifier: counts ? "Due within the next 30 days" : "Evidence data unavailable",
     },
   ];
 }
@@ -121,8 +121,8 @@ export function dashboardModules(): DashboardModule[] {
     {
       name: "Policies and evidence",
       href: "/policies",
-      status: "no-data",
-      description: "No data recorded.",
+      status: "ready",
+      description: "Policy and evidence controls are active.",
     },
     {
       name: "Registers and risks",

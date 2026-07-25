@@ -16,7 +16,7 @@ import {
   Upload,
 } from "lucide-react";
 import { requireAuthorisedContext } from "@/lib/auth/dal";
-import { getRecentDashboardActivity } from "@/lib/dashboard-data";
+import { getDashboardCounts, getRecentDashboardActivity } from "@/lib/dashboard-data";
 import {
   dashboardModules,
   dashboardSummaries,
@@ -37,8 +37,8 @@ const activityLabels: Record<string, string> = {
 
 export default async function DashboardPage() {
   const context = await requireAuthorisedContext();
-  const recentActivity = await getRecentDashboardActivity(context);
-  const summaries = dashboardSummaries();
+  const [recentActivity, counts] = await Promise.all([getRecentDashboardActivity(context), getDashboardCounts(context)]);
+  const summaries = dashboardSummaries(counts);
   const modules = dashboardModules();
   const canEdit = hasPermission(
     context.permissions,
@@ -56,13 +56,13 @@ export default async function DashboardPage() {
   const quickActions = [
     {
       label: "Upload evidence",
-      href: "/evidence",
+      href: "/evidence/new",
       icon: Upload,
       visible: canUpload,
     },
     {
       label: "Add policy",
-      href: "/policies",
+      href: "/policies/new",
       icon: FilePlus2,
       visible: canEdit,
     },

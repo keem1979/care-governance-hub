@@ -19,17 +19,17 @@ interface WorkerEnv {
       };
     };
   };
-  POLICY_FILES: PolicyFileBucket;
+  POLICY_FILES: PrivateFileBucket;
 }
 
 declare global {
-  interface PolicyFileBucket {
+  interface PrivateFileBucket {
     put(key: string, value: ArrayBuffer): Promise<unknown>;
     get(key: string): Promise<{ body: ReadableStream } | null>;
     delete(key: string): Promise<void>;
   }
   // The bucket binding is stable for the lifetime of a worker isolate.
-  var __POLICY_FILES__: PolicyFileBucket | undefined;
+  var __PRIVATE_FILES__: PrivateFileBucket | undefined;
 }
 
 interface WorkerContext {
@@ -43,7 +43,7 @@ const worker = {
     env: WorkerEnv,
     context: WorkerContext,
   ): Promise<Response> {
-    globalThis.__POLICY_FILES__ = env.POLICY_FILES;
+    globalThis.__PRIVATE_FILES__ = env.POLICY_FILES;
     const url = new URL(request.url);
     if (url.pathname === "/_vinext/image") {
       return handleImageOptimization(

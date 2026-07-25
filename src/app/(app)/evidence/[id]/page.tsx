@@ -1,0 +1,35 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { EvidenceActions, EvidenceVersionUpload } from "@/components/evidence-actions";
+import { requireAuthorisedContext } from "@/lib/auth/dal";
+import { createDb } from "@/lib/db";
+import { evidenceDisplayStatus, evidenceScopeWhere } from "@/lib/evidence";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+
+export default async function EvidenceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const context = await requireAuthorisedContext();
+  const canViewAll = hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_VIEW);
+  const canUpload = hasPermission(context.permissions, PERMISSIONS.EVIDENCE_UPLOAD);
+  if (!canViewAll && !canUpload) redirect("/forbidden");
+  const { id } = await params; const db = createDb();
+  try {
+    const item = await db.evidence.findFirst({
+      where: { id, AND: [evidenceScopeWhere(context), ...(!canViewAll ? [{ OR: [{ ownerId: context.user.id }, { uploadedById: context.user.id }] }] : [])] },
+      include: { owner:{select:{name:true}},uploadedBy:{select:{name:true}},location:{select:{name:true}},currentVersion:true,versions:{include:{uploadedBy:{select:{name:true}}},orderBy:{createdAt:"desc"}} },
+    });
+    if (!item) notFound();
+    const relatedPolicy = item.relatedModule === "Policy" && item.relatedRecordId ? await db.policy.findFirst({ where: { id:item.relatedRecordId,organisationId:context.organisation.id }, select:{id:true,title:true} }) : null;
+    const canEdit = hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_EDIT);
+    const canReplace = canUpload && (canEdit || item.ownerId === context.user.id || item.uploadedById === context.user.id);
+    const fileUrl = item.currentVersion ? `/api/evidence/${id}/versions/${item.currentVersion.id}/file` : null;
+    const previewable = item.currentVersion && (item.currentVersion.contentType === "application/pdf" || item.currentVersion.contentType.startsWith("image/"));
+    return <main className="space-y-6">
+      <div><Link href="/evidence" className="text-sm font-semibold text-emerald-700">← Evidence Library</Link><div className="mt-3 flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-widest text-emerald-700">{item.category} · {item.evidenceType}</p><h1 className="text-3xl font-bold">{item.title}</h1><p className="mt-1 text-slate-600">Version {item.currentVersion?.versionNumber ?? "—"} · {evidenceDisplayStatus(item.status,item.reviewExpiryDate)}</p></div>{canEdit && <div className="flex gap-2"><Link href={`/evidence/${id}/edit`} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Edit details</Link><EvidenceActions id={id} archived={item.status === "ARCHIVED"} /></div>}</div></div>
+      <section className="grid gap-4 lg:grid-cols-[1.25fr_1fr]"><div className="rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-lg font-bold">Current file</h2>{fileUrl ? <><div className="mt-4 flex gap-2"><a href={fileUrl} target="_blank" className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Open file</a><a href={`${fileUrl}?download=1`} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold">Download</a></div>{previewable && <iframe title="Evidence preview" src={fileUrl} className="mt-4 h-[520px] w-full rounded-xl border border-slate-200" />}</> : <p className="mt-3 text-slate-600">No file is available.</p>}</div>
+        <section className="rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-lg font-bold">Evidence details</h2><dl className="mt-4 space-y-3 text-sm">{[["Owner",item.owner.name],["Location",item.location?.name ?? "Organisation-wide"],["Evidence date",formatDate(item.evidenceDate)],["Review or expiry",formatDate(item.reviewExpiryDate)],["Confidentiality",item.confidentiality.toLowerCase()],["Uploaded by",item.uploadedBy.name],["Created",formatDate(item.createdAt)]].map(([term,value]) => <div key={term} className="flex justify-between gap-4 border-b border-slate-100 pb-2"><dt className="text-slate-500">{term}</dt><dd className="text-right font-medium capitalize">{value}</dd></div>)}</dl>{item.description && <p className="mt-4 text-sm text-slate-600">{item.description}</p>}{relatedPolicy && <Link href={`/policies/${relatedPolicy.id}`} className="mt-4 block rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">Related policy: {relatedPolicy.title}</Link>}</section></section>
+      {canReplace && <section className="space-y-3"><h2 className="text-xl font-bold">Replace current version</h2><EvidenceVersionUpload id={id} /></section>}
+      <section className="rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold">Version history</h2><div className="mt-4 divide-y divide-slate-200">{item.versions.map((version) => <div key={version.id} className="grid gap-2 py-4 text-sm md:grid-cols-[1fr_1fr_1fr_auto]"><div><strong>Version {version.versionNumber}</strong><p className="text-slate-500">{version.fileName}</p></div><div><span className="text-slate-500">Uploaded by</span><p>{version.uploadedBy.name}</p></div><div><span className="text-slate-500">Uploaded</span><p>{formatDate(version.createdAt)}</p></div><a href={`/api/evidence/${id}/versions/${version.id}/file?download=1`} className="font-semibold text-emerald-700">Download</a>{version.changeNotes && <p className="md:col-span-4 text-slate-600">{version.changeNotes}</p>}</div>)}</div></section>
+    </main>;
+  } finally { await db.$disconnect(); }
+}
+function formatDate(value: Date | null) { return value ? new Intl.DateTimeFormat("en-GB",{dateStyle:"medium"}).format(value) : "Not set"; }

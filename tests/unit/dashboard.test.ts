@@ -6,23 +6,20 @@ import {
 } from "../../src/lib/dashboard";
 
 describe("dashboard configuration", () => {
-  it("uses explicit no-data states for domain modules that are not built", () => {
-    const summaries = dashboardSummaries();
+  it("uses live counts for completed policy and evidence modules", () => {
+    const summaries = dashboardSummaries({ policiesDue: 2, trainingEvidenceExpiring: 3, documentsExpiring: 4 });
 
     expect(summaries).toHaveLength(10);
-    expect(summaries.every(({ value }) => value === null)).toBe(true);
-    expect(summaries.every(({ qualifier }) => qualifier.includes("not yet built"))).toBe(
-      true,
-    );
+    expect(summaries.find(({ label }) => label === "Policies due for review")?.value).toBe(2);
+    expect(summaries.find(({ label }) => label === "Training evidence expiring")?.value).toBe(3);
+    expect(summaries.find(({ label }) => label === "Documents expiring in 30 days")?.value).toBe(4);
   });
 
-  it("reports only foundation controls as ready", () => {
+  it("reports foundation plus policy and evidence controls as ready", () => {
     const modules = dashboardModules();
 
-    expect(modules.filter(({ status }) => status === "ready")).toEqual([
-      expect.objectContaining({ name: "Foundation controls" }),
-    ]);
-    expect(modules.filter(({ status }) => status === "no-data")).toHaveLength(5);
+    expect(modules.filter(({ status }) => status === "ready")).toHaveLength(2);
+    expect(modules.filter(({ status }) => status === "no-data")).toHaveLength(4);
   });
 
   it("formats the reporting month in UK time", () => {

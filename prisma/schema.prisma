@@ -40,6 +40,17 @@ enum PolicyApprovalStatus {
   REJECTED
 }
 
+enum EvidenceConfidentiality {
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+enum EvidenceWorkflowStatus {
+  ACTIVE
+  ARCHIVED
+}
+
 model Organisation {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
@@ -53,6 +64,7 @@ model Organisation {
   memberships OrganisationMembership[]
   activities  ActivityLog[]
   policies    Policy[]
+  evidenceItems Evidence[]
 }
 
 model ServiceLocation {
@@ -71,6 +83,7 @@ model ServiceLocation {
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   assignments    MembershipLocation[]
   activities     ActivityLog[]
+  evidenceItems  Evidence[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -93,6 +106,9 @@ model User {
   policiesCreated Policy[] @relation("PolicyCreator")
   policiesApproved Policy[] @relation("PolicyApprover")
   policyVersions PolicyVersion[]
+  evidenceOwned Evidence[] @relation("EvidenceOwner")
+  evidenceUploaded Evidence[] @relation("EvidenceUploader")
+  evidenceVersions EvidenceVersion[]
 }
 
 model Policy {
@@ -148,6 +164,63 @@ model PolicyVersion {
 
   @@unique([policyId, versionNumber])
   @@index([policyId, createdAt])
+}
+
+model Evidence {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  organisationId        String                  @db.Uuid
+  locationId            String?                 @db.Uuid
+  title                 String
+  description           String?
+  category              String
+  evidenceType          String
+  ownerId               String                  @db.Uuid
+  currentVersionId      String?                 @unique @db.Uuid
+  evidenceDate          DateTime?
+  reviewExpiryDate      DateTime?
+  tags                  String[]                @default([])
+  relatedModule         String?
+  relatedRecordId       String?
+  confidentiality       EvidenceConfidentiality @default(INTERNAL)
+  status                EvidenceWorkflowStatus  @default(ACTIVE)
+  notes                 String?
+  archivedAt            DateTime?
+  uploadedById          String                  @db.Uuid
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  organisation          Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location              ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner                 User            @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  uploadedBy            User            @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  currentVersion        EvidenceVersion? @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions              EvidenceVersion[] @relation("EvidenceVersions")
+
+  @@index([organisationId, status])
+  @@index([organisationId, category])
+  @@index([organisationId, reviewExpiryDate])
+  @@index([locationId])
+}
+
+model EvidenceVersion {
+  id              String   @id @default(uuid()) @db.Uuid
+  evidenceId      String   @db.Uuid
+  versionNumber   String
+  storageKey      String   @unique
+  fileName        String
+  contentType     String
+  sizeBytes       Int
+  checksum        String
+  changeNotes     String?
+  uploadedById    String   @db.Uuid
+  createdAt       DateTime @default(now())
+
+  evidence        Evidence @relation("EvidenceVersions", fields: [evidenceId], references: [id], onDelete: Cascade)
+  currentFor      Evidence? @relation("CurrentEvidenceVersion")
+  uploadedBy      User     @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@unique([evidenceId, versionNumber])
+  @@index([evidenceId, createdAt])
 }
 
 model Role {
