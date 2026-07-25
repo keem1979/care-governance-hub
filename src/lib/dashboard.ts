@@ -35,7 +35,7 @@ export function reportingMonth(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number }): DashboardSummary[] {
   return [
     {
       label: "Policies due for review",
@@ -97,8 +97,8 @@ export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits
       label: "Governance meetings due",
       href: "/meetings",
       icon: CalendarClock,
-      value: null,
-      qualifier: "Meetings module not yet built",
+      value: counts?.governanceMeetingsDue ?? null,
+      qualifier: counts ? "Scheduled or in-progress within 30 days" : "Meeting data unavailable",
     },
     {
       label: "Documents expiring in 30 days",
@@ -139,8 +139,8 @@ export function dashboardModules(): DashboardModule[] {
     {
       name: "Governance and calendar",
       href: "/meetings",
-      status: "no-data",
-      description: "No data recorded.",
+      status: "ready",
+      description: "Structured governance meetings, minutes and decisions are active.",
     },
     {
       name: "KPIs and inspection readiness",

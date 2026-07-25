@@ -22,6 +22,7 @@ export type DashboardCounts = {
   risksOverdueReview: number;
   openHighRiskActions: number;
   overdueActions: number;
+  governanceMeetingsDue: number;
 };
 
 export async function getDashboardCounts(context: AuthorisedContext): Promise<DashboardCounts> {
@@ -31,7 +32,7 @@ export async function getDashboardCounts(context: AuthorisedContext): Promise<Da
   const locationScope = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map(({ id }) => id) } }] };
   const auditLocationScope = context.allLocations ? {} : { locationId: { in: context.locations.map(({ id }) => id) } };
   try {
-    const [policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions] = await Promise.all([
+    const [policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions, governanceMeetingsDue] = await Promise.all([
       db.policy.count({ where: { organisationId: context.organisation.id, status: "APPROVED", nextReviewDate: { lte: inThirtyDays } } }),
       db.audit.count({ where: { organisationId: context.organisation.id, status: { in: ["DRAFT","IN_PROGRESS","AWAITING_REVIEW"] }, reviewDate: { lt: now }, ...auditLocationScope } }),
       db.evidence.count({ where: { organisationId: context.organisation.id, status: "ACTIVE", category: { in: ["Training", "Competencies"] }, reviewExpiryDate: { gte: now, lte: inThirtyDays }, ...locationScope } }),
@@ -42,8 +43,9 @@ export async function getDashboardCounts(context: AuthorisedContext): Promise<Da
       db.risk.count({ where: { organisationId: context.organisation.id, status: { notIn: ["CLOSED","ARCHIVED"] }, nextReviewDate: { lt: now }, ...locationScope } }),
       db.action.count({ where: { organisationId: context.organisation.id, status: { notIn: ["COMPLETED","CANCELLED","ARCHIVED"] }, priority: { in: ["HIGH","CRITICAL"] }, ...locationScope } }),
       db.action.count({ where: { organisationId: context.organisation.id, status: { notIn: ["COMPLETED","CANCELLED","ARCHIVED"] }, dueDate: { lt: now }, ...locationScope } }),
+      db.governanceMeeting.count({ where: { organisationId: context.organisation.id, status: { in: ["SCHEDULED","IN_PROGRESS"] }, meetingDate: { lte: inThirtyDays }, ...locationScope } }),
     ]);
-    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions };
+    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions, governanceMeetingsDue };
   } finally { await db.$disconnect(); }
 }
 

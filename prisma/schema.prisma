@@ -137,6 +137,23 @@ enum ActionSourceType {
   MANUAL
 }
 
+enum MeetingStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  AWAITING_APPROVAL
+  APPROVED
+  CANCELLED
+  ARCHIVED
+}
+
+enum MeetingAttendance {
+  ATTENDING
+  ATTENDED
+  APOLOGY
+  ABSENT
+}
+
 model Organisation {
   id         String    @id @default(uuid()) @db.Uuid
   name       String
@@ -157,6 +174,7 @@ model Organisation {
   registerEntries     RegisterEntry[]
   risks               Risk[]
   actions             Action[]
+  meetings            GovernanceMeeting[]
 }
 
 model ServiceLocation {
@@ -180,6 +198,7 @@ model ServiceLocation {
   registerEntries RegisterEntry[]
   risks           Risk[]
   actions         Action[]
+  meetings        GovernanceMeeting[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -218,6 +237,10 @@ model User {
   actionsCreated         Action[]                 @relation("ActionCreator")
   actionsVerified        Action[]                 @relation("ActionVerifier")
   actionUpdates          ActionUpdate[]
+  meetingsChaired        GovernanceMeeting[]      @relation("MeetingChair")
+  meetingsCreated        GovernanceMeeting[]      @relation("MeetingCreator")
+  meetingsApproved       GovernanceMeeting[]      @relation("MeetingApprover")
+  meetingAttendance      MeetingAttendee[]
 }
 
 model Policy {
@@ -308,6 +331,7 @@ model Evidence {
   registerLinks  RegisterEntryEvidence[]
   riskLinks      RiskEvidence[]
   actionLinks    ActionEvidence[]
+  meetingLinks   MeetingEvidence[]
 
   @@index([organisationId, status])
   @@index([organisationId, category])
@@ -659,6 +683,95 @@ model ActionEvidence {
   evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
 
   @@id([actionId, evidenceId])
+  @@index([evidenceId])
+}
+
+model GovernanceMeeting {
+  id                 String        @id @default(uuid()) @db.Uuid
+  organisationId     String        @db.Uuid
+  locationId         String?       @db.Uuid
+  reference          String
+  title              String
+  meetingType        String
+  meetingDate        DateTime
+  meetingTime        String
+  locationOrLink     String
+  chairId            String        @db.Uuid
+  reportingPeriod    String?
+  previousActionIds  String[]      @default([])
+  kpiReview          String?
+  auditFindings      String?
+  complaints         String?
+  incidents          String?
+  safeguarding       String?
+  workforce          String?
+  risks              String?
+  qualityImprovement String?
+  decisions          String?
+  minutes            String?
+  status             MeetingStatus @default(DRAFT)
+  approvedById       String?       @db.Uuid
+  approvalDate       DateTime?
+  nextMeetingDate    DateTime?
+  archivedAt         DateTime?
+  createdById        String        @db.Uuid
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  organisation  Organisation        @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location      ServiceLocation?    @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  chair         User                @relation("MeetingChair", fields: [chairId], references: [id], onDelete: Restrict)
+  createdBy     User                @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy    User?               @relation("MeetingApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  attendees     MeetingAttendee[]
+  agendaItems   MeetingAgendaItem[]
+  evidenceLinks MeetingEvidence[]
+
+  @@unique([organisationId, reference])
+  @@index([organisationId, status, meetingDate])
+  @@index([locationId])
+  @@index([chairId])
+}
+
+model MeetingAttendee {
+  meetingId  String            @db.Uuid
+  userId     String            @db.Uuid
+  attendance MeetingAttendance @default(ATTENDING)
+
+  meeting GovernanceMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([meetingId, userId])
+  @@index([userId])
+}
+
+model MeetingAgendaItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  meetingId      String   @db.Uuid
+  topic          String
+  title          String
+  notes          String?
+  decision       String?
+  linkedActionId String?  @db.Uuid
+  sortOrder      Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  meeting GovernanceMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, sortOrder])
+  @@index([meetingId])
+  @@index([linkedActionId])
+}
+
+model MeetingEvidence {
+  meetingId  String @db.Uuid
+  evidenceId String @db.Uuid
+
+  meeting  GovernanceMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  evidence Evidence          @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, evidenceId])
   @@index([evidenceId])
 }
 
