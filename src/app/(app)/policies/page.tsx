@@ -43,7 +43,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams: Pro
     </form>
     <div className="flex items-center justify-between">
       <p className="text-sm text-slate-600">{policies.length} {policies.length === 1 ? "policy" : "policies"}</p>
-      <div className="flex gap-2"><Link href={{ pathname: "/policies", query: { ...params, view: "cards" } }} className={`rounded-lg px-3 py-2 text-sm ${view === "cards" ? "bg-emerald-100 font-semibold" : "bg-white"}`}>Cards</Link><Link href={{ pathname: "/policies", query: { ...params, view: "table" } }} className={`rounded-lg px-3 py-2 text-sm ${view === "table" ? "bg-emerald-100 font-semibold" : "bg-white"}`}>Table</Link><Link href="/api/policies/export" className="rounded-lg bg-white px-3 py-2 text-sm">Export CSV</Link></div>
+      <div className="flex gap-2"><Link href="/policies?view=cards" className={`rounded-lg px-3 py-2 text-sm ${view === "cards" ? "bg-emerald-100 font-semibold" : "bg-white"}`}>Cards</Link><Link href="/policies?view=table" className={`rounded-lg px-3 py-2 text-sm ${view === "table" ? "bg-emerald-100 font-semibold" : "bg-white"}`}>Table</Link><Link href="/api/policies/export" className="rounded-lg bg-white px-3 py-2 text-sm">Export CSV</Link></div>
     </div>
     {policies.length === 0 ? <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">No policies found</h2><p className="mt-2 text-slate-600">Add the first controlled policy or adjust the filters.</p></section> :
       view === "cards" ? <section className="grid gap-4 lg:grid-cols-2">{policies.map((policy) => <PolicyCard key={policy.id} policy={policy} />)}</section> :
