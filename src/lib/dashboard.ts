@@ -35,7 +35,7 @@ export function reportingMonth(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number }): DashboardSummary[] {
   return [
     {
       label: "Policies due for review",
@@ -90,8 +90,8 @@ export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits
       label: "Risks overdue for review",
       href: "/risks",
       icon: TriangleAlert,
-      value: null,
-      qualifier: "Risk Register not yet built",
+      value: counts?.risksOverdueReview ?? null,
+      qualifier: counts ? "Open risks past their review date" : "Risk data unavailable",
     },
     {
       label: "Governance meetings due",
@@ -126,9 +126,9 @@ export function dashboardModules(): DashboardModule[] {
     },
     {
       name: "Registers and risks",
-      href: "/registers",
+      href: "/risks",
       status: "ready",
-      description: "Operational registers are active; Risk Register is separate.",
+      description: "Operational registers and scored risk controls are active.",
     },
     {
       name: "Audits and actions",

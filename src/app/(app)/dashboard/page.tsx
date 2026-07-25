@@ -76,6 +76,12 @@ export default async function DashboardPage() {
       ),
     },
     {
+      label: "Add risk",
+      href: "/risks/new",
+      icon: ShieldCheck,
+      visible: canEdit,
+    },
+    {
       label: "Create action",
       href: "/actions",
       icon: ListPlus,
@@ -323,7 +329,7 @@ export default async function DashboardPage() {
             Access follows your organisation role and permissions.
           </p>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {quickActions.map(({ label, href, icon: Icon }) => (
             <Link
               className="group flex items-center justify-between gap-3 rounded-2xl border border-border px-4 py-4 font-semibold transition hover:border-emerald-300 hover:bg-accent"

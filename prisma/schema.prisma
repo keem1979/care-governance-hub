@@ -92,105 +92,127 @@ enum RegisterRiskLevel {
   CRITICAL
 }
 
-model Organisation {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String
-  slug        String   @unique
-  isDemo      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  archivedAt  DateTime?
+enum RiskStatus {
+  OPEN
+  MONITORING
+  TREATMENT_IN_PROGRESS
+  ACCEPTED
+  CLOSED
+  ARCHIVED
+}
 
-  locations   ServiceLocation[]
-  memberships OrganisationMembership[]
-  activities  ActivityLog[]
-  policies    Policy[]
-  evidenceItems Evidence[]
-  auditTemplates AuditTemplate[]
-  audits Audit[]
+enum RiskLevel {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+model Organisation {
+  id         String    @id @default(uuid()) @db.Uuid
+  name       String
+  slug       String    @unique
+  isDemo     Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  locations           ServiceLocation[]
+  memberships         OrganisationMembership[]
+  activities          ActivityLog[]
+  policies            Policy[]
+  evidenceItems       Evidence[]
+  auditTemplates      AuditTemplate[]
+  audits              Audit[]
   registerDefinitions RegisterDefinition[]
-  registerEntries RegisterEntry[]
+  registerEntries     RegisterEntry[]
+  risks               Risk[]
 }
 
 model ServiceLocation {
-  id             String   @id @default(uuid()) @db.Uuid
-  organisationId String   @db.Uuid
+  id             String    @id @default(uuid()) @db.Uuid
+  organisationId String    @db.Uuid
   name           String
   code           String
   addressLine1   String?
   town           String?
   postcode       String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   archivedAt     DateTime?
 
-  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  assignments    MembershipLocation[]
-  activities     ActivityLog[]
-  evidenceItems  Evidence[]
-  audits Audit[]
+  organisation    Organisation         @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  assignments     MembershipLocation[]
+  activities      ActivityLog[]
+  evidenceItems   Evidence[]
+  audits          Audit[]
   registerEntries RegisterEntry[]
+  risks           Risk[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
 }
 
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
   name         String
   passwordHash String
-  isActive     Boolean  @default(true)
+  isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  memberships OrganisationMembership[]
-  sessions    Session[]
-  activities  ActivityLog[]
-  policiesOwned Policy[] @relation("PolicyOwner")
-  policiesCreated Policy[] @relation("PolicyCreator")
-  policiesApproved Policy[] @relation("PolicyApprover")
-  policyVersions PolicyVersion[]
-  evidenceOwned Evidence[] @relation("EvidenceOwner")
-  evidenceUploaded Evidence[] @relation("EvidenceUploader")
-  evidenceVersions EvidenceVersion[]
-  auditsPerformed Audit[] @relation("AuditAuditor")
-  auditsSignedOff Audit[] @relation("AuditSignoff")
-  registerEntriesOwned RegisterEntry[] @relation("RegisterEntryOwner")
-  registerEntriesCreated RegisterEntry[] @relation("RegisterEntryCreator")
-  registerHistory RegisterEntryHistory[]
+  memberships            OrganisationMembership[]
+  sessions               Session[]
+  activities             ActivityLog[]
+  policiesOwned          Policy[]                 @relation("PolicyOwner")
+  policiesCreated        Policy[]                 @relation("PolicyCreator")
+  policiesApproved       Policy[]                 @relation("PolicyApprover")
+  policyVersions         PolicyVersion[]
+  evidenceOwned          Evidence[]               @relation("EvidenceOwner")
+  evidenceUploaded       Evidence[]               @relation("EvidenceUploader")
+  evidenceVersions       EvidenceVersion[]
+  auditsPerformed        Audit[]                  @relation("AuditAuditor")
+  auditsSignedOff        Audit[]                  @relation("AuditSignoff")
+  registerEntriesOwned   RegisterEntry[]          @relation("RegisterEntryOwner")
+  registerEntriesCreated RegisterEntry[]          @relation("RegisterEntryCreator")
+  registerHistory        RegisterEntryHistory[]
+  risksOwned             Risk[]                   @relation("RiskOwner")
+  risksCreated           Risk[]                   @relation("RiskCreator")
+  risksApproved          Risk[]                   @relation("RiskClosureApprover")
+  riskReviews            RiskReview[]
 }
 
 model Policy {
-  id                    String               @id @default(uuid()) @db.Uuid
-  organisationId        String               @db.Uuid
-  title                 String
-  category              String
-  ownerId               String               @db.Uuid
-  currentVersionId      String?              @unique @db.Uuid
-  effectiveDate         DateTime?
-  lastReviewDate        DateTime?
-  nextReviewDate        DateTime?
-  approvalStatus        PolicyApprovalStatus @default(NOT_SUBMITTED)
-  approvedById          String?              @db.Uuid
-  approvedAt            DateTime?
-  tags                  String[]             @default([])
-  complianceAreas       String[]             @default([])
-  notes                 String?
-  status                PolicyWorkflowStatus @default(DRAFT)
-  archivedAt            DateTime?
-  createdById           String               @db.Uuid
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  id               String               @id @default(uuid()) @db.Uuid
+  organisationId   String               @db.Uuid
+  title            String
+  category         String
+  ownerId          String               @db.Uuid
+  currentVersionId String?              @unique @db.Uuid
+  effectiveDate    DateTime?
+  lastReviewDate   DateTime?
+  nextReviewDate   DateTime?
+  approvalStatus   PolicyApprovalStatus @default(NOT_SUBMITTED)
+  approvedById     String?              @db.Uuid
+  approvedAt       DateTime?
+  tags             String[]             @default([])
+  complianceAreas  String[]             @default([])
+  notes            String?
+  status           PolicyWorkflowStatus @default(DRAFT)
+  archivedAt       DateTime?
+  createdById      String               @db.Uuid
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
-  organisation          Organisation  @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  owner                 User          @relation("PolicyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  createdBy             User          @relation("PolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  approvedBy            User?         @relation("PolicyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
-  currentVersion        PolicyVersion? @relation("CurrentPolicyVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
-  versions              PolicyVersion[] @relation("PolicyVersions")
+  organisation   Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  owner          User            @relation("PolicyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy      User            @relation("PolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy     User?           @relation("PolicyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  currentVersion PolicyVersion?  @relation("CurrentPolicyVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions       PolicyVersion[] @relation("PolicyVersions")
 
   @@index([organisationId, status])
   @@index([organisationId, nextReviewDate])
@@ -198,57 +220,58 @@ model Policy {
 }
 
 model PolicyVersion {
-  id              String   @id @default(uuid()) @db.Uuid
-  policyId        String   @db.Uuid
-  versionNumber   String
-  storageKey      String   @unique
-  fileName        String
-  contentType     String
-  sizeBytes       Int
-  checksum        String
-  changeNotes     String?
-  uploadedById    String   @db.Uuid
-  createdAt       DateTime @default(now())
+  id            String   @id @default(uuid()) @db.Uuid
+  policyId      String   @db.Uuid
+  versionNumber String
+  storageKey    String   @unique
+  fileName      String
+  contentType   String
+  sizeBytes     Int
+  checksum      String
+  changeNotes   String?
+  uploadedById  String   @db.Uuid
+  createdAt     DateTime @default(now())
 
-  policy          Policy   @relation("PolicyVersions", fields: [policyId], references: [id], onDelete: Cascade)
-  currentFor      Policy?  @relation("CurrentPolicyVersion")
-  uploadedBy      User     @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  policy     Policy  @relation("PolicyVersions", fields: [policyId], references: [id], onDelete: Cascade)
+  currentFor Policy? @relation("CurrentPolicyVersion")
+  uploadedBy User    @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
 
   @@unique([policyId, versionNumber])
   @@index([policyId, createdAt])
 }
 
 model Evidence {
-  id                    String                  @id @default(uuid()) @db.Uuid
-  organisationId        String                  @db.Uuid
-  locationId            String?                 @db.Uuid
-  title                 String
-  description           String?
-  category              String
-  evidenceType          String
-  ownerId               String                  @db.Uuid
-  currentVersionId      String?                 @unique @db.Uuid
-  evidenceDate          DateTime?
-  reviewExpiryDate      DateTime?
-  tags                  String[]                @default([])
-  relatedModule         String?
-  relatedRecordId       String?
-  confidentiality       EvidenceConfidentiality @default(INTERNAL)
-  status                EvidenceWorkflowStatus  @default(ACTIVE)
-  notes                 String?
-  archivedAt            DateTime?
-  uploadedById          String                  @db.Uuid
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
+  id               String                  @id @default(uuid()) @db.Uuid
+  organisationId   String                  @db.Uuid
+  locationId       String?                 @db.Uuid
+  title            String
+  description      String?
+  category         String
+  evidenceType     String
+  ownerId          String                  @db.Uuid
+  currentVersionId String?                 @unique @db.Uuid
+  evidenceDate     DateTime?
+  reviewExpiryDate DateTime?
+  tags             String[]                @default([])
+  relatedModule    String?
+  relatedRecordId  String?
+  confidentiality  EvidenceConfidentiality @default(INTERNAL)
+  status           EvidenceWorkflowStatus  @default(ACTIVE)
+  notes            String?
+  archivedAt       DateTime?
+  uploadedById     String                  @db.Uuid
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
 
-  organisation          Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  location              ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  owner                 User            @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  uploadedBy            User            @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-  currentVersion        EvidenceVersion? @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
-  versions              EvidenceVersion[] @relation("EvidenceVersions")
-  auditResponses         AuditResponse[]
-  registerLinks          RegisterEntryEvidence[]
+  organisation   Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location       ServiceLocation?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner          User                    @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  uploadedBy     User                    @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  currentVersion EvidenceVersion?        @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions       EvidenceVersion[]       @relation("EvidenceVersions")
+  auditResponses AuditResponse[]
+  registerLinks  RegisterEntryEvidence[]
+  riskLinks      RiskEvidence[]
 
   @@index([organisationId, status])
   @@index([organisationId, category])
@@ -266,43 +289,43 @@ model AuditTemplate {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organisation   Organisation? @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  sections       AuditSection[]
-  audits         Audit[]
+  organisation Organisation?  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  sections     AuditSection[]
+  audits       Audit[]
 
   @@unique([organisationId, name, version])
   @@index([organisationId, isPublished])
 }
 
 model AuditSection {
-  id          String @id @default(uuid()) @db.Uuid
-  templateId  String @db.Uuid
+  id          String  @id @default(uuid()) @db.Uuid
+  templateId  String  @db.Uuid
   title       String
   description String?
   sortOrder   Int
 
-  template    AuditTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  questions   AuditQuestion[]
+  template  AuditTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  questions AuditQuestion[]
 
   @@unique([templateId, sortOrder])
 }
 
 model AuditQuestion {
-  id                            String            @id @default(uuid()) @db.Uuid
-  sectionId                     String            @db.Uuid
-  text                          String
-  guidance                      String?
-  evidenceExpected              String?
-  responseType                  AuditQuestionType @default(COMPLIANCE)
-  options                       String[]          @default([])
-  weighting                     Int               @default(1)
-  mandatory                     Boolean           @default(true)
-  requiresCommentNonCompliant   Boolean           @default(true)
-  requiresEvidence              Boolean           @default(false)
-  sortOrder                     Int
+  id                          String            @id @default(uuid()) @db.Uuid
+  sectionId                   String            @db.Uuid
+  text                        String
+  guidance                    String?
+  evidenceExpected            String?
+  responseType                AuditQuestionType @default(COMPLIANCE)
+  options                     String[]          @default([])
+  weighting                   Int               @default(1)
+  mandatory                   Boolean           @default(true)
+  requiresCommentNonCompliant Boolean           @default(true)
+  requiresEvidence            Boolean           @default(false)
+  sortOrder                   Int
 
-  section                       AuditSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  responses                     AuditResponse[]
+  section   AuditSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  responses AuditResponse[]
 
   @@unique([sectionId, sortOrder])
 }
@@ -331,13 +354,13 @@ model Audit {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  organisation    Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  template        AuditTemplate   @relation(fields: [templateId], references: [id], onDelete: Restrict)
-  auditor         User            @relation("AuditAuditor", fields: [auditorId], references: [id], onDelete: Restrict)
-  location        ServiceLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  signedOffBy     User?           @relation("AuditSignoff", fields: [signedOffById], references: [id], onDelete: SetNull)
-  responses       AuditResponse[]
-  findings        AuditFinding[]
+  organisation Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  template     AuditTemplate   @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  auditor      User            @relation("AuditAuditor", fields: [auditorId], references: [id], onDelete: Restrict)
+  location     ServiceLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  signedOffBy  User?           @relation("AuditSignoff", fields: [signedOffById], references: [id], onDelete: SetNull)
+  responses    AuditResponse[]
+  findings     AuditFinding[]
 
   @@index([organisationId, status])
   @@index([organisationId, auditDate])
@@ -345,20 +368,20 @@ model Audit {
 }
 
 model AuditResponse {
-  id          String   @id @default(uuid()) @db.Uuid
-  auditId     String   @db.Uuid
-  questionId  String   @db.Uuid
-  answer      String?
-  comment     String?
-  score       Float?
-  evidenceId  String?  @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid()) @db.Uuid
+  auditId    String   @db.Uuid
+  questionId String   @db.Uuid
+  answer     String?
+  comment    String?
+  score      Float?
+  evidenceId String?  @db.Uuid
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  audit       Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  question    AuditQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
-  evidence    Evidence?     @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
-  finding     AuditFinding?
+  audit    Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  question AuditQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  evidence Evidence?     @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  finding  AuditFinding?
 
   @@unique([auditId, questionId])
   @@index([evidenceId])
@@ -376,8 +399,8 @@ model AuditFinding {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  audit          Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  response       AuditResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  audit    Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  response AuditResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
 
   @@index([auditId, severity])
 }
@@ -394,8 +417,8 @@ model RegisterDefinition {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organisation   Organisation? @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  entries        RegisterEntry[]
+  organisation Organisation?   @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entries      RegisterEntry[]
 
   @@unique([organisationId, key])
   @@index([isPublished, sortOrder])
@@ -414,20 +437,20 @@ model RegisterEntry {
   status          RegisterEntryStatus @default(OPEN)
   ownerId         String?             @db.Uuid
   data            Json
-  linkedActionIds String[]             @default([])
+  linkedActionIds String[]            @default([])
   closureDate     DateTime?
   archivedAt      DateTime?
   createdById     String              @db.Uuid
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  organisation    Organisation       @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  definition      RegisterDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
-  location        ServiceLocation?   @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  owner           User?              @relation("RegisterEntryOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  createdBy       User               @relation("RegisterEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  evidenceLinks   RegisterEntryEvidence[]
-  history         RegisterEntryHistory[]
+  organisation  Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  definition    RegisterDefinition      @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  location      ServiceLocation?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner         User?                   @relation("RegisterEntryOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy     User                    @relation("RegisterEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  evidenceLinks RegisterEntryEvidence[]
+  history       RegisterEntryHistory[]
 
   @@unique([organisationId, definitionId, reference])
   @@index([organisationId, definitionId, status])
@@ -438,43 +461,120 @@ model RegisterEntryEvidence {
   entryId    String @db.Uuid
   evidenceId String @db.Uuid
 
-  entry      RegisterEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  evidence   Evidence      @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  entry    RegisterEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  evidence Evidence      @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
 
   @@id([entryId, evidenceId])
   @@index([evidenceId])
 }
 
 model RegisterEntryHistory {
-  id         String   @id @default(uuid()) @db.Uuid
-  entryId    String   @db.Uuid
-  userId     String?  @db.Uuid
-  action     String
-  snapshot   Json
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid()) @db.Uuid
+  entryId   String   @db.Uuid
+  userId    String?  @db.Uuid
+  action    String
+  snapshot  Json
+  createdAt DateTime @default(now())
 
-  entry      RegisterEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  entry RegisterEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([entryId, createdAt])
 }
 
-model EvidenceVersion {
-  id              String   @id @default(uuid()) @db.Uuid
-  evidenceId      String   @db.Uuid
-  versionNumber   String
-  storageKey      String   @unique
-  fileName        String
-  contentType     String
-  sizeBytes       Int
-  checksum        String
-  changeNotes     String?
-  uploadedById    String   @db.Uuid
-  createdAt       DateTime @default(now())
+model Risk {
+  id                  String     @id @default(uuid()) @db.Uuid
+  organisationId      String     @db.Uuid
+  locationId          String?    @db.Uuid
+  reference           String
+  title               String
+  description         String
+  category            String
+  existingControls    String
+  likelihood          Int
+  impact              Int
+  initialScore        Int
+  initialLevel        RiskLevel
+  furtherControls     String?
+  ownerId             String?    @db.Uuid
+  targetDate          DateTime?
+  residualLikelihood  Int
+  residualImpact      Int
+  residualScore       Int
+  residualLevel       RiskLevel
+  reviewFrequency     String
+  lastReviewDate      DateTime?
+  nextReviewDate      DateTime
+  status              RiskStatus @default(OPEN)
+  closureRationale    String?
+  closureApprovedById String?    @db.Uuid
+  closureDate         DateTime?
+  archivedAt          DateTime?
+  createdById         String     @db.Uuid
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
-  evidence        Evidence @relation("EvidenceVersions", fields: [evidenceId], references: [id], onDelete: Cascade)
-  currentFor      Evidence? @relation("CurrentEvidenceVersion")
-  uploadedBy      User     @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  organisation      Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location          ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner             User?            @relation("RiskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy         User             @relation("RiskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  closureApprovedBy User?            @relation("RiskClosureApprover", fields: [closureApprovedById], references: [id], onDelete: SetNull)
+  evidenceLinks     RiskEvidence[]
+  reviews           RiskReview[]
+
+  @@unique([organisationId, reference])
+  @@index([organisationId, status, residualLevel])
+  @@index([organisationId, nextReviewDate])
+  @@index([locationId])
+}
+
+model RiskEvidence {
+  riskId     String @db.Uuid
+  evidenceId String @db.Uuid
+
+  risk     Risk     @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([riskId, evidenceId])
+  @@index([evidenceId])
+}
+
+model RiskReview {
+  id                String    @id @default(uuid()) @db.Uuid
+  riskId            String    @db.Uuid
+  reviewedById      String    @db.Uuid
+  reviewDate        DateTime
+  notes             String
+  likelihood        Int
+  impact            Int
+  score             Int
+  level             RiskLevel
+  controlsEffective Boolean
+  nextReviewDate    DateTime
+  createdAt         DateTime  @default(now())
+
+  risk       Risk @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  reviewedBy User @relation(fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  @@index([riskId, reviewDate])
+}
+
+model EvidenceVersion {
+  id            String   @id @default(uuid()) @db.Uuid
+  evidenceId    String   @db.Uuid
+  versionNumber String
+  storageKey    String   @unique
+  fileName      String
+  contentType   String
+  sizeBytes     Int
+  checksum      String
+  changeNotes   String?
+  uploadedById  String   @db.Uuid
+  createdAt     DateTime @default(now())
+
+  evidence   Evidence  @relation("EvidenceVersions", fields: [evidenceId], references: [id], onDelete: Cascade)
+  currentFor Evidence? @relation("CurrentEvidenceVersion")
+  uploadedBy User      @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
 
   @@unique([evidenceId, versionNumber])
   @@index([evidenceId, createdAt])
@@ -522,9 +622,9 @@ model OrganisationMembership {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
-  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
-  role         Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  organisation Organisation         @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role         Role                 @relation(fields: [roleId], references: [id], onDelete: Restrict)
   locations    MembershipLocation[]
 
   @@unique([organisationId, userId])
@@ -536,21 +636,21 @@ model MembershipLocation {
   locationId   String @db.Uuid
 
   membership OrganisationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-  location   ServiceLocation         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  location   ServiceLocation        @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@id([membershipId, locationId])
   @@index([locationId])
 }
 
 model Session {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime @default(now())
-  lastSeenAt DateTime @default(now())
-  userAgent String?
-  ipHash    String?
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  userAgent  String?
+  ipHash     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

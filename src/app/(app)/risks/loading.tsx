@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="space-y-5"><div className="h-10 w-64 animate-pulse rounded bg-slate-200"/><div className="grid gap-4 sm:grid-cols-3">{[1,2,3].map((item)=><div key={item} className="h-28 animate-pulse rounded-2xl bg-slate-200"/>)}</div><div className="h-96 animate-pulse rounded-2xl bg-slate-200"/></main>}
