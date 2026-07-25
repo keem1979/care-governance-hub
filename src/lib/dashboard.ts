@@ -35,7 +35,7 @@ export function reportingMonth(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; trainingEvidenceExpiring: number; documentsExpiring: number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number }): DashboardSummary[] {
   return [
     {
       label: "Policies due for review",
@@ -48,8 +48,8 @@ export function dashboardSummaries(counts?: { policiesDue: number; trainingEvide
       label: "Overdue audits",
       href: "/audits",
       icon: ClipboardCheck,
-      value: null,
-      qualifier: "Audit Centre not yet built",
+      value: counts?.overdueAudits ?? null,
+      qualifier: counts ? "Review date has passed" : "Audit data unavailable",
     },
     {
       label: "Open high-risk actions",
@@ -133,8 +133,8 @@ export function dashboardModules(): DashboardModule[] {
     {
       name: "Audits and actions",
       href: "/audits",
-      status: "no-data",
-      description: "No data recorded.",
+      status: "ready",
+      description: "Audit controls are active; Action Tracker is next.",
     },
     {
       name: "Governance and calendar",

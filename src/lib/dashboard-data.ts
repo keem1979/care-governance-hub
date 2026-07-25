@@ -13,6 +13,7 @@ export type RecentDashboardActivity = {
 
 export type DashboardCounts = {
   policiesDue: number;
+  overdueAudits: number;
   trainingEvidenceExpiring: number;
   documentsExpiring: number;
 };
@@ -22,13 +23,15 @@ export async function getDashboardCounts(context: AuthorisedContext): Promise<Da
   const now = new Date();
   const inThirtyDays = new Date(now); inThirtyDays.setDate(inThirtyDays.getDate() + 30);
   const locationScope = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map(({ id }) => id) } }] };
+  const auditLocationScope = context.allLocations ? {} : { locationId: { in: context.locations.map(({ id }) => id) } };
   try {
-    const [policiesDue, trainingEvidenceExpiring, documentsExpiring] = await Promise.all([
+    const [policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring] = await Promise.all([
       db.policy.count({ where: { organisationId: context.organisation.id, status: "APPROVED", nextReviewDate: { lte: inThirtyDays } } }),
+      db.audit.count({ where: { organisationId: context.organisation.id, status: { in: ["DRAFT","IN_PROGRESS","AWAITING_REVIEW"] }, reviewDate: { lt: now }, ...auditLocationScope } }),
       db.evidence.count({ where: { organisationId: context.organisation.id, status: "ACTIVE", category: { in: ["Training", "Competencies"] }, reviewExpiryDate: { gte: now, lte: inThirtyDays }, ...locationScope } }),
       db.evidence.count({ where: { organisationId: context.organisation.id, status: "ACTIVE", reviewExpiryDate: { gte: now, lte: inThirtyDays }, ...locationScope } }),
     ]);
-    return { policiesDue, trainingEvidenceExpiring, documentsExpiring };
+    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring };
   } finally { await db.$disconnect(); }
 }
 

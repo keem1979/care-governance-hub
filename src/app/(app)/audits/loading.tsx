@@ -1,0 +1,1 @@
+export default function AuditsLoading(){return <main className="space-y-5" aria-busy="true"><div className="h-20 animate-pulse rounded-2xl bg-slate-200"/><div className="grid gap-4 md:grid-cols-3">{[1,2,3].map((item)=><div key={item} className="h-28 animate-pulse rounded-2xl bg-slate-200"/>)}</div><div className="h-72 animate-pulse rounded-2xl bg-slate-200"/></main>}

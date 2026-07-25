@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS "AuditFinding";
+DROP TABLE IF EXISTS "AuditResponse";
+DROP TABLE IF EXISTS "Audit";
+DROP TABLE IF EXISTS "AuditQuestion";
+DROP TABLE IF EXISTS "AuditSection";
+DROP TABLE IF EXISTS "AuditTemplate";
+DROP TYPE IF EXISTS "FindingSeverity";
+DROP TYPE IF EXISTS "AuditStatus";
+DROP TYPE IF EXISTS "AuditQuestionType";

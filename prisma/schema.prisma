@@ -51,6 +51,32 @@ enum EvidenceWorkflowStatus {
   ARCHIVED
 }
 
+enum AuditQuestionType {
+  COMPLIANCE
+  YES_NO
+  TEXT
+  NUMBER
+  DATE
+  FILE
+  MULTIPLE_CHOICE
+}
+
+enum AuditStatus {
+  DRAFT
+  IN_PROGRESS
+  AWAITING_REVIEW
+  COMPLETED
+  CLOSED
+  ARCHIVED
+}
+
+enum FindingSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 model Organisation {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
@@ -65,6 +91,8 @@ model Organisation {
   activities  ActivityLog[]
   policies    Policy[]
   evidenceItems Evidence[]
+  auditTemplates AuditTemplate[]
+  audits Audit[]
 }
 
 model ServiceLocation {
@@ -84,6 +112,7 @@ model ServiceLocation {
   assignments    MembershipLocation[]
   activities     ActivityLog[]
   evidenceItems  Evidence[]
+  audits Audit[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -109,6 +138,8 @@ model User {
   evidenceOwned Evidence[] @relation("EvidenceOwner")
   evidenceUploaded Evidence[] @relation("EvidenceUploader")
   evidenceVersions EvidenceVersion[]
+  auditsPerformed Audit[] @relation("AuditAuditor")
+  auditsSignedOff Audit[] @relation("AuditSignoff")
 }
 
 model Policy {
@@ -195,11 +226,138 @@ model Evidence {
   uploadedBy            User            @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
   currentVersion        EvidenceVersion? @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
   versions              EvidenceVersion[] @relation("EvidenceVersions")
+  auditResponses         AuditResponse[]
 
   @@index([organisationId, status])
   @@index([organisationId, category])
   @@index([organisationId, reviewExpiryDate])
   @@index([locationId])
+}
+
+model AuditTemplate {
+  id             String   @id @default(uuid()) @db.Uuid
+  organisationId String?  @db.Uuid
+  name           String
+  description    String?
+  version        String
+  isPublished    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation   Organisation? @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  sections       AuditSection[]
+  audits         Audit[]
+
+  @@unique([organisationId, name, version])
+  @@index([organisationId, isPublished])
+}
+
+model AuditSection {
+  id          String @id @default(uuid()) @db.Uuid
+  templateId  String @db.Uuid
+  title       String
+  description String?
+  sortOrder   Int
+
+  template    AuditTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  questions   AuditQuestion[]
+
+  @@unique([templateId, sortOrder])
+}
+
+model AuditQuestion {
+  id                            String            @id @default(uuid()) @db.Uuid
+  sectionId                     String            @db.Uuid
+  text                          String
+  guidance                      String?
+  evidenceExpected              String?
+  responseType                  AuditQuestionType @default(COMPLIANCE)
+  options                       String[]          @default([])
+  weighting                     Int               @default(1)
+  mandatory                     Boolean           @default(true)
+  requiresCommentNonCompliant   Boolean           @default(true)
+  requiresEvidence              Boolean           @default(false)
+  sortOrder                     Int
+
+  section                       AuditSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  responses                     AuditResponse[]
+
+  @@unique([sectionId, sortOrder])
+}
+
+model Audit {
+  id              String      @id @default(uuid()) @db.Uuid
+  organisationId  String      @db.Uuid
+  templateId      String      @db.Uuid
+  templateVersion String
+  auditorId       String      @db.Uuid
+  locationId      String      @db.Uuid
+  title           String
+  auditDate       DateTime
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  scope           String?
+  status          AuditStatus @default(DRAFT)
+  overallScore    Float?
+  strengths       String?
+  risks           String?
+  recommendations String?
+  signedOffById   String?     @db.Uuid
+  signedOffAt     DateTime?
+  reviewDate      DateTime?
+  archivedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organisation    Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  template        AuditTemplate   @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  auditor         User            @relation("AuditAuditor", fields: [auditorId], references: [id], onDelete: Restrict)
+  location        ServiceLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  signedOffBy     User?           @relation("AuditSignoff", fields: [signedOffById], references: [id], onDelete: SetNull)
+  responses       AuditResponse[]
+  findings        AuditFinding[]
+
+  @@index([organisationId, status])
+  @@index([organisationId, auditDate])
+  @@index([locationId])
+}
+
+model AuditResponse {
+  id          String   @id @default(uuid()) @db.Uuid
+  auditId     String   @db.Uuid
+  questionId  String   @db.Uuid
+  answer      String?
+  comment     String?
+  score       Float?
+  evidenceId  String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  audit       Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  question    AuditQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  evidence    Evidence?     @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  finding     AuditFinding?
+
+  @@unique([auditId, questionId])
+  @@index([evidenceId])
+}
+
+model AuditFinding {
+  id             String          @id @default(uuid()) @db.Uuid
+  auditId        String          @db.Uuid
+  responseId     String          @unique @db.Uuid
+  severity       FindingSeverity @default(MEDIUM)
+  summary        String
+  recommendation String?
+  actionRequired Boolean         @default(false)
+  resolvedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  audit          Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  response       AuditResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@index([auditId, severity])
 }
 
 model EvidenceVersion {
