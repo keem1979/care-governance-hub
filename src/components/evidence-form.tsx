@@ -16,7 +16,7 @@ export function EvidenceForm({ owners, locations, policies, initial }: { owners:
     event.preventDefault(); setBusy(true); setError("");
     const response = await fetch(initial ? `/api/evidence/${initial.id}` : "/api/evidence", { method: initial ? "PATCH" : "POST", body: new FormData(event.currentTarget) });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) { setError(result.error ?? "Something went wrong."); setBusy(false); return; }
+    if (!response.ok) { setError(result.error ?? "We couldn’t save this evidence. Please check the details and try again."); setBusy(false); return; }
     router.push(`/evidence/${initial?.id ?? result.id}`); router.refresh();
   }
   return <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -34,7 +34,7 @@ export function EvidenceForm({ owners, locations, policies, initial }: { owners:
       <label className="text-sm font-medium">Confidentiality<select className={field} name="confidentiality" defaultValue={initial?.confidentiality ?? "INTERNAL"}>{EVIDENCE_CONFIDENTIALITY.map((value) => <option key={value}>{value.toLowerCase()}</option>)}</select></label>
       {initial && <label className="text-sm font-medium">Record status<select className={field} name="status" defaultValue={initial.status}>{EVIDENCE_STATUSES.map((value) => <option key={value}>{value.toLowerCase()}</option>)}</select></label>}
       <label className="text-sm font-medium">Tags <span className="font-normal text-slate-500">(comma-separated)</span><input className={field} name="tags" defaultValue={initial?.tags} /></label>
-      <label className="text-sm font-medium">Related module<select className={field} name="relatedModule" defaultValue={initial?.relatedModule ?? ""}><option value="">No link</option><option>Policy</option><option disabled>Audit (coming later)</option><option disabled>Action (coming later)</option></select></label>
+      <label className="text-sm font-medium">Related module<select className={field} name="relatedModule" defaultValue={initial?.relatedModule ?? ""}><option value="">Not linked</option><option>Policy</option></select></label>
       <label className="md:col-span-2 text-sm font-medium">Related policy<select className={field} name="relatedRecordId" defaultValue={initial?.relatedRecordId ?? ""}><option value="">None</option>{policies.map((value) => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label>
       <label className="md:col-span-2 text-sm font-medium">Notes<textarea className={`${field} min-h-24`} name="notes" defaultValue={initial?.notes} /></label>
     </div>

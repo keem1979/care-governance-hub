@@ -4,9 +4,13 @@ import { PERMISSIONS } from "@/lib/permissions";
 
 const all = Object.values(PERMISSIONS);
 
-describe("Care Governance Assistant", () => {
+describe("Abi governance assistant", () => {
   it("covers every main navigation module", () => {
     expect(ASSISTANT_TOPICS.map((item) => item.href)).toEqual(expect.arrayContaining(["/dashboard","/policies","/evidence","/audits","/registers","/risks","/actions","/meetings","/calendar","/kpis","/inspection","/templates","/reports","/activity","/settings"]));
+  });
+
+  it("introduces herself as Abi", () => {
+    expect(answerAssistant("Hello", all).answer).toContain("I’m Abi");
   });
 
   it("answers workflow questions with the correct destination", () => {
@@ -34,6 +38,6 @@ describe("Care Governance Assistant", () => {
     const reply = answerAssistant("Take me to Settings", [PERMISSIONS.GOVERNANCE_VIEW]);
     expect(reply.navigate).toBe(false);
     expect(reply.links).toEqual([]);
-    expect(reply.answer).toContain("does not include access");
+    expect(reply.answer).toContain("does not currently have access");
   });
 });

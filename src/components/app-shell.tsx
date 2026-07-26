@@ -101,6 +101,7 @@ export function AppShell({
               width={64}
               height={64}
               priority
+              unoptimized
               className="size-16 shrink-0 rounded-xl bg-white object-contain"
             />
             <span className="min-w-0 leading-tight">

@@ -105,7 +105,7 @@ export function answerAssistant(query: string, permissions: readonly string[], c
   const wantsNavigation = /\b(go to|open|take me|navigate|show me)\b/.test(clean);
   if (!clean || /^(hi|hello|hey|help|what can you do)[.!? ]*$/.test(clean)) {
     return {
-      answer: "I can explain every Care Governance Hub module, show you how to complete common tasks, and take you to pages you are authorised to use. Try asking “How do I add evidence?”, “Open the risk register”, or “Where can I generate a board report?”",
+      answer: "Hi, I’m Abi. I can explain any part of the Hub, talk you through a task or open the right page for you. You could ask, “How do I add evidence?”, “Open the risk register” or “Where can I prepare a board report?”",
       links: accessible(ASSISTANT_TOPICS.map((item) => ({ label: item.name, href: item.href, requiredAny: item.requiredAny })), permissions).slice(0, 6),
       navigate: false,
     };
@@ -115,7 +115,7 @@ export function answerAssistant(query: string, permissions: readonly string[], c
   const topic = /\b(this page|current page|here)\b/.test(clean) && current ? current : bestTopic(clean);
   if (!topic) {
     return {
-      answer: "I can help with how this system works, but I could not connect that question to a Care Governance Hub module. Ask about Dashboard, Policies, Evidence, Audits, Registers, Risks, Actions, Meetings, Calendar, KPIs, Inspection, Templates, Reports, Activity Log or Settings. For regulatory or clinical advice, use your organisation’s approved professional guidance.",
+      answer: "I’m not quite sure which part of the Hub you mean. Tell me whether you’re working with policies, evidence, audits, registers, risks, actions, meetings, the calendar, KPIs, inspection preparation, templates, reports, the activity log or settings. For clinical or regulatory decisions, please follow your organisation’s approved guidance.",
       links: accessible(ASSISTANT_TOPICS.map((item) => ({ label: item.name, href: item.href, requiredAny: item.requiredAny })), permissions).slice(0, 6),
       navigate: false,
     };
@@ -123,7 +123,7 @@ export function answerAssistant(query: string, permissions: readonly string[], c
 
   if (!allowed(topic.requiredAny, permissions)) {
     return {
-      answer: `${topic.name} matches your question, but your current role does not include access to that area. Ask an organisation administrator to review your role or location assignment in Settings.`,
+      answer: `${topic.name} sounds like the right place, but your account does not currently have access to it. Please ask an organisation administrator to check your role or location access in Settings.`,
       links: accessible([{ label: "Open Settings", href: "/settings", requiredAny: [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE] }], permissions),
       navigate: false,
     };
@@ -138,7 +138,7 @@ export function answerAssistant(query: string, permissions: readonly string[], c
   const primary = links[0] ?? { label: `Open ${topic.name}`, href: topic.href };
   return {
     answer: wantsNavigation
-      ? `Taking you to ${primary.label}. ${topic.summary}`
+      ? `Of course — I’ll open ${primary.label} for you. ${topic.summary}`
       : `${topic.summary} ${topic.guidance}`,
     links,
     navigate: wantsNavigation && Boolean(primary.href),

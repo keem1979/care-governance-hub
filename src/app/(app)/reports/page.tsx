@@ -15,13 +15,14 @@ export default async function ReportsPage() {
         </p>
       </header>
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        Reports reflect records currently held in Care Governance Hub. Empty sections mean no matching records were found.
+        Each report uses the records your team has added to the Hub. If a section is empty, there were no matching records for the filters you chose.
       </section>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {Object.entries(REPORT_DEFINITIONS).map(([key, report]) => (
           <Link
             key={key}
             href={`/reports/${key}`}
+            prefetch={false}
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-400"
           >
             <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Report</p>

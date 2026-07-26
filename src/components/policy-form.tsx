@@ -23,7 +23,7 @@ export function PolicyForm({ owners, initial }: { owners: Owner[]; initial?: Ini
       method: initial ? "PATCH" : "POST", body: new FormData(event.currentTarget),
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) { setError(result.error ?? "Something went wrong."); setBusy(false); return; }
+    if (!response.ok) { setError(result.error ?? "We couldn’t save this policy. Please check the details and try again."); setBusy(false); return; }
     router.push(`/policies/${initial?.id ?? result.id}`); router.refresh();
   }
   return (

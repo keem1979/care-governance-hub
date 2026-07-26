@@ -83,13 +83,13 @@ export default async function DashboardPage() {
     },
     {
       label: "Create action",
-      href: "/actions",
+      href: "/actions/new",
       icon: ListPlus,
       visible: canManageActions,
     },
     {
       label: "Schedule meeting",
-      href: "/meetings",
+      href: "/meetings/new",
       icon: CalendarDays,
       visible: canEdit,
     },
@@ -127,13 +127,13 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-2 gap-3">
             <StatusTile
               label="Readiness status"
-              value="Not yet assessed"
-              detail="No official CQC rating"
+              value="Review in progress"
+              detail="For your team’s internal oversight"
             />
             <StatusTile
               label="Overall completion"
-              value="No data"
-              detail="Calculated as modules are added"
+              value="Getting started"
+              detail="Your progress will appear as records are added"
             />
           </div>
         </div>
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
             </h2>
           </div>
           <p className="hidden text-sm text-muted sm:block">
-            Live counts appear as each module is completed.
+            These figures update as your team adds and reviews records.
           </p>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -162,6 +162,7 @@ export default async function DashboardPage() {
               className="group rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
               href={href}
               key={label}
+              prefetch={false}
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-600 group-hover:bg-accent group-hover:text-brand">
@@ -207,6 +208,7 @@ export default async function DashboardPage() {
                 className="group grid gap-2 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
                 href={module.href}
                 key={module.name}
+                prefetch={false}
               >
                 <div>
                   <p className="font-semibold group-hover:text-brand">
@@ -280,13 +282,14 @@ export default async function DashboardPage() {
           ) : (
             <EmptyState
               icon={Activity}
-              title="No activity recorded"
-              detail="Security and governance events will appear here."
+              title="Nothing new yet"
+              detail="Recent changes and sign-ins will appear here."
             />
           )}
           <Link
             className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline"
             href="/activity"
+            prefetch={false}
           >
             View full activity log
             <ArrowRight aria-hidden="true" size={15} />
@@ -298,17 +301,17 @@ export default async function DashboardPage() {
         <DashboardEmptyPanel
           icon={Clock3}
           title="Upcoming deadlines"
-          detail="No deadlines recorded. Due dates will appear when policies, evidence and meetings are added."
+          detail="You’re clear for now. Add review and expiry dates to keep this list useful."
         />
         <DashboardEmptyPanel
           icon={ListPlus}
           title="Overdue actions"
-          detail={counts.overdueActions === 0 ? "No actions are currently overdue." : `${counts.overdueActions} action${counts.overdueActions === 1 ? "" : "s"} require overdue follow-up.`}
+          detail={counts.overdueActions === 0 ? "No overdue actions — everything is on track." : `${counts.overdueActions} action${counts.overdueActions === 1 ? "" : "s"} need overdue follow-up.`}
         />
         <DashboardEmptyPanel
           icon={BarChart3}
           title="Audit completion trend"
-          detail="No data recorded. The trend will use completed audit results."
+          detail="Complete an audit to start seeing progress over time."
         />
       </div>
 
@@ -335,6 +338,7 @@ export default async function DashboardPage() {
               className="group flex items-center justify-between gap-3 rounded-2xl border border-border px-4 py-4 font-semibold transition hover:border-emerald-300 hover:bg-accent"
               href={href}
               key={label}
+              prefetch={false}
             >
               <span className="flex items-center gap-3">
                 <Icon aria-hidden="true" className="text-brand" size={19} />

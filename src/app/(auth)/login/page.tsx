@@ -15,6 +15,7 @@ export default function LoginPage() {
             width={112}
             height={112}
             priority
+            unoptimized
             className="size-28 rounded-2xl bg-white object-contain"
           />
           <span>Care Governance Hub</span>
@@ -45,6 +46,7 @@ export default function LoginPage() {
               width={88}
               height={88}
               priority
+              unoptimized
               className="size-22 rounded-xl border border-border bg-white object-contain"
             />
             <span className="font-semibold">Care Governance Hub</span>
