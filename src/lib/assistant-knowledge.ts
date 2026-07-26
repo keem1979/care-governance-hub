@@ -23,6 +23,11 @@ export type AssistantReply = {
   navigate: boolean;
 };
 
+type ModuleContext = {
+  hsc: string;
+  cqc: string;
+};
+
 const view = [PERMISSIONS.GOVERNANCE_VIEW];
 const edit = [PERMISSIONS.GOVERNANCE_EDIT];
 const reports = [PERMISSIONS.REPORTS_EXPORT];
@@ -100,12 +105,75 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
   ]),
 ];
 
+export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
+  "/dashboard": {
+    hsc: "a governance dashboard gives leaders one place to notice overdue work, emerging risks and gaps before they affect people’s care.",
+    cqc: "it can support the well-led question by showing active oversight, but inspectors will still test the underlying records, decisions, actions and outcomes.",
+  },
+  "/policies": {
+    hsc: "policies turn legislation, recognised guidance and the organisation’s agreed approach into consistent expectations for staff.",
+    cqc: "controlled, current policies can support process evidence across all five key questions, including safeguarding, staffing and good governance. A policy alone is not proof that practice follows it.",
+  },
+  "/evidence": {
+    hsc: "evidence shows what the service actually did, how it checked quality and whether people experienced safe, effective and person-centred care.",
+    cqc: "documents mainly support process and outcome evidence. CQC may also consider people’s experiences, staff and leader feedback, partner feedback and observation, so a document library should never be the only source of assurance.",
+  },
+  "/audits": {
+    hsc: "audits compare day-to-day practice with an agreed standard, identify gaps and provide a basis for improvement.",
+    cqc: "well-designed audits and completed follow-up can support safe, effective and well-led evidence, particularly good governance and learning. An internal audit is provider evidence, not a CQC judgement.",
+  },
+  "/registers": {
+    hsc: "registers create a consistent record of complaints, incidents, safeguarding concerns and other events so patterns, responses and learning are not lost.",
+    cqc: "these records can support the safe, responsive and well-led questions and fundamental standards relating to safeguarding, complaints, good governance and duty of candour.",
+  },
+  "/risks": {
+    hsc: "a risk register helps leaders identify possible harm, record controls, assign ownership and check whether risk is reducing.",
+    cqc: "current risks, effective controls and documented reviews can support evidence about safe systems, learning and good governance. Inspectors may test whether controls work in practice.",
+  },
+  "/actions": {
+    hsc: "an action tracker turns findings and decisions into owned work with deadlines, progress records and evidence of completion.",
+    cqc: "it can show that the service responds to concerns, learns and improves. Closure should be supported by evidence and verification rather than a status change alone.",
+  },
+  "/meetings": {
+    hsc: "governance meetings provide a formal place to review quality, risk, feedback, performance and decisions with clear accountability.",
+    cqc: "agendas, minutes, decisions and followed-through actions can support the well-led question by showing leadership oversight, challenge and learning.",
+  },
+  "/calendar": {
+    hsc: "a compliance calendar reduces the chance of missing policy reviews, training, certificates, audits and other safety-critical deadlines.",
+    cqc: "timely reviews and renewals can support safe, effective and well-led evidence, including staff competence and reliable governance systems.",
+  },
+  "/kpis": {
+    hsc: "KPIs help a service monitor quality, safety, workforce and outcomes over time so leaders can act on deterioration or inequality.",
+    cqc: "trends and outcomes may support the outcomes and processes CQC considers, especially under effective and well-led. Figures need context, analysis and action when performance falls short.",
+  },
+  "/inspection": {
+    hsc: "inspection preparation should be ongoing quality assurance, not a last-minute collection of documents. It helps teams understand strengths, gaps and improvement priorities.",
+    cqc: "the five key questions remain safe, effective, caring, responsive and well-led. CQC is piloting a draft sector-specific adult social care framework in 2026, so this module is an internal evidence-readiness tool and must not be treated as an official rating predictor.",
+  },
+  "/templates": {
+    hsc: "approved templates help staff capture information consistently and reduce omissions in recurring governance work.",
+    cqc: "templates can support reliable processes, but inspectors are likely to look at completed records, staff practice and people’s outcomes rather than an unused blank form.",
+  },
+  "/reports": {
+    hsc: "reports bring records together so leaders can identify themes, provide assurance and make decisions using current information.",
+    cqc: "clear reports may support provider information, process and outcome evidence. Hub reports are internal governance documents, not official CQC inspection reports.",
+  },
+  "/activity": {
+    hsc: "an activity log provides accountability by showing who changed important records and when.",
+    cqc: "a reliable audit trail can support good governance, transparency and record integrity, especially when the organisation can explain how changes are reviewed.",
+  },
+  "/settings": {
+    hsc: "settings define organisational accountability, location scope and least-privilege access to sensitive governance information.",
+    cqc: "clear responsibilities, controlled access and traceable permission changes can support well-led and good-governance evidence, including confidentiality and information security.",
+  },
+};
+
 export function answerAssistant(query: string, permissions: readonly string[], currentPath = ""): AssistantReply {
   const clean = normalise(query);
   const wantsNavigation = /\b(go to|open|take me|navigate|show me)\b/.test(clean);
   if (!clean || /^(hi|hello|hey|help|what can you do)[.!? ]*$/.test(clean)) {
     return {
-      answer: "Hi, I’m Abi. I can explain any part of the Hub, talk you through a task or open the right page for you. You could ask, “How do I add evidence?”, “Open the risk register” or “Where can I prepare a board report?”",
+      answer: "Hi, I’m Abi. I can explain every part of the Hub, why it matters in health and social care, how it may support CQC inspection evidence, or open the right page for you. You could ask, “Why does the risk register matter for CQC?”, “How do I add evidence?” or “Open Reports.”",
       links: accessible(ASSISTANT_TOPICS.map((item) => ({ label: item.name, href: item.href, requiredAny: item.requiredAny })), permissions).slice(0, 6),
       navigate: false,
     };
@@ -113,6 +181,17 @@ export function answerAssistant(query: string, permissions: readonly string[], c
 
   const current = ASSISTANT_TOPICS.find((item) => currentPath === item.href || currentPath.startsWith(`${item.href}/`));
   const topic = /\b(this page|current page|here)\b/.test(clean) && current ? current : bestTopic(clean);
+  if (isGeneralCqcQuestion(clean, topic)) {
+    return {
+      answer: cqcOverview(clean),
+      links: accessible([
+        { label: "Open Inspection Centre", href: "/inspection", requiredAny: view },
+        { label: "Open Evidence Library", href: "/evidence", requiredAny: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
+        { label: "Open Reports", href: "/reports", requiredAny: reports },
+      ], permissions),
+      navigate: false,
+    };
+  }
   if (!topic) {
     return {
       answer: "I’m not quite sure which part of the Hub you mean. Tell me whether you’re working with policies, evidence, audits, registers, risks, actions, meetings, the calendar, KPIs, inspection preparation, templates, reports, the activity log or settings. For clinical or regulatory decisions, please follow your organisation’s approved guidance.",
@@ -136,13 +215,38 @@ export function answerAssistant(query: string, permissions: readonly string[], c
   const links = accessible(rankedLinks.length ? rankedLinks : [{ label: `Open ${topic.name}`, href: topic.href, requiredAny: topic.requiredAny }], permissions).slice(0, 4);
   if (!links.some((item) => item.href === topic.href) && allowed(topic.requiredAny, permissions)) links.push({ label: `Open ${topic.name}`, href: topic.href });
   const primary = links[0] ?? { label: `Open ${topic.name}`, href: topic.href };
+  const moduleContext = MODULE_CONTEXTS[topic.href];
   return {
     answer: wantsNavigation
       ? `Of course — I’ll open ${primary.label} for you. ${topic.summary}`
-      : `${topic.summary} ${topic.guidance}`,
+      : `${topic.summary} ${topic.guidance}${moduleContext ? ` In health and social care, ${moduleContext.hsc} For CQC inspection and assessment, ${moduleContext.cqc}` : ""}`,
     links,
     navigate: wantsNavigation && Boolean(primary.href),
   };
+}
+
+function isGeneralCqcQuestion(
+  query: string,
+  topic: AssistantTopic | undefined,
+): boolean {
+  if (topic && topic.href !== "/inspection") return false;
+  return (
+    /\b(evidence categories|what is cqc|cqc inspection|cqc assessment|inspection framework|fundamental standards)\b/.test(
+      query,
+    ) ||
+    /\b(five|5)\b.*\bkey questions\b/.test(query) ||
+    (/\bcqc\b/.test(query) && !topic)
+  );
+}
+
+function cqcOverview(query: string): string {
+  if (/\b(evidence categories|types of evidence|what evidence)\b/.test(query)) {
+    return "CQC currently groups assessment evidence into six categories: people’s experience of health and care services; feedback from staff and leaders; feedback from partners; observation; processes; and outcomes. The Hub mainly helps organise process and outcome records, but good preparation should also consider what people, staff and partners say and what inspectors may observe. CQC is piloting a draft sector-specific adult social care framework in 2026, so always check current official guidance.";
+  }
+  if (/\b(fundamental standards|minimum standards)\b/.test(query)) {
+    return "The fundamental standards are the minimum standards below which care must never fall. They cover areas such as person-centred care, dignity, consent, safety, safeguarding, complaints, good governance, staffing, fit and proper staff and duty of candour. The Hub can organise supporting governance records, but it cannot determine legal compliance.";
+  }
+  return "CQC regulates health and adult social care services in England. Its five key questions remain: is the service safe, effective, caring, responsive to people’s needs and well-led? CQC considers evidence about people’s experiences, staff and leaders, partners, observation, processes and outcomes. In 2026 CQC is piloting a draft sector-specific adult social care framework, so Abi explains readiness using the five questions while reminding users to confirm the latest official CQC guidance. The Hub supports internal assurance and does not predict or award a CQC rating.";
 }
 
 function topic(name: string, href: string, keywords: string[], summary: string, guidance: string, requiredAny: string[] | undefined, links: AssistantLink[]): AssistantTopic {
