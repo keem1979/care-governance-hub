@@ -28,23 +28,24 @@ import {
 import { useState } from "react";
 import { GovernanceAssistant } from "@/components/governance-assistant";
 import type { AuthorisedContext } from "@/lib/auth/dal";
+import { PERMISSIONS } from "@/lib/permissions";
 
 const navigation = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/policies", label: "Policies", icon: BookOpenCheck },
-  { href: "/evidence", label: "Evidence Library", icon: FolderOpen },
-  { href: "/audits", label: "Audit Centre", icon: ClipboardCheck },
-  { href: "/registers", label: "Registers", icon: NotebookTabs },
-  { href: "/risks", label: "Risk Register", icon: ShieldEllipsis },
-  { href: "/actions", label: "Action Tracker", icon: ListChecks },
-  { href: "/meetings", label: "Governance Meetings", icon: UsersRound },
-  { href: "/calendar", label: "Compliance Calendar", icon: CalendarDays },
-  { href: "/kpis", label: "KPI Dashboard", icon: ChartNoAxesCombined },
-  { href: "/inspection", label: "Inspection Centre", icon: FileCheck2 },
-  { href: "/templates", label: "Templates", icon: FileStack },
-  { href: "/reports", label: "Reports", icon: ScrollText },
-  { href: "/activity", label: "Activity Log", icon: Activity },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+  { href: "/policies", label: "Policies", icon: BookOpenCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/evidence", label: "Evidence Library", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
+  { href: "/audits", label: "Audit Centre", icon: ClipboardCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE] },
+  { href: "/registers", label: "Registers", icon: NotebookTabs, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/risks", label: "Risk Register", icon: ShieldEllipsis, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/actions", label: "Action Tracker", icon: ListChecks, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+  { href: "/meetings", label: "Governance Meetings", icon: UsersRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/calendar", label: "Compliance Calendar", icon: CalendarDays, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/kpis", label: "KPI Dashboard", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/inspection", label: "Inspection Centre", icon: FileCheck2, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/templates", label: "Templates", icon: FileStack, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/reports", label: "Reports", icon: ScrollText, anyOf: [PERMISSIONS.REPORTS_EXPORT] },
+  { href: "/activity", label: "Activity Log", icon: Activity, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+  { href: "/settings", label: "Settings", icon: Settings, anyOf: [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE] },
 ] as const;
 
 export function AppShell({
@@ -121,7 +122,13 @@ export function AppShell({
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
           <ul className="space-y-1">
-            {navigation.map(({ href, label, icon: Icon }) => {
+            {navigation
+              .filter(({ anyOf }) =>
+                anyOf.some((permission) =>
+                  context.permissions.includes(permission),
+                ),
+              )
+              .map(({ href, label, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
               return (
                 <li key={href}>
@@ -143,13 +150,14 @@ export function AppShell({
                   </Link>
                 </li>
               );
-            })}
+              })}
           </ul>
         </nav>
         <div className="border-t border-white/10 p-4">
           <p className="truncate text-sm font-semibold">{context.user.name}</p>
           <p className="mt-0.5 truncate text-xs text-emerald-100/65">
             {context.role.name}
+            {context.accessMode === "READ_ONLY" ? " · Read only" : ""}
           </p>
           <button
             className="mt-3 text-xs font-semibold text-emerald-100 underline-offset-4 hover:underline disabled:opacity-50"

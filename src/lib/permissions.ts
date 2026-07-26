@@ -13,6 +13,104 @@ export const PERMISSIONS = {
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
+export const PERMISSION_GROUPS: Array<{
+  name: string;
+  description: string;
+  items: Array<{ key: PermissionKey; label: string; detail: string }>;
+}> = [
+  {
+    name: "Page access",
+    description: "Controls whether the user can open governance pages and reports.",
+    items: [
+      {
+        key: PERMISSIONS.GOVERNANCE_VIEW,
+        label: "Governance pages",
+        detail: "Open the dashboard and governance modules for assigned locations.",
+      },
+      {
+        key: PERMISSIONS.REPORTS_EXPORT,
+        label: "Reports and exports",
+        detail: "Open reports and download authorised records.",
+      },
+    ],
+  },
+  {
+    name: "Create and update records",
+    description: "Controls the work this user can complete after opening a page.",
+    items: [
+      {
+        key: PERMISSIONS.GOVERNANCE_EDIT,
+        label: "Governance records",
+        detail: "Add and update policies, registers, risks, meetings, calendar entries, KPIs and templates.",
+      },
+      {
+        key: PERMISSIONS.AUDITS_COMPLETE,
+        label: "Audits",
+        detail: "Start audits, record responses and complete findings.",
+      },
+      {
+        key: PERMISSIONS.ACTIONS_MANAGE,
+        label: "Actions",
+        detail: "Create, assign, update and close actions.",
+      },
+      {
+        key: PERMISSIONS.EVIDENCE_UPLOAD,
+        label: "Evidence",
+        detail: "Upload evidence and add controlled versions.",
+      },
+      {
+        key: PERMISSIONS.ASSIGNED_TASKS_EDIT,
+        label: "Assigned work",
+        detail: "Update work specifically assigned to this user.",
+      },
+    ],
+  },
+  {
+    name: "Administration",
+    description: "Keep these permissions limited to trusted administrators.",
+    items: [
+      {
+        key: PERMISSIONS.ORGANISATION_MANAGE,
+        label: "Organisation settings",
+        detail: "Change organisation details and licence settings.",
+      },
+      {
+        key: PERMISSIONS.MEMBERS_MANAGE,
+        label: "Users and permissions",
+        detail: "Add users, remove access and assign roles and permissions.",
+      },
+      {
+        key: PERMISSIONS.LOCATIONS_MANAGE,
+        label: "Service locations",
+        detail: "Add, update, archive and restore locations.",
+      },
+    ],
+  },
+];
+
+const READ_ONLY_PERMISSIONS = new Set<PermissionKey>([
+  PERMISSIONS.GOVERNANCE_VIEW,
+  PERMISSIONS.REPORTS_EXPORT,
+]);
+
+export function applyAccessMode(
+  permissions: readonly string[],
+  accessMode: "STANDARD" | "READ_ONLY",
+): string[] {
+  const unique = [...new Set(permissions)];
+  if (accessMode === "STANDARD") return unique;
+  return unique.filter((key) => READ_ONLY_PERMISSIONS.has(key as PermissionKey));
+}
+
+export function permissionLabel(key: string): string {
+  return (
+    PERMISSION_GROUPS.flatMap(({ items }) => items).find(
+      (item) => item.key === key,
+    )?.label ??
+    key.replaceAll(":", " ").replaceAll("-", " ")
+  );
+}
+
 export const ROLE_KEYS = {
   OWNER: "organisation-owner",
   NOMINATED_INDIVIDUAL: "nominated-individual",

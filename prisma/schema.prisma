@@ -15,6 +15,11 @@ enum MembershipStatus {
   DEACTIVATED
 }
 
+enum MembershipAccessMode {
+  STANDARD
+  READ_ONLY
+}
+
 enum ActivityAction {
   CREATE
   UPDATE
@@ -218,6 +223,7 @@ model Organisation {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
+  licenceSeats Int       @default(10)
 
   locations              ServiceLocation[]
   memberships            OrganisationMembership[]
@@ -1094,7 +1100,8 @@ model Permission {
   key         String @unique
   description String
 
-  roles RolePermission[]
+  roles       RolePermission[]
+  memberships MembershipPermission[]
 }
 
 model RolePermission {
@@ -1114,6 +1121,11 @@ model OrganisationMembership {
   roleId         String           @db.Uuid
   status         MembershipStatus @default(INVITED)
   allLocations   Boolean          @default(false)
+  accessMode     MembershipAccessMode @default(STANDARD)
+  jobTitle       String?
+  department     String?
+  reportsToId    String?          @db.Uuid
+  permissionOverridesEnabled Boolean @default(false)
   invitedAt      DateTime         @default(now())
   joinedAt       DateTime?
   deactivatedAt  DateTime?
@@ -1124,9 +1136,24 @@ model OrganisationMembership {
   user         User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
   role         Role                 @relation(fields: [roleId], references: [id], onDelete: Restrict)
   locations    MembershipLocation[]
+  reportsTo    OrganisationMembership?  @relation("MembershipReportingLine", fields: [reportsToId], references: [id], onDelete: SetNull)
+  directReports OrganisationMembership[] @relation("MembershipReportingLine")
+  permissions  MembershipPermission[]
 
   @@unique([organisationId, userId])
   @@index([userId, status])
+  @@index([organisationId, reportsToId])
+}
+
+model MembershipPermission {
+  membershipId String @db.Uuid
+  permissionId String @db.Uuid
+
+  membership OrganisationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  permission Permission               @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, permissionId])
+  @@index([permissionId])
 }
 
 model MembershipLocation {

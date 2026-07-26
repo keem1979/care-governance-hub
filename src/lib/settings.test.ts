@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { normaliseEmail, normaliseLocationCode, validateMemberAccess, validateTemporaryPassword } from "@/lib/settings";
+import {
+  normaliseEmail,
+  normaliseLocationCode,
+  validateLicenceSeats,
+  validateMemberAccess,
+  validateTemporaryPassword,
+} from "@/lib/settings";
 
 describe("settings safeguards", () => {
   it("normalises email and location codes", () => {
@@ -20,7 +26,26 @@ describe("settings safeguards", () => {
     expect(() => validateMemberAccess({ isSelf: false, currentRoleKey: "organisation-owner", nextRoleKey: "read-only-viewer", nextStatus: "ACTIVE", activeOwnerCount: 1 })).toThrow("at least one active owner");
   });
 
+  it("prevents the last active owner becoming read only", () => {
+    expect(() =>
+      validateMemberAccess({
+        isSelf: false,
+        currentRoleKey: "organisation-owner",
+        nextRoleKey: "organisation-owner",
+        nextStatus: "ACTIVE",
+        currentAccessMode: "STANDARD",
+        nextAccessMode: "READ_ONLY",
+        activeOwnerCount: 1,
+      }),
+    ).toThrow("at least one active owner");
+  });
+
   it("prevents self-removal from assigned locations", () => {
     expect(() => validateMemberAccess({ isSelf: true, currentRoleKey: "registered-manager", nextRoleKey: "registered-manager", nextStatus: "ACTIVE", activeOwnerCount: 1, currentAllLocations: false, nextAllLocations: false, currentLocationIds: ["one"], nextLocationIds: [] })).toThrow("location access");
+  });
+
+  it("does not allow fewer licences than active users", () => {
+    expect(() => validateLicenceSeats(6, 7)).toThrow("7 active users");
+    expect(() => validateLicenceSeats(7, 7)).not.toThrow();
   });
 });

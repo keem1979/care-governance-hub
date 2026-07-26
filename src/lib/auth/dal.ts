@@ -5,7 +5,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createDb } from "@/lib/db";
 import { getServerEnv } from "@/lib/env";
-import { hasPermission, type PermissionKey } from "@/lib/permissions";
+import {
+  applyAccessMode,
+  hasPermission,
+  type PermissionKey,
+} from "@/lib/permissions";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
 
 export type AuthorisedContext = {
@@ -14,6 +18,7 @@ export type AuthorisedContext = {
   organisation: { id: string; name: string; slug: string; isDemo: boolean };
   membershipId: string;
   role: { key: string; name: string };
+  accessMode: "STANDARD" | "READ_ONLY";
   permissions: string[];
   allLocations: boolean;
   locations: { id: string; name: string; code: string }[];
@@ -49,6 +54,8 @@ export const getAuthorisedContext = cache(
               select: {
                 id: true,
                 allLocations: true,
+                accessMode: true,
+                permissionOverridesEnabled: true,
                 organisation: {
                   select: { id: true, name: true, slug: true, isDemo: true },
                 },
@@ -67,6 +74,9 @@ export const getAuthorisedContext = cache(
                       select: { id: true, name: true, code: true },
                     },
                   },
+                },
+                permissions: {
+                  select: { permission: { select: { key: true } } },
                 },
               },
             },
@@ -100,8 +110,13 @@ export const getAuthorisedContext = cache(
         organisation: membership.organisation,
         membershipId: membership.id,
         role: { key: membership.role.key, name: membership.role.name },
-        permissions: membership.role.permissions.map(
-          ({ permission }) => permission.key,
+        accessMode: membership.accessMode,
+        permissions: applyAccessMode(
+          (membership.permissionOverridesEnabled
+            ? membership.permissions
+            : membership.role.permissions
+          ).map(({ permission }) => permission.key),
+          membership.accessMode,
         ),
         allLocations: membership.allLocations,
         locations,
