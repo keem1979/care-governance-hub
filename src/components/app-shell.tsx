@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -19,7 +20,6 @@ import {
   NotebookTabs,
   ScrollText,
   Settings,
-  ShieldCheck,
   ShieldEllipsis,
   SignpostBig,
   UsersRound,
@@ -93,12 +93,22 @@ export function AppShell({
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        <div className="flex h-20 items-center justify-between border-b border-white/10 px-5">
-          <Link href="/dashboard" className="flex items-center gap-3 font-semibold">
-            <span className="grid size-10 place-items-center rounded-xl bg-white/10">
-              <ShieldCheck aria-hidden="true" size={22} />
+        <div className="flex min-h-24 items-center justify-between border-b border-white/10 px-4 py-3">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-3 font-semibold">
+            <Image
+              src="/atom-logo.png"
+              alt="ATOM"
+              width={64}
+              height={64}
+              priority
+              className="size-16 shrink-0 rounded-xl bg-white object-contain"
+            />
+            <span className="min-w-0 leading-tight">
+              <span className="block text-base">Care Governance</span>
+              <span className="mt-1 block text-xs font-medium text-emerald-100/70">
+                Hub
+              </span>
             </span>
-            <span>Care Governance</span>
           </Link>
           <button
             className="rounded-lg p-2 hover:bg-white/10 lg:hidden"

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ShieldCheck } from "lucide-react";
+import Image from "next/image";
 import { LoginForm } from "@/components/login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -8,11 +8,16 @@ export default function LoginPage() {
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
       <section className="hidden bg-brand-dark p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="flex items-center gap-3 text-lg font-semibold">
-          <span className="grid size-11 place-items-center rounded-xl bg-white/10">
-            <ShieldCheck aria-hidden="true" />
-          </span>
-          Care Governance Hub
+        <div className="flex items-center gap-4 text-lg font-semibold">
+          <Image
+            src="/atom-logo.png"
+            alt="ATOM"
+            width={112}
+            height={112}
+            priority
+            className="size-28 rounded-2xl bg-white object-contain"
+          />
+          <span>Care Governance Hub</span>
         </div>
         <div className="max-w-xl">
           <p className="mb-4 text-sm font-semibold tracking-[0.16em] text-emerald-200 uppercase">
@@ -34,9 +39,14 @@ export default function LoginPage() {
       <section className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <span className="grid size-10 place-items-center rounded-xl bg-accent text-brand">
-              <ShieldCheck aria-hidden="true" size={22} />
-            </span>
+            <Image
+              src="/atom-logo.png"
+              alt="ATOM"
+              width={88}
+              height={88}
+              priority
+              className="size-22 rounded-xl border border-border bg-white object-contain"
+            />
             <span className="font-semibold">Care Governance Hub</span>
           </div>
           <p className="text-sm font-semibold tracking-wide text-brand uppercase">

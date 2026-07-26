@@ -16,6 +16,10 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description:
       "A secure governance and compliance evidence hub for UK adult social care providers.",
+    icons: {
+      icon: "/atom-logo.png",
+      apple: "/atom-logo.png",
+    },
     openGraph: {
       title: "Care Governance Hub",
       description: "Clear evidence. Calm governance.",
