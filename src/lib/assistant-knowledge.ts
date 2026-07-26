@@ -214,15 +214,38 @@ export function answerAssistant(query: string, permissions: readonly string[], c
     .map(({ item }) => item);
   const links = accessible(rankedLinks.length ? rankedLinks : [{ label: `Open ${topic.name}`, href: topic.href, requiredAny: topic.requiredAny }], permissions).slice(0, 4);
   if (!links.some((item) => item.href === topic.href) && allowed(topic.requiredAny, permissions)) links.push({ label: `Open ${topic.name}`, href: topic.href });
-  const primary = links[0] ?? { label: `Open ${topic.name}`, href: topic.href };
   const moduleContext = MODULE_CONTEXTS[topic.href];
   return {
     answer: wantsNavigation
-      ? `Of course — I’ll open ${primary.label} for you. ${topic.summary}`
-      : `${topic.summary} ${topic.guidance}${moduleContext ? ` In health and social care, ${moduleContext.hsc} For CQC inspection and assessment, ${moduleContext.cqc}` : ""}`,
+      ? `${topic.name} is the appropriate place for this. ${topic.summary}\n\nI have included the relevant link below so you can open it when you are ready. I will not change pages without your action.`
+      : professionalModuleAnswer(topic, moduleContext),
     links,
-    navigate: wantsNavigation && Boolean(primary.href),
+    navigate: false,
   };
+}
+
+function professionalModuleAnswer(
+  topic: AssistantTopic,
+  moduleContext: ModuleContext | undefined,
+): string {
+  const sections = [
+    topic.summary,
+    `How it helps: ${topic.guidance}`,
+  ];
+  if (moduleContext) {
+    sections.push(
+      `Why it matters in health and social care: ${capitalise(moduleContext.hsc)}`,
+      `CQC relevance: ${capitalise(moduleContext.cqc)}`,
+    );
+  }
+  sections.push(
+    `Suggested next step: Review the relevant page using the link below. If you tell me the outcome you need, I can guide you through the steps without making changes on your behalf.`,
+  );
+  return sections.join("\n\n");
+}
+
+function capitalise(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function isGeneralCqcQuestion(

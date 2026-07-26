@@ -30,8 +30,16 @@ describe("Abi governance assistant", () => {
     expect(reply.links[0]).toEqual({ label: "Add evidence", href: "/evidence/new" });
   });
 
-  it("navigates only for explicit navigation requests", () => {
-    expect(answerAssistant("Open the risk register", all).navigate).toBe(true);
+  it("never changes pages automatically", () => {
+    const navigationRequest = answerAssistant("Open the risk register", all);
+    expect(navigationRequest.navigate).toBe(false);
+    expect(navigationRequest.links[0]).toEqual({
+      label: "Open Risk Register",
+      href: "/risks",
+    });
+    expect(navigationRequest.answer).toContain(
+      "I will not change pages without your action",
+    );
     expect(answerAssistant("How does the risk register work?", all).navigate).toBe(false);
   });
 
@@ -42,8 +50,8 @@ describe("Abi governance assistant", () => {
       "/kpis/entry",
     ).answer;
     expect(answer).toContain("KPI Dashboard");
-    expect(answer).toContain("In health and social care");
-    expect(answer).toContain("For CQC inspection and assessment");
+    expect(answer).toContain("Why it matters in health and social care:");
+    expect(answer).toContain("CQC relevance:");
   });
 
   it("explains a module in health and social care and CQC terms", () => {
@@ -82,8 +90,20 @@ describe("Abi governance assistant", () => {
 
   it("routes named report requests to the matching report", () => {
     const reply = answerAssistant("Take me to the complaints report", all);
-    expect(reply.navigate).toBe(true);
+    expect(reply.navigate).toBe(false);
     expect(reply.links[0]).toEqual({ label: "Complaints report", href: "/reports/complaints" });
+  });
+
+  it("gives a professional answer with help and a suggested next step", () => {
+    const answer = answerAssistant(
+      "Explain the policy module",
+      all,
+    ).answer;
+    expect(answer).toContain("How it helps:");
+    expect(answer).toContain("Why it matters in health and social care:");
+    expect(answer).toContain("CQC relevance:");
+    expect(answer).toContain("Suggested next step:");
+    expect(answer).toContain("without making changes on your behalf");
   });
 
   it("does not link users to unauthorised modules", () => {
