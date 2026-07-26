@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UkDashboardClock } from "@/components/uk-dashboard-clock";
 import {
   Activity,
   ArrowRight,
@@ -20,7 +21,6 @@ import { getDashboardCounts, getRecentDashboardActivity } from "@/lib/dashboard-
 import {
   dashboardModules,
   dashboardSummaries,
-  reportingMonth,
 } from "@/lib/dashboard";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
@@ -100,15 +100,10 @@ export default async function DashboardPage() {
       <section className="overflow-hidden rounded-3xl bg-brand-dark text-white shadow-sm">
         <div className="grid gap-8 px-5 py-6 sm:px-7 lg:grid-cols-[1fr_auto] lg:items-end lg:px-8 lg:py-8">
           <div>
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tracking-[0.16em] text-emerald-100/75 uppercase">
-              <span>Governance overview</span>
-              <span aria-hidden="true">•</span>
-              <span>{reportingMonth(new Date())}</span>
-            </div>
-            <h1 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">
-              Good {new Date().getHours() < 12 ? "morning" : "afternoon"},{" "}
-              {context.user.name.split(" ")[0]}
-            </h1>
+            <UkDashboardClock
+              firstName={context.user.name.split(" ")[0]}
+              initialTime={new Date().toISOString()}
+            />
             <p className="mt-3 max-w-2xl text-sm leading-6 text-emerald-50/75 sm:text-base">
               A single view of evidence, risk and actions for{" "}
               {context.organisation.name}.
