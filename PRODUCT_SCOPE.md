@@ -1532,4 +1532,45 @@ Create the project foundation, authentication, tenant model, roles, permissions,
 Before writing code, present a concise implementation plan based on the actual repository.
 
 After implementation, run all available checks and provide the milestone completion report.
+# QCGMS workforce and care-quality expansion
+
+The Hub extends the original governance MVP with connected workforce,
+care-quality, continuity and assurance controls.
+
+## Workforce compliance and competency
+
+- Staff compliance records scoped by organisation and service location.
+- DBS, right-to-work, visa and professional-registration tracking.
+- Training, information-governance training and competency assessments.
+- Supervision, appraisal and spot-check schedules.
+- Expiry and next-due alerts copied into the Compliance Calendar.
+- Restricted workforce-view and workforce-manage permissions.
+- Dashboard and Abi reminders for overdue and upcoming workforce requirements.
+
+## Care quality and operational assurance
+
+- Care-plan review records.
+- Person-level risk-assessment reviews.
+- Medication and MAR audits.
+- Delegated healthcare task assurance.
+- Service-user outcomes.
+- Satisfaction surveys and “you said, we did” responses.
+- Business-continuity exercises and live disruptions.
+- Commissioner contract reporting and required actions.
+
+These controls connect to the existing evidence, audit, action, risk, KPI,
+governance-meeting, reporting and inspection-readiness modules rather than
+duplicating those records.
+
+## Security and integration readiness
+
+The Hub distinguishes application controls that are active from controls that
+must be configured or evidenced by the organisation or hosting environment.
+The integration catalogue covers Nourish, CareLens, CareNexus, Microsoft 365,
+HR/payroll, training and finance systems. Catalogue entries do not represent
+active supplier integrations until API access, field mapping, information
+governance and supplier approval are complete.
+
+The system supports compliance governance but does not itself certify UK GDPR,
+DSPT, Cyber Essentials or CQC compliance.
 

@@ -19,7 +19,26 @@ export type PendingActionNotification = {
   href: string;
 };
 
+export type WorkforceNotification = {
+  id: string;
+  staffId: string;
+  employeeReference: string;
+  staffName: string;
+  title: string;
+  type: string;
+  dueDate: string;
+  isOverdue: boolean;
+  href: string;
+};
+
 export const ATOM_UPDATES = [
+  {
+    id: "workforce-quality",
+    title: "Workforce competency and care-quality controls",
+    summary:
+      "Track staff checks, training and competencies alongside care reviews, MAR audits, outcomes and continuity.",
+    href: "/workforce",
+  },
   {
     id: "abi-guidance",
     title: "Abi now explains HSC and CQC relevance",
@@ -64,4 +83,3 @@ export function orderPendingActions(
     );
   });
 }
-

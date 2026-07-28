@@ -59,6 +59,13 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Create an action", "/actions/new", ["add", "create", "new", "assign"], [PERMISSIONS.ACTIONS_MANAGE]),
     link("Open action report", "/actions/report", ["report", "print", "pdf"], reports),
   ]),
+  topic("Workforce Compliance", "/workforce", ["workforce", "staff compliance", "dbs", "right to work", "visa", "training", "competency", "supervision", "appraisal", "spot check", "registration"], "Workforce Compliance keeps a controlled matrix of safer recruitment checks, training, competencies, supervision, appraisals and professional requirements.", "Add a staff compliance record, record each check or assessment, set expiry or next-due dates and use the linked calendar deadlines to follow up.", [PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE], [
+    link("Open Workforce Compliance", "/workforce", ["view", "matrix", "tracker"], [PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE]),
+    link("Add a staff record", "/workforce/new", ["add", "create", "new"], [PERMISSIONS.WORKFORCE_MANAGE]),
+  ]),
+  topic("Care Quality", "/quality", ["care quality", "care plan", "mar audit", "medication audit", "delegated healthcare", "service user outcome", "satisfaction survey", "business continuity", "commissioner contract"], "Care Quality brings together operational assurance for care reviews, medication, delegated healthcare, outcomes, feedback, continuity and commissioner obligations.", "Choose the relevant area, record the review or event, assign ownership, link evidence and create actions where improvement is required.", view, [
+    link("Open Care Quality", "/quality", ["view", "open"], view),
+  ]),
   topic("Governance Meetings", "/meetings", ["meeting", "meetings", "agenda", "minutes", "decision", "attendee"], "Governance Meetings records structured agendas, attendance, discussion, decisions, minutes and linked actions.", "Create a meeting, add agenda items and attendees, record minutes and decisions, extract actions, approve the record, then print the agenda or minutes.", view, [
     link("Open Governance Meetings", "/meetings", ["view", "list"], view),
     link("Schedule a meeting", "/meetings/new", ["add", "create", "new", "schedule"], edit),
@@ -100,6 +107,9 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
   topic("Activity Log", "/activity", ["activity", "activity log", "audit trail", "history", "who changed", "download event"], "Activity Log is the read-only audit trail for important system events.", "Filter by user, action, record type, location or date, inspect redacted before-and-after values and export authorised activity to CSV.", view, [
     link("Open Activity Log", "/activity", ["view", "search", "history", "export"], view),
   ]),
+  topic("Security & Integration Readiness", "/assurance", ["security", "integration", "nourish", "carelens", "carenexus", "microsoft 365", "payroll", "training platform", "dspt", "cyber essentials", "mfa", "backup"], "Security & Integration Readiness separates controls already enforced by the Hub from cloud, device and organisational controls that still require configuration or evidence.", "Use it to review security-control ownership and plan approved data connections without claiming that a supplier integration or external certification is already active.", [PERMISSIONS.ORGANISATION_MANAGE], [
+    link("Open Security & Integration Readiness", "/assurance", ["view", "open", "review"], [PERMISSIONS.ORGANISATION_MANAGE]),
+  ]),
   topic("Settings", "/settings", ["settings", "organisation", "location", "locations", "user", "users", "role", "roles", "permission", "access"], "Settings manages organisation details, service locations, users, roles and location access.", "Authorised administrators can add or archive locations, add users, change roles or account status and review central role permissions. Safeguards prevent self-lockout and removal of the last owner.", [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE], [
     link("Open Settings", "/settings", ["view", "manage", "open"], [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE]),
   ]),
@@ -134,6 +144,14 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
     hsc: "an action tracker turns findings and decisions into owned work with deadlines, progress records and evidence of completion.",
     cqc: "it can show that the service responds to concerns, learns and improves. Closure should be supported by evidence and verification rather than a status change alone.",
   },
+  "/workforce": {
+    hsc: "safer recruitment, current training, observed competence, supervision and appraisal help services ensure that staff are suitable, supported and able to deliver safe care.",
+    cqc: "current checks and evidence of competence may support safe, effective and well-led evidence, including staffing and fit-and-proper-person requirements. A completed record is not a substitute for observing practice and responding to concerns.",
+  },
+  "/quality": {
+    hsc: "care-plan reviews, medication assurance, delegated healthcare oversight, outcomes and feedback help leaders see whether care remains safe, person-centred and effective.",
+    cqc: "these records may support safe, effective, caring, responsive and well-led evidence when they demonstrate people’s involvement, reliable practice, learning and measurable improvement.",
+  },
   "/meetings": {
     hsc: "governance meetings provide a formal place to review quality, risk, feedback, performance and decisions with clear accountability.",
     cqc: "agendas, minutes, decisions and followed-through actions can support the well-led question by showing leadership oversight, challenge and learning.",
@@ -161,6 +179,10 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/activity": {
     hsc: "an activity log provides accountability by showing who changed important records and when.",
     cqc: "a reliable audit trail can support good governance, transparency and record integrity, especially when the organisation can explain how changes are reviewed.",
+  },
+  "/assurance": {
+    hsc: "secure, proportionate information handling and reliable system connections protect people, staff and service continuity.",
+    cqc: "access controls, audit trails, continuity arrangements and information-governance assurance may support well-led and safe evidence, but external certifications and hosting controls must be verified separately.",
   },
   "/settings": {
     hsc: "settings define organisational accountability, location scope and least-privilege access to sensitive governance information.",

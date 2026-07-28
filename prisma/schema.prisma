@@ -215,14 +215,43 @@ enum TemplateStatus {
   ARCHIVED
 }
 
+enum StaffEmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  LEFT
+}
+
+enum StaffComplianceType {
+  DBS
+  RIGHT_TO_WORK
+  VISA
+  PROFESSIONAL_REGISTRATION
+  TRAINING
+  COMPETENCY
+  SUPERVISION
+  APPRAISAL
+  SPOT_CHECK
+  INFORMATION_GOVERNANCE
+  OTHER
+}
+
+enum StaffComplianceOutcome {
+  VALID
+  PENDING
+  COMPETENT
+  DEVELOPMENT_REQUIRED
+  NOT_APPLICABLE
+}
+
 model Organisation {
-  id         String    @id @default(uuid()) @db.Uuid
-  name       String
-  slug       String    @unique
-  isDemo     Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  archivedAt DateTime?
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  slug         String    @unique
+  isDemo       Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
   licenceSeats Int       @default(10)
 
   locations              ServiceLocation[]
@@ -243,6 +272,8 @@ model Organisation {
   kpiEntries             KpiEntry[]
   complianceRequirements ComplianceRequirement[]
   templates              Template[]
+  staffMembers           StaffMember[]
+  staffComplianceRecords StaffComplianceRecord[]
 }
 
 model ServiceLocation {
@@ -270,6 +301,7 @@ model ServiceLocation {
   calendarItems          CalendarItem[]
   kpiEntries             KpiEntry[]
   complianceRequirements ComplianceRequirement[]
+  staffMembers           StaffMember[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -285,40 +317,41 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  memberships            OrganisationMembership[]
-  sessions               Session[]
-  activities             ActivityLog[]
-  policiesOwned          Policy[]                 @relation("PolicyOwner")
-  policiesCreated        Policy[]                 @relation("PolicyCreator")
-  policiesApproved       Policy[]                 @relation("PolicyApprover")
-  policyVersions         PolicyVersion[]
-  evidenceOwned          Evidence[]               @relation("EvidenceOwner")
-  evidenceUploaded       Evidence[]               @relation("EvidenceUploader")
-  evidenceVersions       EvidenceVersion[]
-  auditsPerformed        Audit[]                  @relation("AuditAuditor")
-  auditsSignedOff        Audit[]                  @relation("AuditSignoff")
-  registerEntriesOwned   RegisterEntry[]          @relation("RegisterEntryOwner")
-  registerEntriesCreated RegisterEntry[]          @relation("RegisterEntryCreator")
-  registerHistory        RegisterEntryHistory[]
-  risksOwned             Risk[]                   @relation("RiskOwner")
-  risksCreated           Risk[]                   @relation("RiskCreator")
-  risksApproved          Risk[]                   @relation("RiskClosureApprover")
-  riskReviews            RiskReview[]
-  actionsOwned           Action[]                 @relation("ActionOwner")
-  actionsCreated         Action[]                 @relation("ActionCreator")
-  actionsVerified        Action[]                 @relation("ActionVerifier")
-  actionUpdates          ActionUpdate[]
-  meetingsChaired        GovernanceMeeting[]      @relation("MeetingChair")
-  meetingsCreated        GovernanceMeeting[]      @relation("MeetingCreator")
-  meetingsApproved       GovernanceMeeting[]      @relation("MeetingApprover")
-  meetingAttendance      MeetingAttendee[]
-  calendarItemsOwned     CalendarItem[]           @relation("CalendarItemOwner")
-  calendarItemsCreated   CalendarItem[]           @relation("CalendarItemCreator")
-  calendarReminders      CalendarReminder[]
-  kpiEntriesCreated      KpiEntry[]               @relation("KpiEntryCreator")
-  inspectionOwned        ComplianceRequirement[]  @relation("InspectionOwner")
-  inspectionCreated      ComplianceRequirement[]  @relation("InspectionCreator")
-  templatesAuthored      Template[]               @relation("TemplateAuthor")
+  memberships             OrganisationMembership[]
+  sessions                Session[]
+  activities              ActivityLog[]
+  policiesOwned           Policy[]                 @relation("PolicyOwner")
+  policiesCreated         Policy[]                 @relation("PolicyCreator")
+  policiesApproved        Policy[]                 @relation("PolicyApprover")
+  policyVersions          PolicyVersion[]
+  evidenceOwned           Evidence[]               @relation("EvidenceOwner")
+  evidenceUploaded        Evidence[]               @relation("EvidenceUploader")
+  evidenceVersions        EvidenceVersion[]
+  auditsPerformed         Audit[]                  @relation("AuditAuditor")
+  auditsSignedOff         Audit[]                  @relation("AuditSignoff")
+  registerEntriesOwned    RegisterEntry[]          @relation("RegisterEntryOwner")
+  registerEntriesCreated  RegisterEntry[]          @relation("RegisterEntryCreator")
+  registerHistory         RegisterEntryHistory[]
+  risksOwned              Risk[]                   @relation("RiskOwner")
+  risksCreated            Risk[]                   @relation("RiskCreator")
+  risksApproved           Risk[]                   @relation("RiskClosureApprover")
+  riskReviews             RiskReview[]
+  actionsOwned            Action[]                 @relation("ActionOwner")
+  actionsCreated          Action[]                 @relation("ActionCreator")
+  actionsVerified         Action[]                 @relation("ActionVerifier")
+  actionUpdates           ActionUpdate[]
+  meetingsChaired         GovernanceMeeting[]      @relation("MeetingChair")
+  meetingsCreated         GovernanceMeeting[]      @relation("MeetingCreator")
+  meetingsApproved        GovernanceMeeting[]      @relation("MeetingApprover")
+  meetingAttendance       MeetingAttendee[]
+  calendarItemsOwned      CalendarItem[]           @relation("CalendarItemOwner")
+  calendarItemsCreated    CalendarItem[]           @relation("CalendarItemCreator")
+  calendarReminders       CalendarReminder[]
+  kpiEntriesCreated       KpiEntry[]               @relation("KpiEntryCreator")
+  inspectionOwned         ComplianceRequirement[]  @relation("InspectionOwner")
+  inspectionCreated       ComplianceRequirement[]  @relation("InspectionCreator")
+  templatesAuthored       Template[]               @relation("TemplateAuthor")
+  staffComplianceVerified StaffComplianceRecord[]  @relation("StaffComplianceVerifier")
 }
 
 model Policy {
@@ -1063,6 +1096,61 @@ model Template {
   @@index([title])
 }
 
+model StaffMember {
+  id                String                @id @default(uuid()) @db.Uuid
+  organisationId    String                @db.Uuid
+  locationId        String?               @db.Uuid
+  employeeReference String
+  firstName         String
+  lastName          String
+  jobTitle          String
+  department        String?
+  startDate         DateTime?
+  endDate           DateTime?
+  employmentStatus  StaffEmploymentStatus @default(ACTIVE)
+  lineManager       String?
+  notes             String?
+  archivedAt        DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  organisation Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  records      StaffComplianceRecord[]
+
+  @@unique([organisationId, employeeReference])
+  @@index([organisationId, employmentStatus])
+  @@index([locationId])
+}
+
+model StaffComplianceRecord {
+  id             String                 @id @default(uuid()) @db.Uuid
+  organisationId String                 @db.Uuid
+  staffMemberId  String                 @db.Uuid
+  type           StaffComplianceType
+  title          String
+  reference      String?
+  completedDate  DateTime?
+  expiryDate     DateTime?
+  nextDueDate    DateTime?
+  outcome        StaffComplianceOutcome @default(PENDING)
+  assessor       String?
+  verifiedById   String?                @db.Uuid
+  verifiedAt     DateTime?
+  notes          String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  staffMember  StaffMember  @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  verifiedBy   User?        @relation("StaffComplianceVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, type, outcome])
+  @@index([staffMemberId, type])
+  @@index([organisationId, expiryDate])
+  @@index([organisationId, nextDueDate])
+}
+
 model EvidenceVersion {
   id            String   @id @default(uuid()) @db.Uuid
   evidenceId    String   @db.Uuid
@@ -1115,30 +1203,30 @@ model RolePermission {
 }
 
 model OrganisationMembership {
-  id             String           @id @default(uuid()) @db.Uuid
-  organisationId String           @db.Uuid
-  userId         String           @db.Uuid
-  roleId         String           @db.Uuid
-  status         MembershipStatus @default(INVITED)
-  allLocations   Boolean          @default(false)
-  accessMode     MembershipAccessMode @default(STANDARD)
-  jobTitle       String?
-  department     String?
-  reportsToId    String?          @db.Uuid
-  permissionOverridesEnabled Boolean @default(false)
-  invitedAt      DateTime         @default(now())
-  joinedAt       DateTime?
-  deactivatedAt  DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                         String               @id @default(uuid()) @db.Uuid
+  organisationId             String               @db.Uuid
+  userId                     String               @db.Uuid
+  roleId                     String               @db.Uuid
+  status                     MembershipStatus     @default(INVITED)
+  allLocations               Boolean              @default(false)
+  accessMode                 MembershipAccessMode @default(STANDARD)
+  jobTitle                   String?
+  department                 String?
+  reportsToId                String?              @db.Uuid
+  permissionOverridesEnabled Boolean              @default(false)
+  invitedAt                  DateTime             @default(now())
+  joinedAt                   DateTime?
+  deactivatedAt              DateTime?
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
 
-  organisation Organisation         @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  user         User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
-  role         Role                 @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  locations    MembershipLocation[]
-  reportsTo    OrganisationMembership?  @relation("MembershipReportingLine", fields: [reportsToId], references: [id], onDelete: SetNull)
+  organisation  Organisation             @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role          Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  locations     MembershipLocation[]
+  reportsTo     OrganisationMembership?  @relation("MembershipReportingLine", fields: [reportsToId], references: [id], onDelete: SetNull)
   directReports OrganisationMembership[] @relation("MembershipReportingLine")
-  permissions  MembershipPermission[]
+  permissions   MembershipPermission[]
 
   @@unique([organisationId, userId])
   @@index([userId, status])
@@ -1150,7 +1238,7 @@ model MembershipPermission {
   permissionId String @db.Uuid
 
   membership OrganisationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-  permission Permission               @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permission Permission             @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([membershipId, permissionId])
   @@index([permissionId])

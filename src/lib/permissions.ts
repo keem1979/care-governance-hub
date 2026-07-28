@@ -9,6 +9,8 @@ export const PERMISSIONS = {
   EVIDENCE_UPLOAD: "evidence:upload",
   REPORTS_EXPORT: "reports:export",
   ASSIGNED_TASKS_EDIT: "assigned-tasks:edit",
+  WORKFORCE_VIEW: "workforce:view",
+  WORKFORCE_MANAGE: "workforce:manage",
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -63,6 +65,16 @@ export const PERMISSION_GROUPS: Array<{
         label: "Assigned work",
         detail: "Update work specifically assigned to this user.",
       },
+      {
+        key: PERMISSIONS.WORKFORCE_VIEW,
+        label: "Workforce compliance",
+        detail: "View authorised staff compliance, training and competency records.",
+      },
+      {
+        key: PERMISSIONS.WORKFORCE_MANAGE,
+        label: "Manage workforce compliance",
+        detail: "Add and update staff compliance, training, supervision and competency records.",
+      },
     ],
   },
   {
@@ -91,6 +103,7 @@ export const PERMISSION_GROUPS: Array<{
 const READ_ONLY_PERMISSIONS = new Set<PermissionKey>([
   PERMISSIONS.GOVERNANCE_VIEW,
   PERMISSIONS.REPORTS_EXPORT,
+  PERMISSIONS.WORKFORCE_VIEW,
 ]);
 
 export function applyAccessMode(
@@ -128,6 +141,7 @@ export const ROLE_PERMISSION_MAP: Record<RoleKey, readonly PermissionKey[]> = {
   [ROLE_KEYS.NOMINATED_INDIVIDUAL]: [
     PERMISSIONS.GOVERNANCE_VIEW,
     PERMISSIONS.REPORTS_EXPORT,
+    PERMISSIONS.WORKFORCE_VIEW,
   ],
   [ROLE_KEYS.REGISTERED_MANAGER]: [
     PERMISSIONS.LOCATIONS_MANAGE,
@@ -137,6 +151,8 @@ export const ROLE_PERMISSION_MAP: Record<RoleKey, readonly PermissionKey[]> = {
     PERMISSIONS.ACTIONS_MANAGE,
     PERMISSIONS.EVIDENCE_UPLOAD,
     PERMISSIONS.REPORTS_EXPORT,
+    PERMISSIONS.WORKFORCE_VIEW,
+    PERMISSIONS.WORKFORCE_MANAGE,
   ],
   [ROLE_KEYS.QUALITY_MANAGER]: [
     PERMISSIONS.GOVERNANCE_VIEW,
@@ -145,6 +161,8 @@ export const ROLE_PERMISSION_MAP: Record<RoleKey, readonly PermissionKey[]> = {
     PERMISSIONS.ACTIONS_MANAGE,
     PERMISSIONS.EVIDENCE_UPLOAD,
     PERMISSIONS.REPORTS_EXPORT,
+    PERMISSIONS.WORKFORCE_VIEW,
+    PERMISSIONS.WORKFORCE_MANAGE,
   ],
   [ROLE_KEYS.AUDITOR]: [
     PERMISSIONS.GOVERNANCE_VIEW,

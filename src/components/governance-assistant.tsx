@@ -11,7 +11,10 @@ import {
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PendingActionNotification } from "@/lib/assistant-notifications";
+import type {
+  PendingActionNotification,
+  WorkforceNotification,
+} from "@/lib/assistant-notifications";
 
 type Message = {
   id: number;
@@ -30,6 +33,8 @@ type AtomUpdate = {
 type NotificationResponse = {
   pendingCount: number;
   actions: PendingActionNotification[];
+  workforceAlertCount: number;
+  workforceAlerts: WorkforceNotification[];
   updates: AtomUpdate[];
 };
 
@@ -299,6 +304,53 @@ export function GovernanceAssistant() {
                           className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-emerald-700"
                         >
                           Find out more <ChevronRight size={12} />
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+              {notifications?.workforceAlertCount ? (
+                <details className="rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-bold text-amber-950">
+                    <Bell size={15} />
+                    {notifications.workforceAlertCount} workforce{" "}
+                    {notifications.workforceAlertCount === 1 ? "alert" : "alerts"}
+                  </summary>
+                  <p className="mt-2 text-xs leading-5 text-amber-950/75">
+                    Expired and upcoming checks, training, competencies,
+                    supervision or appraisal.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {notifications.workforceAlerts.map((alert) => (
+                      <article
+                        key={alert.id}
+                        className="rounded-lg border border-amber-200 bg-white p-3"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {alert.isOverdue ? (
+                            <span className="rounded-full bg-red-700 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                              Overdue
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-900">
+                              Due soon
+                            </span>
+                          )}
+                          <span className="text-[10px] font-bold uppercase text-slate-500">
+                            {readable(alert.type)}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm font-semibold">{alert.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {alert.staffName} · {alert.employeeReference} · due{" "}
+                          {dateFormatter.format(new Date(alert.dueDate))}
+                        </p>
+                        <button
+                          onClick={() => openPage(alert.href)}
+                          className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-700"
+                        >
+                          Open staff record <ChevronRight size={12} />
                         </button>
                       </article>
                     ))}

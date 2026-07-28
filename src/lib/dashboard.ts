@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   FileClock,
   GraduationCap,
+  UserRoundCheck,
   HeartHandshake,
   ListTodo,
   ShieldAlert,
@@ -62,7 +63,7 @@ export function formatUkDateTime(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number; workforceChecksDue?:number; competencyActions?:number }): DashboardSummary[] {
   return [
     {
       label: "Policies due for review",
@@ -91,6 +92,20 @@ export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits
       icon: GraduationCap,
       value: counts?.trainingEvidenceExpiring ?? null,
       qualifier: counts ? "Due within the next 30 days" : "Evidence data unavailable",
+    },
+    {
+      label: "Workforce checks due",
+      href: "/workforce",
+      icon: UserRoundCheck,
+      value: counts?.workforceChecksDue ?? null,
+      qualifier: counts ? "Expired or due within the next 30 days" : "Workforce data unavailable",
+    },
+    {
+      label: "Competency actions",
+      href: "/workforce",
+      icon: GraduationCap,
+      value: counts?.competencyActions ?? null,
+      qualifier: counts ? "Pending or development required" : "Competency data unavailable",
     },
     {
       label: "Open complaints",
@@ -174,6 +189,12 @@ export function dashboardModules(): DashboardModule[] {
       href: "/kpis",
       status: "ready",
       description: "KPI reporting and internal inspection-evidence readiness controls are active.",
+    },
+    {
+      name: "Workforce and care quality",
+      href: "/workforce",
+      status: "ready",
+      description: "Safer recruitment, expiry, competency and care-quality controls are active.",
     },
   ];
 }
