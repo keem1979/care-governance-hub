@@ -15,8 +15,9 @@ export async function POST(request: Request) {
     if (title.length < 3 || title.length > 180) throw new Error("Enter an audit title.");
     const db = createDb();
     try {
-      const template = await db.auditTemplate.findFirst({ where: { id:templateId,isPublished:true,OR:[{organisationId:null},{organisationId:context.organisation.id}] } });
+      const template = await db.auditTemplate.findFirst({ where: { id:templateId,isPublished:true,OR:[{organisationId:null},{organisationId:context.organisation.id}] }, include: { sections: { select: { _count: { select: { questions: true } } } } } });
       if (!template) throw new Error("Choose a published audit template.");
+      if (!template.sections.some((section) => section._count.questions > 0)) throw new Error("This audit template has no questions and cannot be started.");
       const auditDate = parseOptionalDate(form.get("auditDate")) ?? new Date();
       const audit = await db.$transaction(async (tx) => {
         const created = await tx.audit.create({ data: {
