@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && vinext build",
+    "build:next": "prisma generate && next build",
     "site:build": "prisma generate && vinext build",
     "site:dev": "vinext dev",
     "postinstall": "prisma generate",
