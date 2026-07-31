@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EVIDENCE_CATEGORIES, EVIDENCE_CONFIDENTIALITY, EVIDENCE_STATUSES, EVIDENCE_TYPES } from "@/lib/evidence";
+import { FormPurpose } from "@/components/form-purpose";
 
 type Option = { id: string; name: string };
 type PolicyOption = { id: string; title: string };
@@ -20,10 +21,11 @@ export function EvidenceForm({ owners, locations, policies, initial }: { owners:
     router.push(`/evidence/${initial?.id ?? result.id}`); router.refresh();
   }
   return <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <FormPurpose title="Governance evidence record" description="Upload the actual source document, describe what it proves and assign the right owner, location, date and confidentiality." steps={["Describe the evidence", "Classify and assign it", "Upload and set review dates"]} />
     {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
     <div className="grid gap-4 md:grid-cols-2">
       <label className="md:col-span-2 text-sm font-medium">Title {initial ? null : <span className="font-normal text-slate-500">(optional for a single file; filenames are used for multiple files)</span>}<input className={field} name="title" defaultValue={initial?.title} required={Boolean(initial)} maxLength={180} /></label>
-      <label className="md:col-span-2 text-sm font-medium">Description<textarea className={`${field} min-h-20`} name="description" defaultValue={initial?.description} /></label>
+      <label className="md:col-span-2 text-sm font-medium">What does this evidence demonstrate?<textarea className={`${field} min-h-20`} name="description" defaultValue={initial?.description} placeholder="For example, completed competency observations show staff can administer medicines safely." /></label>
       <label className="text-sm font-medium">Category<select className={field} name="category" defaultValue={initial?.category ?? ""} required><option value="">Choose category</option>{EVIDENCE_CATEGORIES.map((value) => <option key={value}>{value}</option>)}</select></label>
       <label className="text-sm font-medium">Evidence type<select className={field} name="evidenceType" defaultValue={initial?.evidenceType ?? ""} required><option value="">Choose type</option>{EVIDENCE_TYPES.map((value) => <option key={value}>{value}</option>)}</select></label>
       <label className="text-sm font-medium">Record owner<select className={field} name="ownerId" defaultValue={initial?.ownerId ?? owners[0]?.id} required>{owners.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label>
@@ -36,7 +38,7 @@ export function EvidenceForm({ owners, locations, policies, initial }: { owners:
       <label className="text-sm font-medium">Tags <span className="font-normal text-slate-500">(comma-separated)</span><input className={field} name="tags" defaultValue={initial?.tags} /></label>
       <label className="text-sm font-medium">Related module<select className={field} name="relatedModule" defaultValue={initial?.relatedModule ?? ""}><option value="">Not linked</option><option>Policy</option></select></label>
       <label className="md:col-span-2 text-sm font-medium">Related policy<select className={field} name="relatedRecordId" defaultValue={initial?.relatedRecordId ?? ""}><option value="">None</option>{policies.map((value) => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label>
-      <label className="md:col-span-2 text-sm font-medium">Notes<textarea className={`${field} min-h-24`} name="notes" defaultValue={initial?.notes} /></label>
+      <label className="md:col-span-2 text-sm font-medium">Review notes<textarea className={`${field} min-h-24`} name="notes" defaultValue={initial?.notes} placeholder="Record limitations, follow-up needed or why this evidence remains current." /></label>
     </div>
     <button disabled={busy} className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Saving…" : initial ? "Save evidence" : "Upload evidence"}</button>
   </form>;

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { levelClasses, REVIEW_FREQUENCIES, RISK_CATEGORIES, RISK_STATUSES, riskLevel, riskScore, riskStatusLabel } from "@/lib/risks";
+import { FormPurpose } from "@/components/form-purpose";
 
 type Option = { id: string; name: string };
 type Initial = {
@@ -35,23 +36,24 @@ export function RiskForm({ locations, owners, evidence, initial }: { locations: 
   }
 
   return <form onSubmit={submit} className="space-y-7 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <FormPurpose title="Organisational or service risk" description="Describe the uncertain event and possible harm, score it before controls, record what is already working and then score the remaining risk." steps={["Describe the risk and potential harm", "Score current likelihood and impact", "Assign controls, owner and review"]} />
     {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
     <Section title="Risk identification"><div className="grid gap-4 md:grid-cols-2">
       <Field label="Risk reference" hint="auto-generated if blank"><input name="reference" className={cls} defaultValue={initial?.reference} readOnly={Boolean(initial)} /></Field>
       <Field label="Category"><select name="category" className={cls} defaultValue={initial?.category ?? "Operational"}>{RISK_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></Field>
-      <Field label="Risk title" wide><input name="title" className={cls} defaultValue={initial?.title} minLength={3} required /></Field>
-      <Field label="Description" wide><textarea name="description" className={`${cls} min-h-24`} defaultValue={initial?.description} required /></Field>
+      <Field label="Risk title" wide><input name="title" className={cls} defaultValue={initial?.title} minLength={3} required placeholder="For example, missed care visits during severe weather" /></Field>
+      <Field label="What could happen, who could be harmed and what would the impact be?" wide><textarea name="description" className={`${cls} min-h-24`} defaultValue={initial?.description} required placeholder="Describe the uncertain event, possible cause, people or service affected and credible harm." /></Field>
       <Field label="Location"><select name="locationId" className={cls} defaultValue={initial?.locationId ?? ""}><option value="">Organisation-wide</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
       <Field label="Risk owner"><select name="ownerId" className={cls} defaultValue={initial?.ownerId ?? ""}><option value="">Unassigned</option>{owners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
     </div></Section>
     <Section title="Initial assessment"><div className="grid gap-4 md:grid-cols-2">
-      <Field label="Existing controls" wide><textarea name="existingControls" className={`${cls} min-h-24`} defaultValue={initial?.existingControls} required /></Field>
+      <Field label="Controls already in place and evidence they work" wide><textarea name="existingControls" className={`${cls} min-h-24`} defaultValue={initial?.existingControls} required placeholder="List current controls, who performs them, how often and the evidence reviewed." /></Field>
       <MatrixSelect label="Likelihood" name="likelihood" value={likelihood} setValue={setLikelihood} />
       <MatrixSelect label="Impact" name="impact" value={impact} setValue={setImpact} />
       <ScoreCard label="Initial risk" score={initialScore} level={riskLevel(initialScore)} />
     </div></Section>
     <Section title="Treatment and residual assessment"><div className="grid gap-4 md:grid-cols-2">
-      <Field label="Further controls required" wide><textarea name="furtherControls" className={`${cls} min-h-24`} defaultValue={initial?.furtherControls} /></Field>
+      <Field label="Further action needed to reduce the risk" wide><textarea name="furtherControls" className={`${cls} min-h-24`} defaultValue={initial?.furtherControls} placeholder="State the action, responsible person, expected result and evidence needed." /></Field>
       <Field label="Target date"><input name="targetDate" type="date" className={cls} defaultValue={initial?.targetDate} /></Field>
       <MatrixSelect label="Residual likelihood" name="residualLikelihood" value={residualLikelihood} setValue={setResidualLikelihood} />
       <MatrixSelect label="Residual impact" name="residualImpact" value={residualImpact} setValue={setResidualImpact} />

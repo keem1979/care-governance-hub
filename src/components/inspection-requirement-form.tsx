@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CQC_KEY_QUESTIONS, INSPECTION_EVIDENCE_STATUSES, inspectionLabel } from "@/lib/inspection";
+import { FormPurpose } from "@/components/form-purpose";
 
 type Option = { id: string; name: string };
 type Initial = { id: string; keyQuestion: string; qualityStatement: string; title: string; explanation: string; evidenceExamples: string[]; locationId: string; ownerId: string; reviewDate: string; evidenceStatus: string; confidenceNote: string; evidenceIds: string[]; auditIds: string[]; registerEntryIds: string[]; actionIds: string[] };
@@ -19,12 +20,13 @@ export function InspectionRequirementForm({ members, locations, evidence, audits
     router.push(`/inspection/${initial?.id ?? result.id}`); router.refresh();
   }
   return <form onSubmit={submit} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <FormPurpose title="Inspection evidence requirement" description="Describe the assurance question in your own service, explain what good evidence would demonstrate and link the real records that support it." steps={["Define the assurance question", "Explain the evidence expected", "Link records and assign review ownership"]} />
     {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
     <div className="grid gap-4 md:grid-cols-2">
       <label className="text-sm font-medium">Key question<select name="keyQuestion" className={field} defaultValue={initial?.keyQuestion ?? "SAFE"}>{CQC_KEY_QUESTIONS.map((item) => <option key={item} value={item}>{inspectionLabel(item)}</option>)}</select></label>
-      <label className="text-sm font-medium">Quality statement<input name="qualityStatement" className={field} defaultValue={initial?.qualityStatement} placeholder="Configurable statement" /></label>
-      <label className="text-sm font-medium md:col-span-2">Requirement title<input name="title" required minLength={3} className={field} defaultValue={initial?.title} /></label>
-      <label className="text-sm font-medium md:col-span-2">Explanation<textarea name="explanation" required minLength={10} className={`${field} min-h-24`} defaultValue={initial?.explanation} /></label>
+      <label className="text-sm font-medium">Relevant CQC quality statement or internal standard<input name="qualityStatement" className={field} defaultValue={initial?.qualityStatement} placeholder="For example, Safe systems, pathways and transitions" /></label>
+      <label className="text-sm font-medium md:col-span-2">What assurance question must the service answer?<input name="title" required minLength={3} className={field} defaultValue={initial?.title} placeholder="For example, Are medicines errors recognised, escalated and learned from?" /></label>
+      <label className="text-sm font-medium md:col-span-2">What would good evidence demonstrate?<textarea name="explanation" required minLength={10} className={`${field} min-h-24`} defaultValue={initial?.explanation} placeholder="Describe the process, practice and outcome the evidence should show. This is an internal assurance expectation, not a predicted CQC judgement." /></label>
       <label className="text-sm font-medium md:col-span-2">Evidence examples<p className="text-xs font-normal text-slate-500">One per line or comma-separated.</p><textarea name="evidenceExamples" className={`${field} min-h-24`} defaultValue={initial?.evidenceExamples.join("\n")} /></label>
       <label className="text-sm font-medium">Location<select name="locationId" className={field} defaultValue={initial?.locationId ?? ""}><option value="">Organisation-wide</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label className="text-sm font-medium">Owner<select name="ownerId" className={field} defaultValue={initial?.ownerId ?? ""}><option value="">Unassigned</option>{members.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

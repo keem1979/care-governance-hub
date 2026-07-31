@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { kpiLabel } from "@/lib/kpis";
+import { FormPurpose } from "@/components/form-purpose";
 
 type Definition = { id: string; name: string; unit: string; direction: string; targetValue: number; greenThreshold: number; amberThreshold: number };
 type Option = { id: string; name: string };
@@ -25,6 +26,7 @@ export function KpiEntryForm({ definitions, locations, evidence, defaultMonth }:
   }
   if (!selected) return <p>No KPI definitions are available.</p>;
   return <form onSubmit={submit} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <FormPurpose title="Custom monthly performance measure" description="Use this form for one verified KPI result. For the full local-authority return, use the Monthly KPI Return form instead." steps={["Choose the measure, month and location", "Enter the verified result and target", "Explain variance and link evidence"]} />
     {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
     <div className="grid gap-4 md:grid-cols-2">
       <label className="text-sm font-medium md:col-span-2">KPI<select name="kpiId" value={kpiId} onChange={(event) => setKpiId(event.target.value)} className={field}>{definitions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { POLICY_CATEGORIES, POLICY_STATUSES } from "@/lib/policies";
+import { FormPurpose } from "@/components/form-purpose";
 
 type Owner = { id: string; name: string };
 type Initial = {
@@ -28,10 +29,11 @@ export function PolicyForm({ owners, initial }: { owners: Owner[]; initial?: Ini
   }
   return (
     <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <FormPurpose title="Controlled policy record" description="Record who owns the policy, when it takes effect, when it must be reviewed and the approved document version." steps={["Name and classify the policy", "Assign ownership and review dates", "Upload the controlled document"]} />
       {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       <div className="grid gap-4 md:grid-cols-2">
         <label className="md:col-span-2 text-sm font-medium">Policy title
-          <input className={`${inputClass} mt-1`} name="title" defaultValue={initial?.title} required minLength={3} maxLength={180} />
+          <input className={`${inputClass} mt-1`} name="title" defaultValue={initial?.title} required minLength={3} maxLength={180} placeholder="For example, Medicines management policy" />
         </label>
         <label className="text-sm font-medium">Category
           <select className={`${inputClass} mt-1`} name="category" defaultValue={initial?.category ?? ""} required>
@@ -67,13 +69,13 @@ export function PolicyForm({ owners, initial }: { owners: Owner[]; initial?: Ini
           <input className={`${inputClass} mt-1`} name="nextReviewDate" type="date" defaultValue={initial?.nextReviewDate} />
         </label>
         <label className="text-sm font-medium">Tags <span className="font-normal text-slate-500">(comma-separated)</span>
-          <input className={`${inputClass} mt-1`} name="tags" defaultValue={initial?.tags} />
+          <input className={`${inputClass} mt-1`} name="tags" defaultValue={initial?.tags} placeholder="For example, medicines, staff competency, home care" />
         </label>
         <label className="text-sm font-medium">Compliance areas <span className="font-normal text-slate-500">(comma-separated)</span>
-          <input className={`${inputClass} mt-1`} name="complianceAreas" defaultValue={initial?.complianceAreas} />
+          <input className={`${inputClass} mt-1`} name="complianceAreas" defaultValue={initial?.complianceAreas} placeholder="For example, Regulation 12, NICE guidance" />
         </label>
         <label className="md:col-span-2 text-sm font-medium">Notes
-          <textarea className={`${inputClass} mt-1 min-h-28`} name="notes" defaultValue={initial?.notes} />
+          <textarea className={`${inputClass} mt-1 min-h-28`} name="notes" defaultValue={initial?.notes} placeholder="Record scope, important changes, consultation or implementation notes." />
         </label>
       </div>
       <button disabled={busy} className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">

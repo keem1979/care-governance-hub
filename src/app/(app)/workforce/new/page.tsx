@@ -11,7 +11,7 @@ export default async function NewStaffMemberPage() {
         <Link href="/workforce" className="text-sm font-semibold text-emerald-700">
           ← Staff Compliance & Competency
         </Link>
-        <h1 className="mt-2 text-3xl font-bold">Add staff compliance record</h1>
+        <h1 className="mt-2 text-3xl font-bold">Add a staff member</h1>
         <p className="mt-1 text-slate-600">
           Create the workforce record first, then add checks, training and
           competencies.
@@ -23,4 +23,3 @@ export default async function NewStaffMemberPage() {
     </main>
   );
 }
-

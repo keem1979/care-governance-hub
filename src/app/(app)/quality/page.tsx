@@ -12,50 +12,50 @@ import { PERMISSIONS } from "@/lib/permissions";
 
 const areas = [
   {
-    title: "Care-plan reviews",
-    detail: "Review dates, involvement, agreed changes and outcomes.",
+    title: "Review a person’s care plan",
+    detail: "Record who took part, what changed, agreed outcomes and the next review date.",
     href: "/registers/care-plan-reviews",
     icon: HeartHandshake,
   },
   {
-    title: "Person-level risk assessments",
-    detail: "Renewals, changes in risk and updated controls.",
+    title: "Review a person’s risk assessment",
+    detail: "Name the risk being reviewed, record what changed and confirm whether controls were updated.",
     href: "/registers/risk-assessment-reviews",
     icon: ShieldCheck,
   },
   {
-    title: "Medication and MAR audits",
-    detail: "Sampling, omissions, stock variances, findings and actions.",
+    title: "Complete a medication and MAR audit",
+    detail: "Record the sample period, records checked, omissions, stock variances, score and corrective action.",
     href: "/registers/mar-audits",
     icon: Pill,
   },
   {
-    title: "Delegated healthcare tasks",
-    detail: "Delegation, clinical instructions, authorisation and competency.",
+    title: "Record a delegated healthcare task",
+    detail: "Capture the delegating professional, current clinical instructions, authorised staff and competency review.",
     href: "/registers/delegated-healthcare",
     icon: HeartPulse,
   },
   {
-    title: "Service-user outcomes",
-    detail: "Goals, progress, people’s views and review dates.",
+    title: "Review a person’s outcome",
+    detail: "Record the agreed goal, evidence of progress, the person’s view and the next review.",
     href: "/registers/service-user-outcomes",
     icon: ClipboardCheck,
   },
   {
-    title: "Satisfaction surveys",
-    detail: "Scores, themes and ‘you said, we did’ improvement.",
+    title: "Record satisfaction survey results",
+    detail: "Enter response numbers, scores, themes and the improvement communicated back to people.",
     href: "/registers/satisfaction-surveys",
     icon: HeartHandshake,
   },
   {
-    title: "Business continuity",
-    detail: "Plans, exercises, disruptions, recovery and lessons learned.",
+    title: "Record a continuity exercise or disruption",
+    detail: "Describe the scenario, whether care continued, recovery time, lessons and the next exercise.",
     href: "/registers/business-continuity",
     icon: ShieldCheck,
   },
   {
-    title: "Commissioner contracts",
-    detail: "Submission dates, performance issues and commissioner actions.",
+    title: "Track a commissioner requirement",
+    detail: "Record the contract, reporting period, submission dates, performance issue, feedback and required action.",
     href: "/registers/commissioner-contracts",
     icon: ClipboardCheck,
   },
@@ -90,6 +90,7 @@ export default async function CareQualityPage() {
             </div>
             <h2 className="mt-4 font-bold group-hover:text-emerald-800">{title}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
+            <p className="mt-4 text-sm font-semibold text-emerald-700">Open records and add entry</p>
           </Link>
         ))}
       </section>
@@ -105,4 +106,3 @@ export default async function CareQualityPage() {
     </main>
   );
 }
-

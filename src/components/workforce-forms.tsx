@@ -8,6 +8,7 @@ import {
   STAFF_STATUSES,
   workforceLabel,
 } from "@/lib/workforce";
+import { FormPurpose } from "@/components/form-purpose";
 
 type Option = { id: string; name: string };
 
@@ -42,6 +43,7 @@ export function StaffMemberForm({ locations }: { locations: Option[] }) {
       onSubmit={submit}
       className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
     >
+      <FormPurpose title="Staff compliance profile" description="Create one workforce profile using an internal employee reference. Add recruitment checks, training, competencies, supervision and appraisal records after saving." steps={["Identify the worker and role", "Assign their service and manager", "Add dated compliance records"]} />
       {error ? (
         <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
           {error}
@@ -143,6 +145,7 @@ export function StaffComplianceForm({ staffId }: { staffId: string }) {
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      <FormPurpose title="Dated staff compliance record" description="Add one real check, course, competency observation, supervision or appraisal result. Use its actual completion, expiry and next-due dates." steps={["Choose the exact record type", "Record outcome and source", "Set expiry or next review"]} />
       {error ? (
         <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
           {error}
@@ -213,4 +216,3 @@ export function StaffComplianceForm({ staffId }: { staffId: string }) {
     </form>
   );
 }
-
