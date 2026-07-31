@@ -18,7 +18,7 @@ export default function LoginPage() {
             unoptimized
             className="size-28 rounded-2xl bg-white object-contain"
           />
-          <span>Care Governance Hub</span>
+          <span>Quality, Compliance and Governance Management System</span>
         </div>
         <div className="max-w-xl">
           <p className="mb-4 text-sm font-semibold tracking-[0.16em] text-emerald-200 uppercase">
@@ -49,13 +49,13 @@ export default function LoginPage() {
               unoptimized
               className="size-22 rounded-xl border border-border bg-white object-contain"
             />
-            <span className="font-semibold">Care Governance Hub</span>
+            <span className="font-semibold">QCGMS</span>
           </div>
           <p className="text-sm font-semibold tracking-wide text-brand uppercase">
             Welcome back
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight">
-            Sign in to your governance hub
+            Sign in to QCGMS
           </h2>
           <p className="mt-3 mb-8 text-muted">
             Use the account supplied by your organisation administrator.

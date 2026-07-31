@@ -193,6 +193,13 @@ enum KpiRagStatus {
   RED
 }
 
+enum KpiReturnStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  SUBMITTED
+  LOCKED
+}
+
 enum CqcKeyQuestion {
   SAFE
   EFFECTIVE
@@ -270,6 +277,7 @@ model Organisation {
   calendarReminders      CalendarReminder[]
   kpiDefinitions         KpiDefinition[]
   kpiEntries             KpiEntry[]
+  kpiReturns             KpiReturn[]
   complianceRequirements ComplianceRequirement[]
   templates              Template[]
   staffMembers           StaffMember[]
@@ -300,6 +308,7 @@ model ServiceLocation {
   meetings               GovernanceMeeting[]
   calendarItems          CalendarItem[]
   kpiEntries             KpiEntry[]
+  kpiReturns             KpiReturn[]
   complianceRequirements ComplianceRequirement[]
   staffMembers           StaffMember[]
 
@@ -348,6 +357,8 @@ model User {
   calendarItemsCreated    CalendarItem[]           @relation("CalendarItemCreator")
   calendarReminders       CalendarReminder[]
   kpiEntriesCreated       KpiEntry[]               @relation("KpiEntryCreator")
+  kpiReturnsCreated       KpiReturn[]              @relation("KpiReturnCreator")
+  kpiReturnsSubmitted     KpiReturn[]              @relation("KpiReturnSubmitter")
   inspectionOwned         ComplianceRequirement[]  @relation("InspectionOwner")
   inspectionCreated       ComplianceRequirement[]  @relation("InspectionCreator")
   templatesAuthored       Template[]               @relation("TemplateAuthor")
@@ -979,6 +990,35 @@ model KpiEntry {
 
   @@unique([kpiId, locationId, reportingMonth])
   @@index([organisationId, reportingMonth, ragStatus])
+  @@index([locationId, reportingMonth])
+}
+
+model KpiReturn {
+  id               String          @id @default(uuid()) @db.Uuid
+  organisationId   String          @db.Uuid
+  locationId       String          @db.Uuid
+  reportingMonth   DateTime
+  localAuthority   String
+  contractName     String?
+  providerCode     String?
+  locationCode     String?
+  ecmSystem        String?
+  status           KpiReturnStatus @default(DRAFT)
+  data             Json
+  managerComment   String?
+  createdById      String          @db.Uuid
+  submittedById    String?         @db.Uuid
+  submittedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  organisation Organisation   @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  createdBy    User            @relation("KpiReturnCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  submittedBy  User?           @relation("KpiReturnSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+
+  @@unique([organisationId, locationId, reportingMonth])
+  @@index([organisationId, reportingMonth, status])
   @@index([locationId, reportingMonth])
 }
 

@@ -67,7 +67,7 @@ export default async function ReportPage({
           </div>
         ) : <p className="mt-8 rounded-lg border border-dashed p-8 text-center text-sm">No real database records match the selected filters.</p>}
         {filters.appendices ? <section className="mt-8 break-before-page"><h3 className="text-xl font-bold">Appendix: source record counts</h3><p className="mt-1 text-sm text-slate-600">Counts reflect the same authorised scope and active report filters.</p><ul className="mt-4 space-y-2">{report.sourceCounts.map((item) => <li key={item.source} className="flex max-w-md justify-between border-b pb-2 text-sm"><span>{item.source}</span><strong>{item.count}</strong></li>)}</ul></section> : null}
-        <footer className="mt-8 border-t pt-3 text-xs text-slate-500">Care Governance Hub · Internal governance record · Contains only records available to the signed-in user.</footer>
+        <footer className="mt-8 border-t pt-3 text-xs text-slate-500">QCGMS · Internal governance record · Contains only records available to the signed-in user.</footer>
       </article>
     </main>
   );

@@ -1,8 +1,8 @@
 # CODEX MASTER BUILD BRIEF
 
-## Care Governance Hub — MVP
+## Quality, Compliance and Governance Management System — QCGMS
 
-You are the lead full-stack software engineer, product designer and quality-assurance engineer responsible for building a production-quality MVP called **Care Governance Hub**.
+You are the lead full-stack software engineer, product designer and quality-assurance engineer responsible for building a production-quality MVP called **Quality, Compliance and Governance Management System — QCGMS**.
 
 The product is a secure, multi-tenant compliance and governance platform for UK adult social care providers, Registered Managers, Quality Managers and nominated individuals.
 
@@ -253,7 +253,7 @@ Create a clean left-hand navigation menu:
 * Action Tracker
 * Governance Meetings
 * Compliance Calendar
-* KPI Dashboard
+* KPI Suite
 * Inspection Centre
 * Templates
 * Reports
@@ -861,7 +861,7 @@ For the MVP, in-app reminders are sufficient. Design notification services so em
 
 ---
 
-# 16. KPI Dashboard
+# 16. KPI Suite
 
 Create monthly KPI entry and reporting.
 
@@ -1573,4 +1573,3 @@ governance and supplier approval are complete.
 
 The system supports compliance governance but does not itself certify UK GDPR,
 DSPT, Cyber Essentials or CQC compliance.
-

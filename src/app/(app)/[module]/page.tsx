@@ -35,7 +35,7 @@ const modules: Record<string, { title: string; description: string }> = {
     description: "See reviews, expiries, deadlines and governance commitments.",
   },
   kpis: {
-    title: "KPI Dashboard",
+    title: "KPI Suite",
     description: "Record real monthly measures, targets and trends.",
   },
   inspection: {

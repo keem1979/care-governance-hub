@@ -11,8 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(baseUrl),
     title: {
-      default: "Care Governance Hub",
-      template: "%s | Care Governance Hub",
+      default: "Quality, Compliance and Governance Management System — QCGMS",
+      template: "%s | QCGMS",
     },
     description:
       "A secure governance and compliance evidence hub for UK adult social care providers.",
@@ -21,14 +21,14 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: "/atom-logo.png",
     },
     openGraph: {
-      title: "Care Governance Hub",
+      title: "Quality, Compliance and Governance Management System — QCGMS",
       description: "Clear evidence. Calm governance.",
       type: "website",
       images: [{ url: "/og.png", width: 1536, height: 910 }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Care Governance Hub",
+      title: "Quality, Compliance and Governance Management System — QCGMS",
       description: "Clear evidence. Calm governance.",
       images: ["/og.png"],
     },

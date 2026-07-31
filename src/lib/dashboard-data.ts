@@ -25,6 +25,7 @@ export type DashboardCounts = {
   governanceMeetingsDue: number;
   workforceChecksDue: number;
   competencyActions: number;
+  kpiReturnsOutstanding: number;
 };
 
 export async function getDashboardCounts(context: AuthorisedContext): Promise<DashboardCounts> {
@@ -35,7 +36,8 @@ export async function getDashboardCounts(context: AuthorisedContext): Promise<Da
   const auditLocationScope = context.allLocations ? {} : { locationId: { in: context.locations.map(({ id }) => id) } };
   try {
     const staffLocationScope = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map(({ id }) => id) } }] };
-    const [policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions, governanceMeetingsDue, workforceChecksDue, competencyActions] = await Promise.all([
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 12));
+    const [policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions, governanceMeetingsDue, workforceChecksDue, competencyActions, submittedKpiLocations] = await Promise.all([
       db.policy.count({ where: { organisationId: context.organisation.id, status: "APPROVED", nextReviewDate: { lte: inThirtyDays } } }),
       db.audit.count({ where: { organisationId: context.organisation.id, status: { in: ["DRAFT","IN_PROGRESS","AWAITING_REVIEW"] }, reviewDate: { lt: now }, ...auditLocationScope } }),
       db.evidence.count({ where: { organisationId: context.organisation.id, status: "ACTIVE", category: { in: ["Training", "Competencies"] }, reviewExpiryDate: { gte: now, lte: inThirtyDays }, ...locationScope } }),
@@ -49,8 +51,9 @@ export async function getDashboardCounts(context: AuthorisedContext): Promise<Da
       db.governanceMeeting.count({ where: { organisationId: context.organisation.id, status: { in: ["SCHEDULED","IN_PROGRESS"] }, meetingDate: { lte: inThirtyDays }, ...locationScope } }),
       db.staffComplianceRecord.count({ where: { organisationId: context.organisation.id, OR: [{ expiryDate: { lte: inThirtyDays } }, { nextDueDate: { lte: inThirtyDays } }], staffMember: { archivedAt: null, ...staffLocationScope } } }),
       db.staffComplianceRecord.count({ where: { organisationId: context.organisation.id, type: "COMPETENCY", outcome: { in: ["PENDING","DEVELOPMENT_REQUIRED"] }, staffMember: { archivedAt: null, ...staffLocationScope } } }),
+      db.kpiReturn.count({ where: { organisationId: context.organisation.id, reportingMonth: monthStart, status: { in: ["READY_FOR_REVIEW", "SUBMITTED", "LOCKED"] }, ...(context.allLocations ? {} : { locationId: { in: context.locations.map(({ id }) => id) } }) } }),
     ]);
-    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions, governanceMeetingsDue, workforceChecksDue, competencyActions };
+    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions, governanceMeetingsDue, workforceChecksDue, competencyActions, kpiReturnsOutstanding: Math.max(0, context.locations.length - submittedKpiLocations) };
   } finally { await db.$disconnect(); }
 }
 

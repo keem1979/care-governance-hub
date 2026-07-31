@@ -74,8 +74,10 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Open Compliance Calendar", "/calendar", ["view", "list", "month"], view),
     link("Add a deadline", "/calendar/new", ["add", "create", "new", "deadline"], edit),
   ]),
-  topic("KPI Dashboard", "/kpis", ["kpi", "kpis", "performance", "target", "rag", "indicator", "trend"], "KPI Dashboard records monthly measures, targets, RAG results and trends.", "Enter monthly KPI values for an organisation or location, attach notes and evidence, review trend charts, import or export CSV and print the KPI report.", view, [
-    link("Open KPI Dashboard", "/kpis", ["view", "dashboard", "trend"], view),
+  topic("KPI Suite", "/kpis", ["kpi", "kpis", "performance", "target", "rag", "indicator", "trend", "local authority", "commissioner", "monthly return"], "KPI Suite keeps monthly local-authority returns, operational scorecards, evidence and trends together.", "Registered Managers can complete a branch return covering delivery, capacity, workforce, live-in care, complaints and safeguarding. QCGMS validates related totals, calculates rates without divide-by-zero errors, keeps a submission history and exports a commissioner-ready CSV. Confirm the authority’s current template before official submission.", view, [
+    link("Open KPI Suite", "/kpis", ["view", "dashboard", "trend"], view),
+    link("Start monthly authority return", "/kpis/monthly", ["authority", "commissioner", "return", "month end"], edit),
+    link("View return history", "/kpis/returns", ["history", "submitted", "draft", "review"], view),
     link("Enter KPI data", "/kpis/entry", ["add", "enter", "record", "new", "monthly"], edit),
     link("Open KPI report", "/kpis/report", ["report", "print", "pdf"], reports),
   ]),
@@ -195,7 +197,7 @@ export function answerAssistant(query: string, permissions: readonly string[], c
   const wantsNavigation = /\b(go to|open|take me|navigate|show me)\b/.test(clean);
   if (!clean || /^(hi|hello|hey|help|what can you do)[.!? ]*$/.test(clean)) {
     return {
-      answer: "Hi, I’m Abi. I can explain every part of the Hub, why it matters in health and social care, how it may support CQC inspection evidence, or open the right page for you. You could ask, “Why does the risk register matter for CQC?”, “How do I add evidence?” or “Open Reports.”",
+      answer: "Hi, I’m Abi. I can explain every part of QCGMS, why it matters in health and social care, how it may support CQC inspection evidence, or give you the right page link. You could ask, “How do I complete the monthly local authority KPI return?”, “Why does the risk register matter for CQC?” or “Open Reports.”",
       links: accessible(ASSISTANT_TOPICS.map((item) => ({ label: item.name, href: item.href, requiredAny: item.requiredAny })), permissions).slice(0, 6),
       navigate: false,
     };
@@ -216,7 +218,7 @@ export function answerAssistant(query: string, permissions: readonly string[], c
   }
   if (!topic) {
     return {
-      answer: "I’m not quite sure which part of the Hub you mean. Tell me whether you’re working with policies, evidence, audits, registers, risks, actions, meetings, the calendar, KPIs, inspection preparation, templates, reports, the activity log or settings. For clinical or regulatory decisions, please follow your organisation’s approved guidance.",
+      answer: "I’m not quite sure which part of QCGMS you mean. Tell me whether you’re working with policies, evidence, audits, registers, risks, actions, meetings, the calendar, KPIs, inspection preparation, templates, reports, the activity log or settings. For clinical or regulatory decisions, please follow your organisation’s approved guidance.",
       links: accessible(ASSISTANT_TOPICS.map((item) => ({ label: item.name, href: item.href, requiredAny: item.requiredAny })), permissions).slice(0, 6),
       navigate: false,
     };

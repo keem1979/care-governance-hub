@@ -1,6 +1,6 @@
-# Care Governance Hub
+# Quality, Compliance and Governance Management System — QCGMS
 
-Care Governance Hub is a secure, multi-tenant governance and compliance workspace
+QCGMS is a secure, multi-tenant quality, governance and compliance workspace
 for UK adult social care providers. It helps teams organise evidence and understand
 what is ready, missing, or urgent without claiming to predict an official CQC rating.
 

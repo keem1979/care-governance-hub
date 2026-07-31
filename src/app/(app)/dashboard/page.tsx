@@ -93,6 +93,12 @@ export default async function DashboardPage() {
       icon: CalendarDays,
       visible: canEdit,
     },
+    {
+      label: "Monthly KPI return",
+      href: "/kpis/monthly",
+      icon: BarChart3,
+      visible: canEdit,
+    },
   ].filter(({ visible }) => visible);
 
   return (

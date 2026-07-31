@@ -1,6 +1,7 @@
 import {
   BookOpenCheck,
   CalendarClock,
+  ChartNoAxesCombined,
   ClipboardCheck,
   FileClock,
   GraduationCap,
@@ -63,8 +64,15 @@ export function formatUkDateTime(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number; workforceChecksDue?:number; competencyActions?:number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number; workforceChecksDue?:number; competencyActions?:number; kpiReturnsOutstanding?:number }): DashboardSummary[] {
   return [
+    {
+      label: "Monthly KPI returns outstanding",
+      href: "/kpis/returns",
+      icon: ChartNoAxesCombined,
+      value: counts?.kpiReturnsOutstanding ?? null,
+      qualifier: counts ? "Branches not yet ready for review this month" : "KPI return data unavailable",
+    },
     {
       label: "Policies due for review",
       href: "/policies",
@@ -188,7 +196,7 @@ export function dashboardModules(): DashboardModule[] {
       name: "KPIs and inspection readiness",
       href: "/kpis",
       status: "ready",
-      description: "KPI reporting and internal inspection-evidence readiness controls are active.",
+      description: "Monthly authority returns, KPI trends and inspection-evidence readiness controls are active.",
     },
     {
       name: "Workforce and care quality",

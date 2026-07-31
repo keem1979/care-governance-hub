@@ -49,7 +49,7 @@ describe("Abi governance assistant", () => {
       all,
       "/kpis/entry",
     ).answer;
-    expect(answer).toContain("KPI Dashboard");
+    expect(answer).toContain("KPI Suite");
     expect(answer).toContain("Why it matters in health and social care:");
     expect(answer).toContain("CQC relevance:");
   });
