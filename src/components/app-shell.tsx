@@ -54,6 +54,30 @@ const navigation = [
   { href: "/settings", label: "Settings", icon: Settings, anyOf: [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE] },
 ] as const;
 
+const moduleConnections: Record<string, {
+  source: string;
+  links: { href: string; label: string }[];
+}> = {
+  policies: { source: "Controlled policy records, approvals, review dates and document versions", links: [{ href: "/reports/policy-compliance", label: "Policy report" }, { href: "/inspection", label: "Inspection evidence" }, { href: "/activity?recordType=Policy", label: "Policy activity" }] },
+  evidence: { source: "Uploaded evidence, template copies and linked module records", links: [{ href: "/reports/evidence-index", label: "Evidence report" }, { href: "/inspection", label: "Inspection links" }, { href: "/audits", label: "Audit evidence" }] },
+  audits: { source: "Completed audit forms, responses, findings and scores", links: [{ href: "/reports/audit", label: "Audit report" }, { href: "/actions", label: "Improvement actions" }, { href: "/inspection", label: "Inspection evidence" }] },
+  registers: { source: "Operational events entered by managers and authorised staff", links: [{ href: "/kpis", label: "Synced KPIs" }, { href: "/actions", label: "Follow-up actions" }, { href: "/reports", label: "Register reports" }] },
+  risks: { source: "Scored risks, controls, owners and review history", links: [{ href: "/reports/risk", label: "Risk report" }, { href: "/actions", label: "Risk actions" }, { href: "/dashboard", label: "Dashboard alerts" }] },
+  actions: { source: "Actions raised from audits, risks, registers, meetings and manual entry", links: [{ href: "/reports/action-status", label: "Action report" }, { href: "/calendar", label: "Due dates" }, { href: "/dashboard", label: "Dashboard alerts" }] },
+  workforce: { source: "Staff records, checks, training, supervision and competency outcomes", links: [{ href: "/calendar", label: "Expiry calendar" }, { href: "/kpis", label: "Workforce KPIs" }, { href: "/inspection", label: "Inspection evidence" }] },
+  quality: { source: "Care-plan, MAR, outcomes, surveys and contract assurance registers", links: [{ href: "/kpis", label: "Quality KPIs" }, { href: "/inspection", label: "Inspection evidence" }, { href: "/reports/quality-assurance", label: "Quality report" }] },
+  meetings: { source: "Agendas, attendance, decisions, approved minutes and linked actions", links: [{ href: "/actions", label: "Meeting actions" }, { href: "/calendar", label: "Meeting dates" }, { href: "/reports/monthly-governance", label: "Governance report" }] },
+  calendar: { source: "Manual deadlines plus policy, workforce and governance due dates", links: [{ href: "/policies", label: "Policy reviews" }, { href: "/workforce", label: "Workforce checks" }, { href: "/dashboard", label: "Upcoming deadlines" }] },
+  kpis: { source: "Registers, actions, workforce, audits, policies and verified manager figures", links: [{ href: "/kpis/returns", label: "Return history" }, { href: "/reports/kpi", label: "KPI report" }, { href: "/dashboard", label: "Dashboard summary" }] },
+  inspection: { source: "Evidence, policies, audits, actions and operational register links", links: [{ href: "/inspection/pack", label: "Inspection pack" }, { href: "/reports/inspection-readiness", label: "Readiness report" }, { href: "/evidence", label: "Evidence Library" }] },
+  templates: { source: "Published starter templates and organisation-owned controlled templates", links: [{ href: "/evidence", label: "Create evidence" }, { href: "/audits", label: "Audit forms" }, { href: "/activity?recordType=Template", label: "Template activity" }] },
+  reports: { source: "Live authorised records from every governance module", links: [{ href: "/dashboard", label: "Dashboard" }, { href: "/activity", label: "Audit trail" }] },
+  activity: { source: "Immutable create, update, approval, export and access events", links: [{ href: "/reports", label: "Reports" }, { href: "/assurance", label: "Security assurance" }] },
+  assurance: { source: "Settings, access controls, audit history and security evidence", links: [{ href: "/settings", label: "Access settings" }, { href: "/activity", label: "Audit trail" }, { href: "/evidence", label: "Security evidence" }] },
+  settings: { source: "Organisation structure, locations, licences, users and permissions", links: [{ href: "/activity", label: "Permission history" }, { href: "/assurance", label: "Security readiness" }] },
+  dashboard: { source: "Live alerts and summaries from all QCGMS modules", links: [{ href: "/reports/monthly-governance", label: "Governance report" }, { href: "/activity", label: "Recent activity" }] },
+};
+
 export function AppShell({
   context,
   children,
@@ -66,6 +90,8 @@ export function AppShell({
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const location = context.locations[0];
+  const moduleKey = pathname.split("/").filter(Boolean)[0] ?? "dashboard";
+  const connections = moduleConnections[moduleKey];
 
   async function signOut() {
     setSigningOut(true);
@@ -214,6 +240,16 @@ export function AppShell({
             <ChevronDown className="shrink-0 text-muted" size={15} />
           </button>
         </header>
+        {connections ? (
+          <section className="border-b border-emerald-100 bg-emerald-50/70 px-4 py-3 sm:px-6 lg:px-8" aria-label="Module data and related views">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs leading-5 text-emerald-950"><strong>Data source:</strong> {connections.source}</p>
+              <nav className="flex flex-wrap gap-2" aria-label="Related module views">
+                {connections.links.map((item) => <Link key={item.href} href={item.href} className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-bold text-emerald-800 hover:border-emerald-400">{item.label}</Link>)}
+              </nav>
+            </div>
+          </section>
+        ) : null}
         <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
       <GovernanceAssistant />

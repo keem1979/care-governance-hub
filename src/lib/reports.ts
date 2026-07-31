@@ -81,6 +81,7 @@ export type ReportRow = {
   type: string;
   reference: string;
   title: string;
+  href: string;
   date: string;
   location: string;
   category: string;

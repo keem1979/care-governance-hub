@@ -51,6 +51,25 @@ export function activityLabel(value: string): string {
   return value.replaceAll("_", " ").toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
+export function activityRecordHref(recordType: string, recordId: string | null): string | null {
+  if (!recordId) return null;
+  const routes: Record<string, string> = {
+    Action: "actions",
+    ActionUpdate: "actions",
+    Audit: "audits",
+    CalendarItem: "calendar",
+    ComplianceRequirement: "inspection",
+    Evidence: "evidence",
+    GovernanceMeeting: "meetings",
+    Policy: "policies",
+    Risk: "risks",
+    RiskReview: "risks",
+    StaffMember: "workforce",
+    Template: "templates",
+  };
+  return routes[recordType] ? `/${routes[recordType]}/${recordId}` : null;
+}
+
 export function safeActivityValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(safeActivityValue);
   if (!value || typeof value !== "object") return value;

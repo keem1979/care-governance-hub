@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityCsv, parseActivityFilters, safeActivityValue } from "@/lib/activity";
+import { activityCsv, activityRecordHref, parseActivityFilters, safeActivityValue } from "@/lib/activity";
 
 describe("activity log", () => {
   it("accepts only authorised locations", () => {
@@ -14,6 +14,11 @@ describe("activity log", () => {
 
   it("redacts sensitive change values recursively", () => {
     expect(safeActivityValue({ token: "secret", nested: { passwordHash: "hash", status: "OPEN" } })).toEqual({ token: "[REDACTED]", nested: { passwordHash: "[REDACTED]", status: "OPEN" } });
+  });
+
+  it("links supported activity events back to their source record", () => {
+    expect(activityRecordHref("Policy", "p1")).toBe("/policies/p1");
+    expect(activityRecordHref("Login", null)).toBeNull();
   });
 
   it("exports escaped CSV without sensitive values", () => {

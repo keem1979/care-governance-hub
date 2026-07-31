@@ -11,6 +11,7 @@ const row: ReportRow = {
   type: "Risk",
   reference: "RSK-1",
   title: "Test risk",
+  href: "/risks/risk-1",
   date: "2026-07-20",
   location: "Main service",
   category: "Operational",

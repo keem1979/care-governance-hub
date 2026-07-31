@@ -3,6 +3,7 @@ import {
   ACTIVITY_ACTIONS,
   ACTIVITY_PAGE_SIZE,
   activityLabel,
+  activityRecordHref,
   parseActivityFilters,
   safeActivityValue,
 } from "@/lib/activity";
@@ -89,14 +90,18 @@ export default async function ActivityPage({
         <p className="text-sm text-slate-600">Newest activity first</p>
         {canExport ? <a href={`/api/activity/export${query ? `?${query}` : ""}`} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Export CSV</a> : null}
       </div>
-      {entries.length ? <section className="space-y-3">{entries.map((entry) => <article key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {entries.length ? <section className="space-y-3">{entries.map((entry) => {
+        const sourceHref = activityRecordHref(entry.recordType, entry.recordId);
+        return <article key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><div className="flex flex-wrap items-center gap-2"><span className={badge(entry.action)}>{activityLabel(entry.action)}</span><span className="text-xs font-semibold text-slate-500">{entry.recordType}{entry.recordId ? ` · ${entry.recordId}` : ""}</span></div><h2 className="mt-2 font-bold">{entry.summary}</h2></div>
           <time className="text-xs text-slate-500" dateTime={entry.createdAt.toISOString()}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(entry.createdAt)}</time>
         </div>
         <p className="mt-3 text-sm text-slate-600">{entry.user?.name ?? "System"} · {entry.location?.name ?? "Organisation-wide"}{entry.sessionInfo ? " · Session information recorded" : ""}</p>
+        {sourceHref ? <Link href={sourceHref} className="mt-3 inline-flex text-sm font-bold text-emerald-800 underline decoration-emerald-300 underline-offset-2">Open source record</Link> : null}
         {entry.beforeValue || entry.afterValue ? <details className="mt-4 rounded-xl bg-slate-50 p-3 text-sm"><summary className="cursor-pointer font-semibold">Inspect recorded changes</summary><div className="mt-3 grid gap-3 lg:grid-cols-2">{entry.beforeValue ? <Value title="Before" value={entry.beforeValue}/> : null}{entry.afterValue ? <Value title="After" value={entry.afterValue}/> : null}</div></details> : null}
-      </article>)}</section> : <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="font-bold">No activity found</h2><p className="mt-1 text-sm text-slate-600">Adjust the filters to view other recorded events.</p></section>}
+      </article>;
+      })}</section> : <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="font-bold">No activity found</h2><p className="mt-1 text-sm text-slate-600">Adjust the filters to view other recorded events.</p></section>}
       <nav className="flex items-center justify-between" aria-label="Activity pages">
         {filters.page > 1 ? <Link href={`?${makeQuery({ ...filters, page: filters.page - 1 })}`} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold">Previous</Link> : <span/>}
         {filters.page < pages ? <Link href={`?${makeQuery({ ...filters, page: filters.page + 1 })}`} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold">Next</Link> : <span/>}
