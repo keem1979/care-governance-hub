@@ -12,6 +12,25 @@ type Definition = {
   amberThreshold: number;
 };
 
+export function KpiNeedsEntryButton({ definitionId }: { definitionId: string }) {
+  function openEntry() {
+    const input = document.getElementById(`kpi-input-${definitionId}`);
+    input?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => input?.focus(), 350);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={openEntry}
+      aria-label="Open this KPI's monthly entry field"
+      className="rounded-full bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+    >
+      ENTER RESULT
+    </button>
+  );
+}
+
 export function KpiScorecardEntry({
   definition,
   month,
@@ -56,6 +75,7 @@ export function KpiScorecardEntry({
       <label className="block text-sm font-semibold">
         This month’s verified result ({definition.unit})
         <input
+          id={`kpi-input-${definition.id}`}
           name="actualValue"
           type="number"
           step="any"
