@@ -11,9 +11,44 @@ export default async function MonthlyKpiReturnPage({ searchParams }: { searchPar
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
   const query = await searchParams;
   const requestedId = String(query.id ?? "");
+  const requestedMonth = /^\d{4}-\d{2}$/.test(String(query.month)) ? String(query.month) : new Date().toISOString().slice(0, 7);
+  const requestedLocation = context.locations.some((location) => location.id === String(query.location)) ? String(query.location) : context.locations[0]?.id ?? "";
   const db = createDb();
   try {
     const existing = requestedId ? await db.kpiReturn.findFirst({ where: { id: requestedId, organisationId: context.organisation.id } }) : null;
+    const reportingMonth = new Date(`${requestedMonth}-01T12:00:00Z`);
+    const monthEnd = new Date(reportingMonth);
+    monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1);
+    const registerCounts = existing || !requestedLocation ? [] : await db.registerEntry.groupBy({
+      by: ["definitionId"],
+      where: {
+        organisationId: context.organisation.id,
+        locationId: requestedLocation,
+        archivedAt: null,
+        eventDate: { gte: reportingMonth, lt: monthEnd },
+        definition: { key: { in: ["missed-visits", "late-visits", "complaints", "safeguarding"] } },
+      },
+      _count: { id: true },
+    });
+    const definitions = registerCounts.length ? await db.registerDefinition.findMany({
+      where: { id: { in: registerCounts.map((item) => item.definitionId) } },
+      select: { id: true, key: true },
+    }) : [];
+    const countFor = (key: string) => {
+      const definition = definitions.find((item) => item.key === key);
+      return definition ? registerCounts.find((item) => item.definitionId === definition.id)?._count.id ?? 0 : 0;
+    };
+    const activeStaff = existing || !requestedLocation ? 0 : await db.staffMember.count({
+      where: { organisationId: context.organisation.id, locationId: requestedLocation, archivedAt: null, employmentStatus: "ACTIVE" },
+    });
+    const defaultData: KpiReturnData = {
+      missedCalls: countFor("missed-visits"),
+      lateCalls: countFor("late-visits"),
+      complaintsReceived: countFor("complaints"),
+      safeguardingReferrals: countFor("safeguarding"),
+      staffMonthEnd: activeStaff,
+    };
+    const sourceCount = requestedLocation ? Object.keys(defaultData).length : 0;
     return <main className="mx-auto max-w-7xl space-y-6">
       <header>
         <Link href="/kpis" className="text-sm font-semibold text-emerald-700">Back to KPI Suite</Link>
@@ -25,6 +60,7 @@ export default async function MonthlyKpiReturnPage({ searchParams }: { searchPar
       <MonthlyKpiReturnForm
         locations={context.locations.map(({ id, name, code }) => ({ id, name, code }))}
         currentUserCanSubmit={hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_EDIT)}
+        defaults={!existing ? { reportingMonth: requestedMonth, locationId: requestedLocation, data: defaultData, sourceCount } : undefined}
         initial={existing ? {
           id: existing.id,
           reportingMonth: existing.reportingMonth.toISOString().slice(0, 7),

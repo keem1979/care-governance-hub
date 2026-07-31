@@ -9,9 +9,16 @@ type Location = { id: string; name: string; code: string };
 export function MonthlyKpiReturnForm({
   locations,
   initial,
+  defaults,
   currentUserCanSubmit,
 }: {
   locations: Location[];
+  defaults?: {
+    reportingMonth: string;
+    locationId: string;
+    data: KpiReturnData;
+    sourceCount: number;
+  };
   initial?: {
     id: string;
     reportingMonth: string;
@@ -28,7 +35,7 @@ export function MonthlyKpiReturnForm({
   currentUserCanSubmit: boolean;
 }) {
   const router = useRouter();
-  const [values, setValues] = useState<KpiReturnData>(initial?.data ?? {});
+  const [values, setValues] = useState<KpiReturnData>(initial?.data ?? defaults?.data ?? {});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const summary = useMemo(() => calculateKpiReturnSummary(values), [values]);
@@ -55,14 +62,15 @@ export function MonthlyKpiReturnForm({
   return (
     <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void save(event.currentTarget, "draft"); }}>
       {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div> : null}
+      {!initial && defaults?.sourceCount ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><strong>Started from QCGMS records.</strong> {defaults.sourceCount} figures below were pre-filled from this branch’s visits, workforce, complaints and safeguarding records. Check each number before submission.</div> : null}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><h2 className="text-lg font-bold">Return details</h2><p className="text-sm text-slate-600">One return is kept for each branch and reporting month.</p></div>
           {initial ? <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold">{initial.status.replaceAll("_", " ")}</span> : null}
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <label className="text-sm font-medium">Reporting month<input className={field} name="reportingMonth" type="month" required defaultValue={initial?.reportingMonth ?? new Date().toISOString().slice(0, 7)} /></label>
-          <label className="text-sm font-medium">Branch<select className={field} name="locationId" required defaultValue={initial?.locationId ?? locations[0]?.id}>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
+          <label className="text-sm font-medium">Reporting month<input className={field} name="reportingMonth" type="month" required defaultValue={initial?.reportingMonth ?? defaults?.reportingMonth ?? new Date().toISOString().slice(0, 7)} /></label>
+          <label className="text-sm font-medium">Branch<select className={field} name="locationId" required defaultValue={initial?.locationId ?? defaults?.locationId ?? locations[0]?.id}>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
           <label className="text-sm font-medium">Local authority<input className={field} name="localAuthority" required defaultValue={initial?.localAuthority ?? "Surrey County Council"} /></label>
           <label className="text-sm font-medium">Contract or framework<input className={field} name="contractName" defaultValue={initial?.contractName ?? "Care Within the Home"} /></label>
           <label className="text-sm font-medium">Provider code<input className={field} name="providerCode" defaultValue={initial?.providerCode} placeholder="CQC provider ID or commissioner code" /></label>
@@ -93,7 +101,7 @@ export function MonthlyKpiReturnForm({
                   name={item.key}
                   type="number"
                   inputMode="numeric"
-                  defaultValue={initial?.data[item.key] ?? ""}
+                  defaultValue={initial?.data[item.key] ?? defaults?.data[item.key] ?? ""}
                   onChange={(event) => setValues((current) => ({ ...current, [item.key]: event.target.value === "" ? 0 : Number(event.target.value) }))}
                 />
                 {item.help ? <span className="mt-1 block text-xs font-normal text-slate-500">{item.help}</span> : null}
