@@ -3,6 +3,7 @@ import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { calculateKpiRag, parseCsv, parseKpiMonth } from "@/lib/kpis";
 import { PERMISSIONS } from "@/lib/permissions";
+import { isAutoCalculatedKpi } from "@/lib/commissioner-kpis";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
       const kpiText = value("kpi").toLowerCase();
       const definition = definitions.find((item) => item.slug === kpiText || item.name.toLowerCase() === kpiText);
       if (!definition) throw new Error(`Row ${index + 2}: KPI was not found.`);
+      if (isAutoCalculatedKpi(definition.slug)) throw new Error(`Row ${index + 2}: ${definition.name} is calculated automatically from its source figures.`);
       const locationText = value("location").toLowerCase();
       const location = locationText ? locations.find((item) => item.name.toLowerCase() === locationText || item.code.toLowerCase() === locationText) : null;
       if (locationText && !location) throw new Error(`Row ${index + 2}: location was not found.`);

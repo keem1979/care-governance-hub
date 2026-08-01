@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { calculateKpiRag, parseKpiMonth } from "@/lib/kpis";
 import {
-  COMMISSIONER_KPI_SLUGS,
+  KPI_RETURN_SYNC_SLUGS,
   commissionerKpiValues,
 } from "@/lib/commissioner-kpis";
 import type { KpiReturnData } from "@/lib/kpi-suite";
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const definitions = await db.kpiDefinition.findMany({
       where: {
         organisationId: context.organisation.id,
-        slug: { in: [...Object.keys(KPI_AUTO_SOURCES), ...COMMISSIONER_KPI_SLUGS] },
+        slug: { in: [...Object.keys(KPI_AUTO_SOURCES), ...KPI_RETURN_SYNC_SLUGS] },
         isActive: true,
       },
     });

@@ -39,12 +39,14 @@ const WORKFORCE = new Set([
   "staff-turnover", "staff-sickness", "vacancies", "training-compliance", "supervision-compliance",
   "appraisal-compliance", "spot-check-compliance", "dbs-compliance", "right-to-work-compliance",
   "professional-registration-compliance", "competency-compliance",
+  "orientation-completion-rate", "live-in-supervision-rate",
 ]);
 
 const EXPERIENCE_OUTCOMES = new Set([
   "care-hours-delivered", "care-plan-reviews", "service-user-satisfaction", "staff-satisfaction", "compliments",
   "continuity-of-care", "visits-within-agreed-time", "outcomes-achieved", "care-plan-involvement",
   "complaints-responded-on-time", "complaint-actions-completed", "feedback-response-rate", "carer-satisfaction",
+  "complaint-closure-rate",
 ]);
 
 export function kpiCatalogueSection(slug: string): KpiCatalogueSectionKey {

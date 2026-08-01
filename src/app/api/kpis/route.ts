@@ -4,6 +4,7 @@ import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { calculateKpiRag, monthKey, parseKpiMonth } from "@/lib/kpis";
 import { PERMISSIONS } from "@/lib/permissions";
+import { isAutoCalculatedKpi } from "@/lib/commissioner-kpis";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
     const notes = String(form.get("notes") ?? "").trim() || null;
     const definition = await db.kpiDefinition.findFirst({ where: { id: kpiId, organisationId: context.organisation.id, isActive: true } });
     if (!definition) throw new Error("Choose a valid KPI.");
+    if (isAutoCalculatedKpi(definition.slug)) throw new Error("This rate is calculated automatically from its source figures.");
     if (locationId && !context.locations.some(({ id }) => id === locationId)) throw new Error("Choose an authorised location.");
     if (![actualValue, targetValue, greenThreshold, amberThreshold].every(Number.isFinite)) throw new Error("Enter valid KPI values and thresholds.");
     const ragStatus = calculateKpiRag({ actual: actualValue, direction: definition.direction, greenThreshold, amberThreshold });

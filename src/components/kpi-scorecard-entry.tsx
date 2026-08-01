@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { KPI_RESULT_BUTTON_CLASS } from "@/lib/kpi-ui";
 
 type Definition = {
   id: string;
@@ -24,9 +25,9 @@ export function KpiNeedsEntryButton({ definitionId }: { definitionId: string }) 
       type="button"
       onClick={openEntry}
       aria-label="Open this KPI's monthly entry field"
-      className="rounded-full bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+      className={KPI_RESULT_BUTTON_CLASS}
     >
-      ENTER RESULT
+      Add result
     </button>
   );
 }
@@ -98,9 +99,9 @@ export function KpiScorecardEntry({
       {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
       <button
         disabled={busy}
-        className="w-full rounded-lg border border-emerald-700 px-3 py-2 text-sm font-bold text-emerald-800 disabled:opacity-60"
+        className={`${KPI_RESULT_BUTTON_CLASS} w-full`}
       >
-        {busy ? "Saving…" : actualValue === undefined ? "Save this figure" : "Update this figure"}
+        {busy ? "Saving…" : actualValue === undefined ? "Save result" : "Update result"}
       </button>
     </form>
   );

@@ -79,13 +79,21 @@ export function MonthlyKpiReturnForm({
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <Rate label="Successful delivery" value={summary.successfulDeliveryRate} />
-        <Rate label="Provider exception rate" value={summary.providerExceptionRate} />
-        <Rate label="Restart acceptance" value={summary.restartAcceptanceRate} />
-        <Rate label="Referral response" value={summary.referralResponseRate} />
-        <Rate label="New staff rate" value={summary.staffJoinerRate} />
-        <Rate label="Care Certificate" value={summary.careCertificateRate} />
+      <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+        <h2 className="text-lg font-bold text-blue-950">Rates calculated for you</h2>
+        <p className="mt-1 text-sm text-blue-900">These results update automatically as you enter the related monthly totals below. Save the return to update the KPI scorecard.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Rate label="Calls delivered as planned" value={summary.successfulDeliveryRate} />
+          <Rate label="Care-call exceptions" value={summary.providerExceptionRate} />
+          <Rate label="Restart acceptance" value={summary.restartAcceptanceRate} />
+          <Rate label="Referral response" value={summary.referralResponseRate} />
+          <Rate label="New-starter rate" value={summary.staffJoinerRate} />
+          <Rate label="Orientation completion" value={summary.orientationCompletionRate} />
+          <Rate label="Care Certificate compliance" value={summary.careCertificateRate} />
+          <Rate label="Live-in supervision" value={summary.liveInSupervisionRate} />
+          <Rate label="Competency compliance" value={summary.competencyCompletionRate} />
+          <Rate label="Complaint closure" value={summary.complaintClosureRate} />
+        </div>
       </section>
 
       {KPI_RETURN_SECTIONS.map((section) => (
@@ -130,5 +138,5 @@ export function MonthlyKpiReturnForm({
 }
 
 function Rate({ label, value }: { label: string; value: number | null }) {
-  return <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-semibold text-slate-500">{label}</p><p className="mt-2 text-2xl font-black">{formatRate(value)}</p></div>;
+  return <div className="rounded-xl border border-blue-100 bg-white p-4"><p className="text-xs font-semibold text-slate-600">{label}</p><p className="mt-2 text-2xl font-black text-slate-950">{formatRate(value)}</p><p className="mt-1 text-[11px] font-semibold text-blue-700">Calculated automatically</p></div>;
 }
