@@ -64,3 +64,19 @@ test("opens the connected Action Tracker and its natural entry form", async ({ p
   await expect(page.getByLabel("Source record")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create and connect action" })).toBeVisible();
 });
+
+test("shows Care Quality as a connected overview rather than a duplicate register", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Email address").fill("owner@meadowview.demo");
+  await page.getByLabel("Password").fill("DemoCare!2026");
+  await page.getByRole("button", { name: "Sign in securely" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+  await page.goto("/quality", { waitUntil: "domcontentloaded", timeout: 45_000 });
+  await expect(page.getByRole("heading", { name: "Quality & Outcomes Overview" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Quality pathways" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Latest quality signals" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Quality attention queue" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "One source of truth—no duplicate records" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Quality assurance report", exact: true })).toBeVisible();
+});

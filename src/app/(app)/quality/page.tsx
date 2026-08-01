@@ -1,114 +1,41 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  ClipboardCheck,
-  HeartHandshake,
-  HeartPulse,
-  Pill,
-  ShieldCheck,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, CheckCircle2, ClipboardCheck, FileSearch, HeartPulse, Plus, ShieldCheck } from "lucide-react";
 import { requirePermission } from "@/lib/auth/dal";
-import { PERMISSIONS } from "@/lib/permissions";
-
-const areas = [
-  {
-    title: "Complete an assessment",
-    detail: "Start with initial needs and decision-specific consent, then choose only the specialist assessments indicated by need or risk.",
-    href: "/assessments",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Review a person’s care plan",
-    detail: "Record who took part, what changed, agreed outcomes and the next review date.",
-    href: "/registers/care-plan-reviews",
-    icon: HeartHandshake,
-  },
-  {
-    title: "Review a person’s risk assessment",
-    detail: "Name the risk being reviewed, record what changed and confirm whether controls were updated.",
-    href: "/registers/risk-assessment-reviews",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Complete a medication and MAR audit",
-    detail: "Record the sample period, records checked, omissions, stock variances, score and corrective action.",
-    href: "/registers/mar-audits",
-    icon: Pill,
-  },
-  {
-    title: "Record a delegated healthcare task",
-    detail: "Capture the delegating professional, current clinical instructions, authorised staff and competency review.",
-    href: "/registers/delegated-healthcare",
-    icon: HeartPulse,
-  },
-  {
-    title: "Review a person’s outcome",
-    detail: "Record the agreed goal, evidence of progress, the person’s view and the next review.",
-    href: "/registers/service-user-outcomes",
-    icon: ClipboardCheck,
-  },
-  {
-    title: "Record satisfaction survey results",
-    detail: "Enter response numbers, scores, themes and the improvement communicated back to people.",
-    href: "/registers/satisfaction-surveys",
-    icon: HeartHandshake,
-  },
-  {
-    title: "Record a continuity exercise or disruption",
-    detail: "Describe the scenario, whether care continued, recovery time, lessons and the next exercise.",
-    href: "/registers/business-continuity",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Track a commissioner requirement",
-    detail: "Record the contract, reporting period, submission dates, performance issue, feedback and required action.",
-    href: "/registers/commissioner-contracts",
-    icon: ClipboardCheck,
-  },
-] as const;
+import { actionScopeWhere, effectiveActionStatus } from "@/lib/actions";
+import { CARE_QUALITY_AREAS, CARE_QUALITY_KPI_SLUGS, CARE_QUALITY_REGISTER_KEYS, isQualityAttention, latestKpisBySlug } from "@/lib/care-quality";
+import { createDb } from "@/lib/db";
+import { kpiLabel, ragClasses } from "@/lib/kpis";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { registerScopeWhere, registerStatusLabel } from "@/lib/registers";
 
 export default async function CareQualityPage() {
-  await requirePermission(PERMISSIONS.GOVERNANCE_VIEW);
-  return (
-    <main className="space-y-7">
-      <header>
-        <p className="text-sm font-bold uppercase tracking-widest text-emerald-700">
-          Quality operations
-        </p>
-        <h1 className="text-3xl font-bold">Care Quality & Contract Assurance</h1>
-        <p className="mt-1 max-w-3xl text-slate-600">
-          Monitor care reviews, medication assurance, delegated healthcare,
-          outcomes, feedback, continuity and commissioner obligations.
-        </p>
-      </header>
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {areas.map(({ title, detail, href, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-400"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <span className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
-                <Icon size={20} />
-              </span>
-              <ArrowRight className="text-slate-300 group-hover:text-emerald-700" size={18} />
-            </div>
-            <h2 className="mt-4 font-bold group-hover:text-emerald-800">{title}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
-            <p className="mt-4 text-sm font-semibold text-emerald-700">Open records and add entry</p>
-          </Link>
-        ))}
-      </section>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="font-bold">Already connected elsewhere in the Hub</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Complaints, compliments, safeguarding, incidents, accidents,
-          medicines errors, falls, missed visits and CQC notifications remain
-          in Registers. Organisation-level risks remain in Risk Register, and
-          improvement work remains in Action Tracker so records are not duplicated.
-        </p>
-      </section>
-    </main>
-  );
+  const context=await requirePermission(PERMISSIONS.GOVERNANCE_VIEW),db=createDb(),now=new Date();
+  try{
+    const definitions=await db.registerDefinition.findMany({where:{key:{in:CARE_QUALITY_REGISTER_KEYS},isPublished:true,OR:[{organisationId:null},{organisationId:context.organisation.id}]},select:{id:true,key:true,name:true}});
+    const definitionIds=definitions.map(x=>x.id),definitionById=new Map(definitions.map(x=>[x.id,x]));
+    const registerWhere={...registerScopeWhere(context),definitionId:{in:definitionIds}};
+    const locationScope=context.allLocations?{}:{OR:[{locationId:null},{locationId:{in:context.locations.map(x=>x.id)}}]};
+    const [grouped,recent,kpiEntries,actions]=await Promise.all([
+      db.registerEntry.groupBy({by:["definitionId","status","riskLevel"],where:registerWhere,_count:{_all:true},_max:{eventDate:true}}),
+      db.registerEntry.findMany({where:registerWhere,include:{definition:{select:{key:true,name:true}},location:{select:{name:true}},owner:{select:{name:true}}},orderBy:{updatedAt:"desc"},take:8}),
+      db.kpiEntry.findMany({where:{organisationId:context.organisation.id,...locationScope,kpi:{slug:{in:[...CARE_QUALITY_KPI_SLUGS]},isActive:true}},include:{kpi:{select:{name:true,slug:true,unit:true}}},orderBy:{reportingMonth:"desc"},take:80}),
+      db.action.findMany({where:{...actionScopeWhere(context),category:{in:["Care quality","Safety","Medicines","Quality improvement"]},status:{notIn:["COMPLETED","CANCELLED","ARCHIVED"]}},include:{owner:{select:{name:true}}},orderBy:[{dueDate:"asc"},{priority:"desc"}],take:6}),
+    ]);
+    const latestKpis=[...latestKpisBySlug(kpiEntries).values()],total=grouped.reduce((sum,x)=>sum+x._count._all,0),attention=grouped.filter(x=>isQualityAttention(x.status,x.riskLevel)).reduce((sum,x)=>sum+x._count._all,0),highRisk=grouped.filter(x=>["HIGH","CRITICAL"].includes(x.riskLevel)&&!["CLOSED","ARCHIVED"].includes(x.status)).reduce((sum,x)=>sum+x._count._all,0),redKpis=latestKpis.filter(x=>x.ragStatus==="RED").length,canEdit=hasPermission(context.permissions,PERMISSIONS.GOVERNANCE_EDIT);
+    const byArea=CARE_QUALITY_AREAS.map(area=>{const rows=grouped.filter(x=>area.registerKeys.includes(definitionById.get(x.definitionId)?.key??""));return{...area,total:rows.reduce((sum,x)=>sum+x._count._all,0),attention:rows.filter(x=>isQualityAttention(x.status,x.riskLevel)).reduce((sum,x)=>sum+x._count._all,0),lastDate:rows.map(x=>x._max.eventDate).filter(Boolean).sort((a,b)=>(b?.getTime()??0)-(a?.getTime()??0))[0]??null}});
+    return <main className="space-y-7">
+      <header className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-800 p-7 text-white shadow-sm"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-sm font-bold uppercase tracking-widest text-emerald-200">Registered Manager quality cockpit</p><h1 className="mt-1 text-3xl font-bold">Quality & Outcomes Overview</h1><p className="mt-2 max-w-3xl text-emerald-50">See the quality of care across assessments, reviews, medicines, outcomes, experience and contract assurance—without entering the same information twice.</p></div><HeartPulse className="size-12 text-emerald-200"/></div><div className="mt-6 flex flex-wrap gap-2 text-sm"><Link href="/kpis" className="rounded-full bg-white/10 px-4 py-2 font-semibold">Quality KPIs</Link><Link href="/inspection" className="rounded-full bg-white/10 px-4 py-2 font-semibold">Inspection evidence</Link><Link href="/reports/quality-assurance" className="rounded-full bg-white/10 px-4 py-2 font-semibold">Quality assurance report</Link><Link href="/actions?category=Care+quality" className="rounded-full bg-white/10 px-4 py-2 font-semibold">Improvement actions</Link></div></header>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><Stat icon={ClipboardCheck} label="Quality records" value={total} detail="held in source modules"/><Stat icon={AlertTriangle} label="Need attention" value={attention} detail="open or under review" warn={attention>0}/><Stat icon={ShieldCheck} label="High-risk open" value={highRisk} detail="high or critical" warn={highRisk>0}/><Stat icon={BarChart3} label="Red KPI signals" value={redKpis} detail={`${latestKpis.length} measures updated`} warn={redKpis>0}/><Stat icon={CheckCircle2} label="Open improvements" value={actions.length} detail="quality-linked actions"/></section>
+      <section><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold">Quality pathways</h2><p className="mt-1 text-sm text-slate-600">Each card reads the original register or assessment record. Create and update work only at that source.</p></div><Link href="/registers" className="text-sm font-bold text-emerald-800">Browse all registers →</Link></div><div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{byArea.map(area=><article key={area.key} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><span className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><HeartPulse size={20}/></span>{area.attention>0?<span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-900">{area.attention} need attention</span>:<span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">No open gaps</span>}</div><h3 className="mt-4 font-bold">{area.title}</h3><p className="mt-2 min-h-16 text-sm leading-6 text-slate-600">{area.description}</p><div className="mt-4 flex items-center justify-between text-xs text-slate-500"><span>{area.total} records</span><span>{area.lastDate?`Last ${date(area.lastDate)}`:"No records yet"}</span></div><div className="mt-4 flex flex-wrap gap-3"><Link href={area.href} className="text-sm font-bold text-emerald-800">Open source →</Link>{canEdit&&<Link href={area.createHref} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700"><Plus size={14}/> Add record</Link>}</div></article>)}</div></section>
+      <section className="grid gap-5 xl:grid-cols-2"><Panel title="Latest quality signals" icon={BarChart3}>{latestKpis.length?<div className="divide-y divide-slate-100">{latestKpis.slice(0,7).map(item=><Link key={item.id} href="/kpis" className="flex items-center justify-between gap-4 py-3"><div><p className="font-semibold">{item.kpi.name}</p><p className="text-xs text-slate-500">{month(item.reportingMonth)} · verified source: {kpiLabel(item.sourceType)}</p></div><div className="text-right"><p className="font-bold">{formatValue(item.actualValue,item.kpi.unit)}</p><span className={`rounded-full px-2 py-1 text-xs font-bold ${ragClasses(item.ragStatus)}`}>{kpiLabel(item.ragStatus)}</span></div></Link>)}</div>:<Empty text="No quality KPI results have been entered yet." href="/kpis/entry" link="Add this month’s figures"/>}</Panel>
+      <Panel title="Quality attention queue" icon={AlertTriangle}>{recent.length||actions.length?<div className="space-y-3">{recent.filter(item=>isQualityAttention(item.status,item.riskLevel)).slice(0,4).map(item=><Link key={item.id} href={`/registers/${item.definition.key}/${item.id}`} className="block rounded-xl border border-slate-200 p-4 hover:border-emerald-400"><div className="flex justify-between gap-3"><p className="font-semibold">{item.title}</p><span className="text-xs font-bold text-amber-800">{registerStatusLabel(item.status)}</span></div><p className="mt-1 text-xs text-slate-500">{item.definition.name} · {item.location?.name??"Organisation-wide"} · {item.owner?.name??"Unassigned"}</p></Link>)}{actions.slice(0,3).map(item=><Link key={item.id} href={`/actions/${item.id}`} className="block rounded-xl border border-slate-200 p-4 hover:border-emerald-400"><div className="flex justify-between gap-3"><p className="font-semibold">{item.title}</p><span className="text-xs font-bold text-red-700">{registerStatusLabel(effectiveActionStatus(item.status,item.dueDate,now))}</span></div><p className="mt-1 text-xs text-slate-500">Action {item.reference} · {item.owner.name} · due {date(item.dueDate)}</p></Link>)}</div>:<Empty text="There are no current quality records or actions requiring attention." href="/assessments" link="Start an assessment"/>}</Panel></section>
+      <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><div className="flex gap-3"><FileSearch className="mt-0.5 shrink-0 text-blue-800"/><div><h2 className="font-bold text-blue-950">One source of truth—no duplicate records</h2><p className="mt-1 text-sm leading-6 text-blue-950">Assessment Centre owns assessments and consent. Registers own operational quality records. KPI Suite owns measured results. Action Tracker owns improvement work. Evidence Library and Inspection Centre reuse those records. This page only brings their live position together for management oversight.</p><div className="mt-3 flex flex-wrap gap-3 text-sm font-bold"><Link href="/assessments" className="text-blue-900">Assessments</Link><Link href="/registers" className="text-blue-900">Registers</Link><Link href="/evidence" className="text-blue-900">Evidence</Link><Link href="/inspection" className="text-blue-900">Inspection Centre</Link></div></div></div></section>
+    </main>;
+  }finally{await db.$disconnect()}
 }
+function Stat({icon:Icon,label,value,detail,warn=false}:{icon:typeof HeartPulse;label:string;value:number;detail:string;warn?:boolean}){return <div className={`rounded-2xl border p-5 ${warn?"border-amber-200 bg-amber-50":"border-slate-200 bg-white"}`}><Icon size={20} className={warn?"text-amber-800":"text-emerald-700"}/><p className="mt-3 text-sm text-slate-600">{label}</p><p className="text-3xl font-black">{value}</p><p className="text-xs text-slate-500">{detail}</p></div>}
+function Panel({title,icon:Icon,children}:{title:string;icon:typeof HeartPulse;children:React.ReactNode}){return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><Icon size={20} className="text-emerald-700"/><h2 className="text-lg font-bold">{title}</h2></div><div className="mt-4">{children}</div></section>}
+function Empty({text,href,link}:{text:string;href:string;link:string}){return <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center"><p className="text-sm text-slate-600">{text}</p><Link href={href} className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-emerald-800">{link}<ArrowRight size={14}/></Link></div>}
+function date(value:Date){return new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"Europe/London"}).format(value)}
+function month(value:Date){return new Intl.DateTimeFormat("en-GB",{month:"short",year:"numeric",timeZone:"Europe/London"}).format(value)}
+function formatValue(value:number,unit:string){return unit==="%"?`${value.toFixed(1).replace(/\.0$/,"")}%`:`${value.toLocaleString("en-GB")} ${unit}`.trim()}
