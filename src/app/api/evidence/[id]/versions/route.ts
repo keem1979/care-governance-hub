@@ -20,6 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     try {
       const evidence = await db.evidence.findFirst({ where: { id, ...evidenceScopeWhere(context) } });
       if (!evidence) return NextResponse.json({ error: "Evidence not found." }, { status: 404 });
+      if (evidence.relatedModule === "RegisterEntry") return NextResponse.json({ error: "This evidence is updated automatically from its source register record. Attach supporting documents to the register entry instead." }, { status: 409 });
       const canManage = hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_EDIT) || evidence.ownerId === context.user.id || evidence.uploadedById === context.user.id;
       if (!canManage) return NextResponse.json({ error: "You cannot replace this evidence item." }, { status: 403 });
       const bytes = await file.arrayBuffer();

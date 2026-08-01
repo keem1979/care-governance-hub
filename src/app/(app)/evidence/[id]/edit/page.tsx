@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { EvidenceForm } from "@/components/evidence-form";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
@@ -16,6 +16,7 @@ export default async function EditEvidencePage({ params }: { params: Promise<{ i
       db.policy.findMany({where:{organisationId:context.organisation.id,status:{not:"ARCHIVED"}},select:{id:true,title:true},orderBy:{title:"asc"}}),
     ]);
     if (!item) notFound();
+    if (item.relatedModule === "RegisterEntry") redirect(`/evidence/${id}`);
     return <main className="mx-auto max-w-4xl space-y-5"><div><Link href={`/evidence/${id}`} className="text-sm font-semibold text-emerald-700">← Back to evidence</Link><h1 className="mt-2 text-3xl font-bold">Edit evidence details</h1></div><EvidenceForm owners={memberships.map(({user})=>user)} locations={context.locations.map((location)=>({id:location.id,name:location.name}))} policies={policies} initial={{id:item.id,title:item.title,description:item.description??"",category:item.category,evidenceType:item.evidenceType,ownerId:item.ownerId,locationId:item.locationId??"",evidenceDate:dateInput(item.evidenceDate),reviewExpiryDate:dateInput(item.reviewExpiryDate),tags:item.tags.join(", "),relatedModule:item.relatedModule??"",relatedRecordId:item.relatedRecordId??"",confidentiality:item.confidentiality,status:item.status,notes:item.notes??""}} /></main>;
   } finally { await db.$disconnect(); }
 }

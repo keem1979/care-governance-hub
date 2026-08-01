@@ -4,6 +4,7 @@ import { requireAuthorisedContext } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { EVIDENCE_REQUIREMENTS, evidenceRequirementStatus } from "@/lib/evidence-requirements";
+import { registerEvidenceRequirementKey, registerKeyFromEvidenceTags } from "@/lib/register-evidence";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 type Query = Record<string, string | string[] | undefined>;
@@ -22,12 +23,14 @@ export default async function EvidenceRequirementsPage({ searchParams }: { searc
   const serviceSpecific = String(query.scope ?? "all");
   const db = createDb();
   const evidence = await db.evidence.findMany({
-    where: { ...evidenceScopeWhere(context), status: "ACTIVE", relatedModule: "EvidenceRequirement" },
-    select: { id: true, title: true, relatedRecordId: true, reviewExpiryDate: true, location: { select: { name: true } } },
+    where: { ...evidenceScopeWhere(context), status: "ACTIVE", relatedModule: { in: ["EvidenceRequirement", "RegisterEntry"] } },
+    select: { id: true, title: true, relatedModule: true, relatedRecordId: true, reviewExpiryDate: true, tags: true, location: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   }).finally(() => db.$disconnect());
   const rows = EVIDENCE_REQUIREMENTS.map((requirement) => {
-    const linked = evidence.filter((item) => item.relatedRecordId === requirement.key);
+    const linked = evidence.filter((item) => item.relatedModule === "EvidenceRequirement"
+      ? item.relatedRecordId === requirement.key
+      : registerEvidenceRequirementKey(registerKeyFromEvidenceTags(item.tags) ?? "") === requirement.key);
     return { requirement, linked, status: evidenceRequirementStatus(linked) };
   });
   const counts = Object.fromEntries(STATUSES.map((status) => [status, rows.filter((item) => item.status === status).length]));
