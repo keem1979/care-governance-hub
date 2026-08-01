@@ -121,6 +121,7 @@ enum RiskLevel {
 enum ActionStatus {
   OPEN
   IN_PROGRESS
+  BLOCKED
   AWAITING_EVIDENCE
   AWAITING_VERIFICATION
   COMPLETED
@@ -144,6 +145,12 @@ enum ActionSourceType {
   RISK
   GOVERNANCE_MEETING
   POLICY_REVIEW
+  REGISTER
+  ASSESSMENT
+  INSPECTION
+  KPI
+  WORKFORCE
+  EVIDENCE
   MANUAL
 }
 
@@ -497,6 +504,7 @@ model Evidence {
   kpiLinks        KpiEvidence[]
   inspectionLinks ComplianceRequirementEvidence[]
   staffComplianceRecords StaffComplianceRecord[]
+  actionUpdates          ActionUpdate[]
 
   @@index([organisationId, status])
   @@index([organisationId, category])
@@ -838,14 +846,23 @@ model Action {
   reference                 String
   title                     String
   description               String
+  category                  String           @default("Quality improvement")
+  rootCause                 String?
+  expectedOutcome           String?
+  successMeasure            String?
   sourceType                ActionSourceType
   sourceRecordId            String?          @db.Uuid
   sourceReference           String?
+  sourceUrl                 String?
   ownerId                   String           @db.Uuid
   priority                  ActionPriority   @default(MEDIUM)
   dueDate                   DateTime
+  reviewDate                DateTime?
   status                    ActionStatus     @default(OPEN)
   progressNote              String?
+  progressPercent           Int              @default(0)
+  escalationRequired        Boolean          @default(false)
+  escalationReason          String?
   evidenceRequired          Boolean          @default(true)
   evidenceWaiverExplanation String?
   completionDate            DateTime?
@@ -875,17 +892,23 @@ model Action {
 }
 
 model ActionUpdate {
-  id        String        @id @default(uuid()) @db.Uuid
-  actionId  String        @db.Uuid
-  userId    String        @db.Uuid
-  note      String
-  status    ActionStatus?
-  createdAt DateTime      @default(now())
+  id              String        @id @default(uuid()) @db.Uuid
+  actionId        String        @db.Uuid
+  userId          String        @db.Uuid
+  note            String
+  status          ActionStatus?
+  progressPercent Int?
+  nextStep        String?
+  blocker         String?
+  evidenceId      String?       @db.Uuid
+  createdAt       DateTime      @default(now())
 
   action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  evidence Evidence? @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
 
   @@index([actionId, createdAt])
+  @@index([evidenceId])
 }
 
 model ActionEvidence {

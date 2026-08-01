@@ -44,3 +44,23 @@ test("shows the tenant-scoped dashboard after sign-in", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Client Directory" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Add client" })).toBeVisible();
 });
+
+test("opens the connected Action Tracker and its natural entry form", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/login?returnTo=%2Factions", { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Email address").fill("owner@meadowview.demo");
+  await page.getByLabel("Password").fill("DemoCare!2026");
+  await page.getByRole("button", { name: "Sign in securely" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+  await page.goto("/actions", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/actions$/, { timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "Action Tracker" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Compliance calendar", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Action evidence" })).toBeVisible();
+  await page.goto("/actions/new", { waitUntil: "domcontentloaded", timeout: 45_000 });
+  await expect(page.getByRole("heading", { name: "Create improvement action" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByLabel("Expected outcome")).toBeVisible();
+  await expect(page.getByLabel("How will success be measured?")).toBeVisible();
+  await expect(page.getByLabel("Source record")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create and connect action" })).toBeVisible();
+});
