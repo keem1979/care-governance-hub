@@ -13,6 +13,7 @@ export default async function AuditsPage({ searchParams }: { searchParams: Promi
   const params = await searchParams;
   const status = String(params.status ?? "");
   const q = String(params.q ?? "").trim();
+  const category = String(params.category ?? "");
   const db = createDb();
   try {
     const [audits, templates] = await Promise.all([
@@ -24,16 +25,17 @@ export default async function AuditsPage({ searchParams }: { searchParams: Promi
       db.auditTemplate.findMany({
         where: { isPublished: true, OR: [{ organisationId: null }, { organisationId: context.organisation.id }] },
         include: { sections: { select: { _count: { select: { questions: true } } } }, _count: { select: { audits: true } } },
-        orderBy: { name: "asc" },
+        orderBy: [{category:"asc"},{ name: "asc" }],
       }),
     ]);
     const inProgress = audits.filter((item) => ["DRAFT", "IN_PROGRESS"].includes(item.status)).length;
     const awaiting = audits.filter((item) => item.status === "AWAITING_REVIEW").length;
     const completed = audits.filter((item) => ["COMPLETED", "CLOSED"].includes(item.status)).length;
+    const shownTemplates=category?templates.filter((item)=>item.category===category):templates;
     return <main className="space-y-7">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-widest text-emerald-700">Assurance programme</p><h1 className="text-3xl font-bold">Audit Centre</h1><p className="mt-1 text-slate-600">Choose an audit form, check a sample, record findings and submit it for sign-off.</p></div>{canComplete ? <Link href="/audits/new" className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white">Start a new audit form</Link> : null}</div>
 
-      {canComplete ? <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="font-bold text-emerald-950">How to add an audit</h2><p className="mt-1 text-sm text-emerald-900">1. Choose a form below. 2. Add the location, date and scope. 3. Complete every question and save or submit.</p></div><Link href="/audits/new" className="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white">Choose an audit form</Link></div></section> : null}
+      {canComplete ? <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="font-bold text-emerald-950">From review to controlled evidence</h2><p className="mt-1 max-w-4xl text-sm leading-6 text-emerald-900">Choose a form, define the objective and sample, record what was checked, then submit for review. Submitted audits automatically appear in the Evidence Library; unfinished drafts do not. Partial and failed checks create findings that can feed the Action Tracker.</p></div><Link href="/audits/new" className="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white">Choose an audit form</Link></div></section> : null}
 
       <section className="grid gap-3 sm:grid-cols-3">{[["In progress", inProgress], ["Awaiting review", awaiting], ["Completed or closed", completed]].map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">{label}</p><p className="mt-1 text-3xl font-bold">{value}</p></div>)}</section>
 
@@ -46,9 +48,9 @@ export default async function AuditsPage({ searchParams }: { searchParams: Promi
         })}</tbody></table></div>}
       </section>
 
-      <section><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Form library</p><h2 className="text-2xl font-bold">Choose an audit form</h2><p className="mt-1 text-sm text-slate-600">Each form now includes core governance checks and questions tailored to that audit area.</p><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{templates.map((template) => {
+      <section><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Risk-based form library</p><h2 className="text-2xl font-bold">Choose an audit form</h2><p className="mt-1 text-sm text-slate-600">A scalable assurance catalogue covering care delivery, people, workforce, safety, clinical practice, information and governance.</p></div><form><select name="category" defaultValue={category} className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm"><option value="">All audit areas</option>{[...new Set(templates.map((item)=>item.category))].map((item)=><option key={item}>{item}</option>)}</select><button className="ml-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white">Show</button></form></div><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{shownTemplates.map((template) => {
         const questionCount = template.sections.reduce((sum, section) => sum + section._count.questions, 0);
-        return <article key={template.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><h3 className="font-bold">{template.name}</h3><span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">v{template.version}</span></div><p className="mt-2 text-sm text-slate-600">{template.description}</p><p className="mt-4 text-xs font-semibold text-slate-500">{questionCount} questions · {template.sections.length} sections · {template._count.audits} audit records</p>{canComplete ? <Link href={`/audits/new?template=${template.id}`} className="mt-4 inline-flex rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white">Open this audit form</Link> : null}</article>;
+        return <article key={template.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-emerald-700">{template.category}</p><h3 className="mt-1 font-bold">{template.name}</h3></div><span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">v{template.version}</span></div><p className="mt-2 text-sm text-slate-600">{template.description}</p><div className="mt-3 flex flex-wrap gap-1">{template.standardRefs.slice(0,3).map((item)=><span key={item} className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">{item}</span>)}</div><p className="mt-4 text-xs font-semibold text-slate-500">{questionCount} checks · {template.sections.length} sections · {template.frequency??"Risk-based"}{template.serviceSpecific?" · when applicable":""}</p>{canComplete ? <Link href={`/audits/new?template=${template.id}`} className="mt-4 inline-flex rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white">Open this audit form</Link> : null}</article>;
       })}</div></section>
     </main>;
   } finally { await db.$disconnect(); }

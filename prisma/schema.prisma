@@ -464,21 +464,28 @@ model Evidence {
 }
 
 model AuditTemplate {
-  id             String   @id @default(uuid()) @db.Uuid
-  organisationId String?  @db.Uuid
-  name           String
-  description    String?
-  version        String
-  isPublished    Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid()) @db.Uuid
+  organisationId  String?  @db.Uuid
+  key             String
+  name            String
+  description     String?
+  category        String   @default("Governance")
+  standardRefs    String[] @default([])
+  frequency       String?
+  serviceSpecific Boolean  @default(false)
+  version         String
+  isPublished     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   organisation Organisation?  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   sections     AuditSection[]
   audits       Audit[]
 
   @@unique([organisationId, name, version])
+  @@unique([organisationId, key, version])
   @@index([organisationId, isPublished])
+  @@index([category, isPublished])
 }
 
 model AuditSection {
@@ -526,6 +533,12 @@ model Audit {
   periodStart     DateTime?
   periodEnd       DateTime?
   scope           String?
+  objective       String?
+  sampleMethod    String?
+  sampleSize      Int?
+  sampleDetails   String?
+  standardApplied String?
+  limitations     String?
   status          AuditStatus @default(DRAFT)
   overallScore    Float?
   strengths       String?
@@ -996,25 +1009,25 @@ model KpiEntry {
 }
 
 model KpiReturn {
-  id               String          @id @default(uuid()) @db.Uuid
-  organisationId   String          @db.Uuid
-  locationId       String          @db.Uuid
-  reportingMonth   DateTime
-  localAuthority   String
-  contractName     String?
-  providerCode     String?
-  locationCode     String?
-  ecmSystem        String?
-  status           KpiReturnStatus @default(DRAFT)
-  data             Json
-  managerComment   String?
-  createdById      String          @db.Uuid
-  submittedById    String?         @db.Uuid
-  submittedAt      DateTime?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id             String          @id @default(uuid()) @db.Uuid
+  organisationId String          @db.Uuid
+  locationId     String          @db.Uuid
+  reportingMonth DateTime
+  localAuthority String
+  contractName   String?
+  providerCode   String?
+  locationCode   String?
+  ecmSystem      String?
+  status         KpiReturnStatus @default(DRAFT)
+  data           Json
+  managerComment String?
+  createdById    String          @db.Uuid
+  submittedById  String?         @db.Uuid
+  submittedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  organisation Organisation   @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  organisation Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   location     ServiceLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
   createdBy    User            @relation("KpiReturnCreator", fields: [createdById], references: [id], onDelete: Restrict)
   submittedBy  User?           @relation("KpiReturnSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)

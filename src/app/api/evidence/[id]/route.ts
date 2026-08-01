@@ -14,7 +14,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const current = await db.evidence.findFirst({ where: { id, ...evidenceScopeWhere(context) } });
     if (!current) return NextResponse.json({ error: "Evidence not found." }, { status: 404 });
-    if (current.relatedModule === "RegisterEntry") return NextResponse.json({ error: "This evidence is controlled by its source register record. Update or archive the register entry instead." }, { status: 409 });
+    if (["RegisterEntry","Audit"].includes(current.relatedModule??"")) return NextResponse.json({ error: "This evidence is controlled by its source record. Update or archive the source instead." }, { status: 409 });
     if (intent === "archive" || intent === "restore") {
       const archive = intent === "archive";
       await db.$transaction([

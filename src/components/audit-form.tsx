@@ -10,6 +10,7 @@ type Question = {
   guidance: string | null;
   evidenceExpected: string | null;
   responseType: string;
+  options: string[];
   mandatory: boolean;
   requiresEvidence: boolean;
   weighting: number;
@@ -107,8 +108,8 @@ export function AuditAssessmentForm({
             </legend>
             <div className="mt-4 grid gap-4 lg:grid-cols-3">
               <label className="text-sm font-medium">Finding or response<AnswerControl question={question} value={value.answer} onChange={(answer) => update(question.id, "answer", answer)} disabled={readOnly} /></label>
-              <label className="text-sm font-medium">What you checked and found<textarea disabled={readOnly} value={value.comment} onChange={(event) => update(question.id, "comment", event.target.value)} className="mt-1 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100" placeholder="Sample size, records checked, gap, good practice or action needed" /></label>
-              <label className="text-sm font-medium">Supporting evidence<select disabled={readOnly} value={value.evidenceId} onChange={(event) => update(question.id, "evidenceId", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100"><option value="">No evidence linked</option>{evidence.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select>{question.requiresEvidence ? <span className="mt-1 block text-xs font-normal text-amber-700">Evidence is required before submission.</span> : null}</label>
+              <label className="text-sm font-medium">What you checked and found<textarea disabled={readOnly} value={value.comment} onChange={(event) => update(question.id, "comment", event.target.value)} className="mt-1 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100" placeholder="State the source, sample references, result, good practice, gap and action. Avoid people’s names." /><span className="mt-1 block text-xs font-normal text-slate-500">Required on submission unless a supporting evidence record is linked.</span></label>
+              <label className="text-sm font-medium">Supporting evidence<select disabled={readOnly} value={value.evidenceId} onChange={(event) => update(question.id, "evidenceId", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100"><option value="">Describe source in the finding note</option>{evidence.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select>{question.requiresEvidence ? <span className="mt-1 block text-xs font-normal text-amber-700">A linked Evidence Library record is required before submission.</span> : <span className="mt-1 block text-xs font-normal text-slate-500">Link the controlled record when one exists.</span>}</label>
             </div>
           </fieldset>;
         })}
@@ -132,7 +133,7 @@ export function AuditAssessmentForm({
 }
 
 function AnswerControl({ question, value, onChange, disabled }: { question: Question; value: string; onChange: (value: string) => void; disabled: boolean }) {
-  const options = question.responseType === "COMPLIANCE" ? COMPLIANCE_ANSWERS : question.responseType === "YES_NO" ? ["YES", "NO", "NOT_APPLICABLE"] : null;
+  const options = question.responseType === "COMPLIANCE" ? COMPLIANCE_ANSWERS : question.responseType === "YES_NO" ? ["YES", "NO", "NOT_APPLICABLE"] : question.responseType === "MULTIPLE_CHOICE" ? question.options : null;
   const className = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-100";
   if (options) return <select disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} className={className}><option value="">Choose response</option>{options.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ").toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase())}</option>)}</select>;
   return <input disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} type={question.responseType === "NUMBER" ? "number" : question.responseType === "DATE" ? "date" : "text"} className={className} placeholder="Enter response" />;

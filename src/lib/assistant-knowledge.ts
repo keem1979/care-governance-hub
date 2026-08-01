@@ -51,7 +51,7 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Open Call Log", "/registers/call-log", ["open", "view", "list"], view),
     link("Call Log report", "/registers/call-log/report", ["report", "print", "export"], reports),
   ]),
-  topic("Audit Centre", "/audits", ["audit", "audits", "finding", "findings", "assurance", "score"], "Audit Centre runs reusable audits, records responses, calculates scores and creates findings.", "Start from a published template, complete questions with comments or evidence, submit the audit, review findings and print the audit report.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE], [
+  topic("Audit Centre", "/audits", ["audit", "audits", "finding", "findings", "assurance", "score", "sample", "cqc self assessment"], "Audit Centre provides risk-based forms for care delivery, workforce, safety, people experience, clinical practice, information governance and leadership. It records the objective, standard, sample, sources, findings and sign-off; its score is internal assurance, not a predicted CQC rating.", "Choose the form that matches the risk, define a representative sample and any limitations, then record what was checked for every answer. Partial and failed checks create findings. When the audit is submitted, QCGMS creates a controlled Evidence Library record automatically; use the Action Tracker for required improvements.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE], [
     link("Open Audit Centre", "/audits", ["view", "list", "templates"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE]),
     link("Start an audit", "/audits/new", ["start", "add", "create", "new"], [PERMISSIONS.AUDITS_COMPLETE]),
   ]),
