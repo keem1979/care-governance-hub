@@ -5,6 +5,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { parseOptionalDate } from "@/lib/policies";
 import { STAFF_STATUSES } from "@/lib/workforce";
 import { formatPersonReference } from "@/lib/people-references";
+import { syncTrainingMatrixEvidence } from "@/lib/workforce-evidence";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.WORKFORCE_MANAGE);
@@ -22,6 +23,9 @@ export async function POST(request: Request) {
   const locationId = optional(form.get("locationId"), 40);
   const employmentStatus = clean(form.get("employmentStatus"), 30);
   const startDate = parseOptionalDate(form.get("startDate"));
+  const contractedDaysPerWeek = number(form.get("contractedDaysPerWeek"), 5);
+  const annualLeaveEntitlementDays = number(form.get("annualLeaveEntitlementDays"), 28);
+  const annualLeaveCarryOverDays = number(form.get("annualLeaveCarryOverDays"), 0);
 
   if (
     firstName.length < 2 ||
@@ -71,9 +75,22 @@ export async function POST(request: Request) {
           startDate,
           employmentStatus: employmentStatus as never,
           lineManager,
+          contractedDaysPerWeek,
+          annualLeaveEntitlementDays,
+          annualLeaveCarryOverDays,
           notes,
         },
       });
+      const coreCourses = await tx.trainingCourse.findMany({
+        where: { organisationId: null, serviceSpecific: false, archivedAt: null },
+        select: { id: true },
+      });
+      if (coreCourses.length) {
+        await tx.staffTrainingRequirement.createMany({
+          data: coreCourses.map((course) => ({ organisationId: context.organisation.id, staffMemberId: created.id, trainingCourseId: course.id })),
+          skipDuplicates: true,
+        });
+      }
       await tx.activityLog.create({
         data: {
           organisationId: context.organisation.id,
@@ -86,6 +103,7 @@ export async function POST(request: Request) {
           afterValue: { employeeReference, jobTitle, employmentStatus },
         },
       });
+      await syncTrainingMatrixEvidence(tx, { organisationId: context.organisation.id, actorId: context.user.id });
       return created;
     });
     return NextResponse.json({ id: staff.id }, { status: 201 });
@@ -111,4 +129,8 @@ function clean(value: FormDataEntryValue | null, limit: number) {
 }
 function optional(value: FormDataEntryValue | null, limit: number) {
   return clean(value, limit) || null;
+}
+function number(value: FormDataEntryValue | null, fallback: number) {
+  const parsed = Number(String(value ?? ""));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }

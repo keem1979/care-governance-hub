@@ -66,14 +66,7 @@ export default async function WorkforcePage() {
               professional registrations, supervision, appraisals and spot checks.
             </p>
           </div>
-          {canManage ? (
-            <Link
-              href="/workforce/new"
-              className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white"
-            >
-              Add staff record
-            </Link>
-          ) : null}
+          <div className="flex flex-wrap gap-3"><Link href="/workforce/training" className="rounded-xl border border-emerald-300 bg-white px-5 py-3 text-sm font-semibold text-emerald-800">Training matrix</Link>{canManage ? <Link href="/workforce/new" className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white">Add staff record</Link> : null}</div>
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

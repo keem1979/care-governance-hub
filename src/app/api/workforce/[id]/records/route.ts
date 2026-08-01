@@ -8,6 +8,7 @@ import {
   STAFF_COMPLIANCE_TYPES,
   workforceScopeWhere,
 } from "@/lib/workforce";
+import { syncTrainingMatrixEvidence } from "@/lib/workforce-evidence";
 
 export async function POST(
   request: Request,
@@ -25,6 +26,7 @@ export async function POST(
   const completedDate = parseOptionalDate(form.get("completedDate"));
   const expiryDate = parseOptionalDate(form.get("expiryDate"));
   const nextDueDate = parseOptionalDate(form.get("nextDueDate"));
+  const trainingCourseId = optional(form.get("trainingCourseId"), 40);
 
   if (
     title.length < 3 ||
@@ -45,6 +47,10 @@ export async function POST(
     if (!staff) {
       return NextResponse.json({ error: "Staff record not found." }, { status: 404 });
     }
+    if (trainingCourseId) {
+      const course = await db.trainingCourse.findFirst({ where: { id: trainingCourseId, archivedAt: null, OR: [{ organisationId: null }, { organisationId: context.organisation.id }] }, select: { id: true } });
+      if (!course) return NextResponse.json({ error: "Choose a training course from the authorised catalogue." }, { status: 400 });
+    }
 
     const dueDate = expiryDate ?? nextDueDate;
     const result = await db.$transaction(async (tx) => {
@@ -63,8 +69,12 @@ export async function POST(
           verifiedById: context.user.id,
           verifiedAt: new Date(),
           notes,
+          trainingCourseId,
         },
       });
+      if (trainingCourseId) {
+        await tx.staffTrainingRequirement.upsert({ where: { staffMemberId_trainingCourseId: { staffMemberId: id, trainingCourseId } }, create: { organisationId: context.organisation.id, staffMemberId: id, trainingCourseId }, update: { archivedAt: null, exempt: false, exemptionReason: null } });
+      }
       if (dueDate) {
         await tx.calendarItem.create({
           data: {
@@ -94,6 +104,7 @@ export async function POST(
           afterValue: { staffMemberId: id, type, title, outcome, expiryDate, nextDueDate },
         },
       });
+      if (type === "TRAINING" || type === "COMPETENCY") await syncTrainingMatrixEvidence(tx, { organisationId: context.organisation.id, actorId: context.user.id });
       return record;
     });
     return NextResponse.json({ id: result.id }, { status: 201 });

@@ -2,6 +2,13 @@
 
 All notable changes are documented here.
 
+## 2026-08-01 — Workforce Suite
+
+- Added private staff profile pictures and staff-linked evidence uploads.
+- Added leave and absence requests, manager decisions and annual leave balance calculations.
+- Added a searchable training and competency catalogue based on the 2025 Care Certificate and CQC Regulation 18, with role-specific assignments and a live matrix.
+- Added automatic Evidence Library synchronisation for the workforce training matrix.
+
 ## 0.1.0 — Milestone 1 Foundation
 
 ### Added

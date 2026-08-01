@@ -259,6 +259,30 @@ enum StaffComplianceOutcome {
   NOT_APPLICABLE
 }
 
+enum StaffLeaveType {
+  ANNUAL
+  SICKNESS
+  CARERS
+  DEPENDANT_EMERGENCY
+  MATERNITY
+  PATERNITY
+  ADOPTION
+  SHARED_PARENTAL
+  PARENTAL_BEREAVEMENT
+  COMPASSIONATE
+  STUDY
+  TOIL
+  UNPAID
+  OTHER
+}
+
+enum StaffLeaveStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CANCELLED
+}
+
 model Organisation {
   id           String    @id @default(uuid()) @db.Uuid
   name         String
@@ -290,6 +314,9 @@ model Organisation {
   templates              Template[]
   staffMembers           StaffMember[]
   staffComplianceRecords StaffComplianceRecord[]
+  trainingCourses        TrainingCourse[]
+  trainingRequirements   StaffTrainingRequirement[]
+  staffLeaveRequests     StaffLeaveRequest[]
   clients                Client[]
   referenceCounters      ReferenceCounter[]
 }
@@ -374,6 +401,8 @@ model User {
   inspectionCreated       ComplianceRequirement[]  @relation("InspectionCreator")
   templatesAuthored       Template[]               @relation("TemplateAuthor")
   staffComplianceVerified StaffComplianceRecord[]  @relation("StaffComplianceVerifier")
+  staffLeaveRequested     StaffLeaveRequest[]       @relation("StaffLeaveRequester")
+  staffLeaveDecided       StaffLeaveRequest[]       @relation("StaffLeaveDecision")
 }
 
 model Policy {
@@ -467,6 +496,7 @@ model Evidence {
   meetingLinks    MeetingEvidence[]
   kpiLinks        KpiEvidence[]
   inspectionLinks ComplianceRequirementEvidence[]
+  staffComplianceRecords StaffComplianceRecord[]
 
   @@index([organisationId, status])
   @@index([organisationId, category])
@@ -1212,6 +1242,13 @@ model StaffMember {
   endDate           DateTime?
   employmentStatus  StaffEmploymentStatus @default(ACTIVE)
   lineManager       String?
+  profilePhotoKey   String?               @unique
+  profilePhotoType  String?
+  contractedDaysPerWeek Decimal           @default(5) @db.Decimal(4, 2)
+  annualLeaveEntitlementDays Decimal       @default(28) @db.Decimal(6, 2)
+  annualLeaveCarryOverDays Decimal         @default(0) @db.Decimal(6, 2)
+  leaveYearStartMonth Int                  @default(1)
+  leaveYearStartDay   Int                  @default(1)
   notes             String?
   archivedAt        DateTime?
   createdAt         DateTime              @default(now())
@@ -1220,6 +1257,8 @@ model StaffMember {
   organisation Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   location     ServiceLocation?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
   records      StaffComplianceRecord[]
+  trainingRequirements StaffTrainingRequirement[]
+  leaveRequests StaffLeaveRequest[]
   registerEntries RegisterEntry[]
 
   @@unique([organisationId, employeeReference])
@@ -1302,17 +1341,98 @@ model StaffComplianceRecord {
   verifiedById   String?                @db.Uuid
   verifiedAt     DateTime?
   notes          String?
+  trainingCourseId String?                @db.Uuid
+  evidenceId     String?                  @db.Uuid
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
 
   organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   staffMember  StaffMember  @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
   verifiedBy   User?        @relation("StaffComplianceVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  trainingCourse TrainingCourse? @relation(fields: [trainingCourseId], references: [id], onDelete: SetNull)
+  evidence       Evidence?       @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
 
   @@index([organisationId, type, outcome])
   @@index([staffMemberId, type])
   @@index([organisationId, expiryDate])
   @@index([organisationId, nextDueDate])
+  @@index([staffMemberId, trainingCourseId])
+}
+
+model TrainingCourse {
+  id                    String   @id @default(uuid()) @db.Uuid
+  organisationId        String?  @db.Uuid
+  key                   String
+  title                 String
+  category              String
+  description           String
+  sourceName            String
+  sourceUrl             String
+  suggestedRenewalMonths Int?
+  serviceSpecific       Boolean  @default(false)
+  tags                   String[] @default([])
+  archivedAt             DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  organisation Organisation? @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  requirements StaffTrainingRequirement[]
+  records StaffComplianceRecord[]
+
+  @@unique([organisationId, key])
+  @@index([organisationId, category])
+  @@index([key])
+}
+
+model StaffTrainingRequirement {
+  id             String   @id @default(uuid()) @db.Uuid
+  organisationId String   @db.Uuid
+  staffMemberId  String   @db.Uuid
+  trainingCourseId String @db.Uuid
+  requiredBy     DateTime?
+  exempt         Boolean  @default(false)
+  exemptionReason String?
+  assignedAt     DateTime @default(now())
+  archivedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  staffMember StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  trainingCourse TrainingCourse @relation(fields: [trainingCourseId], references: [id], onDelete: Restrict)
+
+  @@unique([staffMemberId, trainingCourseId])
+  @@index([organisationId, archivedAt])
+  @@index([trainingCourseId])
+}
+
+model StaffLeaveRequest {
+  id             String           @id @default(uuid()) @db.Uuid
+  organisationId String           @db.Uuid
+  staffMemberId  String           @db.Uuid
+  type           StaffLeaveType
+  status         StaffLeaveStatus @default(PENDING)
+  startDate      DateTime
+  endDate        DateTime
+  requestedDays  Decimal          @db.Decimal(6, 2)
+  reason         String?
+  managerNote    String?
+  fitNoteReceived Boolean         @default(false)
+  returnToWorkCompleted Boolean   @default(false)
+  requestedById  String           @db.Uuid
+  decidedById    String?          @db.Uuid
+  decidedAt      DateTime?
+  archivedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  staffMember StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  requestedBy User @relation("StaffLeaveRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  decidedBy User? @relation("StaffLeaveDecision", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, status, startDate])
+  @@index([staffMemberId, startDate])
 }
 
 model EvidenceVersion {

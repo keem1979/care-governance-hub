@@ -1,5 +1,15 @@
 # Data Model
 
+## Workforce Suite
+
+- `StaffMember` is the single workforce profile, with an automatic staff reference, role/location, private profile-photo storage key and configurable leave allowance.
+- `StaffComplianceRecord` stores dated recruitment checks, training, supervision, appraisal and observed competency outcomes. Training records can link to a catalogue course and controlled evidence.
+- `TrainingCourse` contains the shared Skills for Care/CQC-informed catalogue plus organisation-specific courses. `StaffTrainingRequirement` assigns only the applicable courses to each worker.
+- `StaffLeaveRequest` records annual leave, sickness and other leave, the requested working days, manager decision and return-to-work or fit-note follow-up.
+- Staff documents are restricted `Evidence` records linked with `relatedModule = StaffMember`; the live training matrix has one automatically refreshed restricted evidence record.
+
+Workforce access remains tenant- and location-scoped through `workforce:view` and `workforce:manage`. Profile photographs and uploaded documents remain in private object storage and are served only after an authorised request.
+
 ## Foundation entities
 
 | Entity | Purpose | Tenant rule |
