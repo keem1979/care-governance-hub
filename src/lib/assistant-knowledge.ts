@@ -34,7 +34,7 @@ const reports = [PERMISSIONS.REPORTS_EXPORT];
 
 export const ASSISTANT_TOPICS: AssistantTopic[] = [
   topic("Dashboard", "/dashboard", ["dashboard", "home", "overview", "alerts", "tasks", "summary"], "The Dashboard summarises current governance priorities from live records.", "Use it to review due policy work, audits, evidence expiry, open register items, risks, actions, meetings and recent activity.", undefined, []),
-  topic("Policies", "/policies", ["policy", "policies", "approval", "review date", "version"], "Policies controls policy ownership, approval, review dates, status and file versions.", "Open a policy to inspect its metadata and versions. Users with governance-edit access can create, update, approve, archive and restore policies.", view, [
+  topic("Policies", "/policies", ["policy", "policies", "approval", "review date", "version", "remove policy", "restore policy"], "Policies controls policy ownership, approval, review dates, status and file versions.", "Open a policy to inspect its metadata and versions. Users with governance-edit access can create, update, approve, remove and restore policies. Removing a policy hides it from the active library while retaining its versions and audit history.", view, [
     link("Open Policies", "/policies", ["view", "list", "search"], view),
     link("Add a policy", "/policies/new", ["add", "create", "new", "upload"], edit),
   ]),
