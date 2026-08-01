@@ -1,4 +1,4 @@
-export type RegisterField={key:string;label:string;type:"text"|"date"|"textarea"|"boolean"|"number";required?:boolean};
+export type RegisterField={key:string;label:string;type:"text"|"date"|"textarea"|"boolean"|"number"|"select";required?:boolean;options?:string[]};
 export type RegisterFormExperience={dateLabel:string;titleLabel:string;titlePlaceholder:string;summaryLabel:string;summaryPlaceholder:string;detailsIntro:string;saveLabel:string};
 export const REGISTER_STATUSES=["OPEN","IN_REVIEW","AWAITING_ACTION","CLOSED","ARCHIVED"] as const;
 export const REGISTER_RISK_LEVELS=["LOW","MEDIUM","HIGH","CRITICAL"] as const;
@@ -37,6 +37,7 @@ const EXPERIENCES:Record<string,Partial<RegisterFormExperience>>={
   "satisfaction-surveys":{dateLabel:"Date survey period closed",titleLabel:"Which survey results are being recorded?",titlePlaceholder:"For example, quarter 2 service-user satisfaction survey",summaryLabel:"Response and headline findings",summaryPlaceholder:"Record audience, response level, overall result and the most important themes.",detailsIntro:"Capture response numbers, scores, positive themes and ‘you said, we did’ action.",saveLabel:"Save survey results"},
   "business-continuity":{dateLabel:"Date of exercise or disruption",titleLabel:"Which scenario or disruption was reviewed?",titlePlaceholder:"For example, 4-hour care-planning system outage exercise",summaryLabel:"What happened and was care maintained?",summaryPlaceholder:"Record the scenario, services affected, decisions, recovery and outcome.",detailsIntro:"Capture activation, critical services, recovery time, lessons and retest date.",saveLabel:"Save continuity record"},
   "commissioner-contracts":{dateLabel:"Reporting or correspondence date",titleLabel:"Which contract obligation is being tracked?",titlePlaceholder:"For example, monthly home-care KPI return",summaryLabel:"Requirement and current position",summaryPlaceholder:"Record what is due, reporting period, performance position, feedback and risk.",detailsIntro:"Capture commissioner, contract, submission dates, performance issues and required action.",saveLabel:"Save contract record"},
+  "call-log":{dateLabel:"Date of call",titleLabel:"What was the call about?",titlePlaceholder:"For example, family update about a delayed morning visit",summaryLabel:"Call summary and outcome",summaryPlaceholder:"Record the important facts, decision, advice given and agreed next step. Use internal references instead of unnecessary personal details.",detailsIntro:"Capture who the call involved, direction, time, subject, outcome, follow-up and escalation.",saveLabel:"Save call log entry"},
 };
 
 export function registerFormExperience(key:string,name:string):RegisterFormExperience{

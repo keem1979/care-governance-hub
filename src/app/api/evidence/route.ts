@@ -8,6 +8,7 @@ import {
 import { PERMISSIONS } from "@/lib/permissions";
 import { parseOptionalDate, splitList } from "@/lib/policies";
 import { deletePrivateFile, putPrivateFile } from "@/lib/private-storage";
+import { evidenceRequirementByKey } from "@/lib/evidence-requirements";
 
 function text(form: FormData, key: string) { return String(form.get(key) ?? "").trim(); }
 async function checksum(bytes: ArrayBuffer) {
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
         const policy = await db.policy.findFirst({ where: { id: relatedRecordId, organisationId: context.organisation.id }, select: { id: true } });
         if (!policy) throw new Error("The related policy could not be found.");
       }
+      if (relatedModule === "EvidenceRequirement" && !evidenceRequirementByKey(relatedRecordId)) throw new Error("The evidence requirement could not be found.");
 
       const createdIds: string[] = [];
       for (const file of files) {
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
           await tx.activityLog.create({ data: {
             organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE",
             recordType: "Evidence", recordId: created.id, summary: `Uploaded evidence: ${title}`,
-            afterValue: { title, category, evidenceType, version: "1.0" },
+            afterValue: { title, category, evidenceType, version: "1.0", relatedModule, relatedRecordId },
           } });
           return created;
         });

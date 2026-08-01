@@ -42,6 +42,15 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Open Evidence Library", "/evidence", ["view", "list", "search"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD]),
     link("Add evidence", "/evidence/new", ["add", "create", "new", "upload"], [PERMISSIONS.EVIDENCE_UPLOAD]),
   ]),
+  topic("Evidence Requirements", "/evidence/requirements", ["required evidence", "evidence gap", "missing evidence", "inspection evidence", "what evidence do i need"], "The Evidence Requirements Register is a sourced homecare baseline across the five CQC key questions.", "Use it to see current, expiring, expired and missing evidence, read the regulatory basis, and upload directly against each requirement. Service-specific items must be tailored by the Registered Manager.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD], [
+    link("Show missing evidence", "/evidence/requirements?status=NEEDS_EVIDENCE", ["missing", "gap", "needed"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD]),
+    link("Open requirements register", "/evidence/requirements", ["open", "requirements", "list"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD]),
+  ]),
+  topic("Call Log", "/registers/call-log", ["call log", "phone call", "telephone call", "outbound call", "inbound call", "voicemail"], "The Call Log records important inbound and outbound calls, decisions, escalation and follow-up.", "Use a clear internal reference, record the factual outcome, set a follow-up date when needed, link supporting evidence and create an Action Tracker item for formal follow-up.", view, [
+    link("Add a call", "/registers/call-log/new", ["add", "record", "new"], edit),
+    link("Open Call Log", "/registers/call-log", ["open", "view", "list"], view),
+    link("Call Log report", "/registers/call-log/report", ["report", "print", "export"], reports),
+  ]),
   topic("Audit Centre", "/audits", ["audit", "audits", "finding", "findings", "assurance", "score"], "Audit Centre runs reusable audits, records responses, calculates scores and creates findings.", "Start from a published template, complete questions with comments or evidence, submit the audit, review findings and print the audit report.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE], [
     link("Open Audit Centre", "/audits", ["view", "list", "templates"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE]),
     link("Start an audit", "/audits/new", ["start", "add", "create", "new"], [PERMISSIONS.AUDITS_COMPLETE]),
@@ -129,6 +138,14 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/evidence": {
     hsc: "evidence shows what the service actually did, how it checked quality and whether people experienced safe, effective and person-centred care.",
     cqc: "documents mainly support process and outcome evidence. CQC may also consider people’s experiences, staff and leader feedback, partner feedback and observation, so a document library should never be the only source of assurance.",
+  },
+  "/evidence/requirements": {
+    hsc: "an evidence requirements register helps the Registered Manager see what assurance is present, what is expiring and where a documented gap needs action.",
+    cqc: "the register maps a homecare baseline to the five key questions and relevant regulations, but CQC evidence categories are a guide rather than a universal checklist and the service must tailor requirements to its regulated activities.",
+  },
+  "/registers/call-log": {
+    hsc: "a structured call log preserves important communications, decisions, escalation and follow-up without relying on memory or informal notes.",
+    cqc: "accurate, proportionate call records can support person-centred care, continuity, complaints handling, safeguarding and good governance when follow-up is completed and sensitive information is protected.",
   },
   "/audits": {
     hsc: "audits compare day-to-day practice with an agreed standard, identify gaps and provide a basis for improvement.",
@@ -276,6 +293,7 @@ function isGeneralCqcQuestion(
   query: string,
   topic: AssistantTopic | undefined,
 ): boolean {
+  if (/\b(evidence categories|types of evidence)\b/.test(query)) return true;
   if (topic && topic.href !== "/inspection") return false;
   return (
     /\b(evidence categories|what is cqc|cqc inspection|cqc assessment|inspection framework|fundamental standards)\b/.test(
