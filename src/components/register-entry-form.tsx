@@ -57,8 +57,8 @@ export function RegisterEntryForm({ registerKey, registerName, fields, locations
       </div>
     </FormSection>
 
-    <FormSection number="4" title="Supporting evidence" description="Link documents that support decisions, investigation, outcome or closure.">
-      <p className="text-sm text-slate-500">Use Ctrl or Command to select more than one item. If the evidence is not listed, save this record and upload it to the Evidence Library.</p>
+    <FormSection number="4" title="Supporting evidence" description="This register entry becomes live evidence automatically. Add documents that support decisions, investigation, outcome or closure.">
+      <p className="text-sm text-slate-500">Use Ctrl or Command to select more than one uploaded item. If a document is not listed, save this record and upload it to the Evidence Library.</p>
       <select multiple name="evidenceIds" defaultValue={initial?.evidenceIds ?? []} className={`${cls} min-h-32`}>{evidence.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select>
     </FormSection>
 
