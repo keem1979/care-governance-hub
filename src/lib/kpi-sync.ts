@@ -1,15 +1,15 @@
 import { COMMISSIONER_KPI_SOURCE } from "@/lib/commissioner-kpis";
 
 export const KPI_AUTO_SOURCES: Record<string, string> = {
-  "missed-visits": "Missed visits register",
-  "late-visits": "Late visits register",
+  "scc-missed-calls": "Missed visits register",
+  "scc-late-calls": "Late visits register",
   "medication-errors": "Medication errors register",
   falls: "Falls register",
   "pressure-damage": "Pressure damage register",
   "hospital-admissions": "Hospital admissions register",
-  complaints: "Complaints register",
+  "scc-complaints-received": "Complaints register",
   compliments: "Compliments register",
-  "safeguarding-referrals": "Safeguarding register",
+  "scc-safeguarding-referrals": "Safeguarding register",
   incidents: "Incidents register",
   "near-misses": "Near misses register",
   "training-compliance": "Staff training records",
@@ -27,15 +27,15 @@ export function kpiAutoSource(slug: string) {
 }
 
 export const REGISTER_KPI_KEYS: Record<string, string> = {
-  "missed-visits": "missed-visits",
-  "late-visits": "late-visits",
+  "scc-missed-calls": "missed-visits",
+  "scc-late-calls": "late-visits",
   "medication-errors": "medicines-errors",
   falls: "falls",
   "pressure-damage": "pressure-damage",
   "hospital-admissions": "hospital-admissions",
-  complaints: "complaints",
+  "scc-complaints-received": "complaints",
   compliments: "compliments",
-  "safeguarding-referrals": "safeguarding",
+  "scc-safeguarding-referrals": "safeguarding",
   incidents: "incidents",
   "near-misses": "near-misses",
 };

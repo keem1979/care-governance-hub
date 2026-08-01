@@ -71,11 +71,11 @@ export function MonthlyKpiReturnForm({
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="text-sm font-medium">Reporting month<input className={field} name="reportingMonth" type="month" required defaultValue={initial?.reportingMonth ?? defaults?.reportingMonth ?? new Date().toISOString().slice(0, 7)} /></label>
           <label className="text-sm font-medium">Branch<select className={field} name="locationId" required defaultValue={initial?.locationId ?? defaults?.locationId ?? locations[0]?.id}>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
-          <label className="text-sm font-medium">Local authority<input className={field} name="localAuthority" required defaultValue={initial?.localAuthority ?? "Surrey County Council"} /></label>
+          <label className="text-sm font-medium">Commissioner or contract owner<input className={field} name="localAuthority" required defaultValue={initial?.localAuthority} placeholder="Enter the organisation receiving this return" /></label>
           <label className="text-sm font-medium">Contract or framework<input className={field} name="contractName" defaultValue={initial?.contractName ?? "Care Within the Home"} /></label>
-          <label className="text-sm font-medium">Provider code<input className={field} name="providerCode" defaultValue={initial?.providerCode} placeholder="CQC provider ID or commissioner code" /></label>
-          <label className="text-sm font-medium">Location code<input className={field} name="locationCode" defaultValue={initial?.locationCode} placeholder="CQC location ID or branch code" /></label>
-          <label className="text-sm font-medium md:col-span-2 xl:col-span-3"><span className="flex items-center justify-between gap-2"><span>Electronic Call Monitoring System (ECM)</span><span className="font-mono text-xs text-slate-400">1.1a</span></span><input className={field} name="ecmSystem" defaultValue={initial?.ecmSystem} placeholder="Enter the ECM used during this month" /></label>
+          <label className="text-sm font-medium">Provider identifier <span className="font-normal text-slate-500">(optional)</span><input className={field} name="providerCode" defaultValue={initial?.providerCode} placeholder="Your internal or regulatory identifier" /></label>
+          <label className="text-sm font-medium">Service identifier <span className="font-normal text-slate-500">(optional)</span><input className={field} name="locationCode" defaultValue={initial?.locationCode} placeholder="Your internal service or branch identifier" /></label>
+          <label className="text-sm font-medium md:col-span-2 xl:col-span-3">Electronic call monitoring system<input className={field} name="ecmSystem" defaultValue={initial?.ecmSystem} placeholder="Enter the system used during this month" /></label>
         </div>
       </section>
 
@@ -95,7 +95,7 @@ export function MonthlyKpiReturnForm({
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {section.fields.map((item) => (
               <label key={item.key} className="text-sm font-medium">
-                <span className="flex items-center justify-between gap-2"><span>{item.label}</span>{item.code ? <span className="font-mono text-xs text-slate-400">{item.code}</span> : null}</span>
+                <span>{item.label}</span>
                 <input
                   className={field}
                   min="0"
@@ -117,7 +117,7 @@ export function MonthlyKpiReturnForm({
       </section>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        This workflow was designed from the 2026 workbook supplied by your organisation. Check the authority’s current template, definitions and deadline before submitting an official return.
+        This internal return brings service delivery, workforce, complaints and safeguarding figures into one consistent monthly record. Check any contract-specific definitions and deadlines before external submission.
       </div>
 
       {!locked ? <div className="flex flex-wrap gap-3">

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const localAuthority = String(form.get("localAuthority") ?? "").trim();
     const intent = String(form.get("intent") ?? "draft");
     if (!context.locations.some((location) => location.id === locationId)) throw new Error("Choose a branch you are authorised to manage.");
-    if (!localAuthority) throw new Error("Enter the local authority.");
+    if (!localAuthority) throw new Error("Enter the commissioner or contract owner.");
     const data = parseKpiReturnForm(form);
     const errors = validateKpiReturn(data);
     if (intent !== "draft" && errors.length) throw new Error(`Resolve these checks before progressing: ${errors.join(" ")}`);

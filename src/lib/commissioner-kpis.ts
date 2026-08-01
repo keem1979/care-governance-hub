@@ -5,7 +5,7 @@ import {
   type KpiReturnData,
 } from "@/lib/kpi-suite";
 
-export const COMMISSIONER_KPI_SOURCE = "Monthly local authority KPI return";
+export const COMMISSIONER_KPI_SOURCE = "Monthly service performance return";
 
 export const COMMISSIONER_KPI_FIELD_KEYS = [
   "pocsEnded",

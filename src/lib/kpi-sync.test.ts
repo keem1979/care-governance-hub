@@ -11,8 +11,9 @@ describe("KPI source synchronisation", () => {
   it("maps operational indicators to their source modules", () => {
     expect(REGISTER_KPI_KEYS.falls).toBe("falls");
     expect(REGISTER_KPI_KEYS["medication-errors"]).toBe("medicines-errors");
+    expect(REGISTER_KPI_KEYS["scc-missed-calls"]).toBe("missed-visits");
     expect(KPI_AUTO_SOURCES["overdue-actions"]).toBe("Action Tracker");
-    expect(kpiAutoSource("scc-total-calls")).toBe("Monthly local authority KPI return");
+    expect(kpiAutoSource("scc-total-calls")).toBe("Monthly service performance return");
   });
 
   it("calculates compliance percentages to one decimal place", () => {

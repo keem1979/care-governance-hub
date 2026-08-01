@@ -74,9 +74,9 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Open Compliance Calendar", "/calendar", ["view", "list", "month"], view),
     link("Add a deadline", "/calendar/new", ["add", "create", "new", "deadline"], edit),
   ]),
-  topic("KPI Suite", "/kpis", ["kpi", "kpis", "performance", "target", "rag", "indicator", "trend", "local authority", "commissioner", "monthly return"], "KPI Suite keeps monthly local-authority returns, operational scorecards, evidence and trends together.", "Registered Managers can complete a branch return covering delivery, capacity, workforce, live-in care, complaints and safeguarding. QCGMS validates related totals, calculates rates without divide-by-zero errors, keeps a submission history and exports a commissioner-ready CSV. Confirm the authority’s current template before official submission.", view, [
+  topic("KPI Suite", "/kpis", ["kpi", "kpis", "performance", "target", "rag", "indicator", "trend", "monthly return"], "KPI Suite brings service delivery, safety, workforce, people’s experience, outcomes and governance measures into one monthly view.", "Registered Managers can complete a branch performance return covering delivery, capacity, workforce, live-in care, complaints and safeguarding. QCGMS validates related totals, calculates rates safely, updates the matching scorecard measures, keeps a submission history and exports a clear CSV.", view, [
     link("Open KPI Suite", "/kpis", ["view", "dashboard", "trend"], view),
-    link("Start monthly authority return", "/kpis/monthly", ["authority", "commissioner", "return", "month end"], edit),
+    link("Start monthly performance return", "/kpis/monthly", ["return", "month end", "service performance"], edit),
     link("View return history", "/kpis/returns", ["history", "submitted", "draft", "review"], view),
     link("Enter KPI data", "/kpis/entry", ["add", "enter", "record", "new", "monthly"], edit),
     link("Open KPI report", "/kpis/report", ["report", "print", "pdf"], reports),
@@ -197,7 +197,7 @@ export function answerAssistant(query: string, permissions: readonly string[], c
   const wantsNavigation = /\b(go to|open|take me|navigate|show me)\b/.test(clean);
   if (!clean || /^(hi|hello|hey|help|what can you do)[.!? ]*$/.test(clean)) {
     return {
-      answer: "Hi, I’m Abi. I can explain every part of QCGMS, why it matters in health and social care, how it may support CQC inspection evidence, or give you the right page link. You could ask, “How do I complete the monthly local authority KPI return?”, “Why does the risk register matter for CQC?” or “Open Reports.”",
+      answer: "Hi, I’m Abi. I can explain every part of QCGMS, why it matters in health and social care, how it may support CQC inspection evidence, or give you the right page link. You could ask, “How do I complete the monthly performance return?”, “Why does the risk register matter for CQC?” or “Open Reports.”",
       links: accessible(ASSISTANT_TOPICS.map((item) => ({ label: item.name, href: item.href, requiredAny: item.requiredAny })), permissions).slice(0, 6),
       navigate: false,
     };
