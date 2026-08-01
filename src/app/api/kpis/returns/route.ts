@@ -80,6 +80,8 @@ export async function POST(request: Request) {
           amberThreshold: definition.amberThreshold,
           ragStatus: ragStatus as KpiRagStatus,
           notes: `${AUTO_SYNC_NOTE_PREFIX} ${COMMISSIONER_KPI_SOURCE}.`,
+          sourceType: "MONTHLY_PERFORMANCE_RETURN",
+          sourceUrl: `/kpis/returns/${result.id}`,
           createdById: context.user.id,
         };
         if (entry) await tx.kpiEntry.update({ where: { id: entry.id }, data: entryData });

@@ -978,6 +978,8 @@ model KpiEntry {
   amberThreshold Float
   ragStatus      KpiRagStatus
   notes          String?
+  sourceType     String       @default("OTHER_VERIFIED_SOURCE")
+  sourceUrl      String?
   createdById    String       @db.Uuid
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt

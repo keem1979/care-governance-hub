@@ -18,6 +18,7 @@ import {
   WORKFORCE_KPI_TYPES,
 } from "@/lib/kpi-sync";
 import { PERMISSIONS } from "@/lib/permissions";
+import { automatedKpiSource } from "@/lib/kpi-sources";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -144,6 +145,7 @@ export async function POST(request: Request) {
         amberThreshold: definition.amberThreshold,
       });
       const notes = `${AUTO_SYNC_NOTE_PREFIX} ${kpiAutoSource(definition.slug)}. Refreshes when connected figures are refreshed.`;
+      const provenance = automatedKpiSource(definition.slug);
       const data = {
         organisationId: context.organisation.id,
         locationId,
@@ -155,6 +157,7 @@ export async function POST(request: Request) {
         amberThreshold: definition.amberThreshold,
         ragStatus: ragStatus as KpiRagStatus,
         notes,
+        ...provenance,
         createdById: context.user.id,
       };
       if (existing) await db.kpiEntry.update({ where: { id: existing.id }, data });

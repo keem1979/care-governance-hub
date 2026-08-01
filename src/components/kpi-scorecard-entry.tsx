@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KPI_RESULT_BUTTON_CLASS } from "@/lib/kpi-ui";
+import { KPI_SOURCE_OPTIONS } from "@/lib/kpi-sources";
 
 type Definition = {
   id: string;
@@ -38,12 +39,16 @@ export function KpiScorecardEntry({
   locationId,
   actualValue,
   notes,
+  sourceType,
+  sourceUrl,
 }: {
   definition: Definition;
   month: string;
   locationId: string | null;
   actualValue?: number;
   notes?: string | null;
+  sourceType?: string | null;
+  sourceUrl?: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -88,11 +93,23 @@ export function KpiScorecardEntry({
         />
       </label>
       <label className="block text-sm font-semibold">
-        Explanation or source
+        Where did this figure come from? <span className="text-red-700">Required</span>
+        <select name="sourceType" required defaultValue={sourceType ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal">
+          <option value="" disabled>Select the evidence source</option>
+          {KPI_SOURCE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </label>
+      <label className="block text-sm font-semibold">
+        Source link <span className="font-normal text-slate-500">(optional)</span>
+        <input name="sourceUrl" type="url" defaultValue={sourceUrl ?? ""} placeholder="https://…" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-normal" />
+        <span className="mt-1 block text-xs font-normal text-slate-500">Link to the care system record, report or evidence page. Do not paste passwords.</span>
+      </label>
+      <label className="block text-sm font-semibold">
+        Evidence note or explanation
         <textarea
           name="notes"
           defaultValue={notes?.startsWith("[Auto-synced]") ? "" : notes ?? ""}
-          placeholder="Explain the figure, variance or source used."
+          placeholder="Explain the figure, any variance and the check completed."
           className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal"
         />
       </label>
