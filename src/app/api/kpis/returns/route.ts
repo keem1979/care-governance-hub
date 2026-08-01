@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
+import { KpiRagStatus } from "@/generated/prisma/enums";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { parseKpiReturnForm, validateKpiReturn } from "@/lib/kpi-suite";
-import { monthKey, parseKpiMonth } from "@/lib/kpis";
+import { COMMISSIONER_KPI_SOURCE, commissionerKpiValues } from "@/lib/commissioner-kpis";
+import { monthKey, parseKpiMonth, calculateKpiRag } from "@/lib/kpis";
+import { AUTO_SYNC_NOTE_PREFIX } from "@/lib/kpi-sync";
 import { PERMISSIONS } from "@/lib/permissions";
 
 export async function POST(request: Request) {
@@ -45,6 +48,43 @@ export async function POST(request: Request) {
       const result = existing
         ? await tx.kpiReturn.update({ where: { id: existing.id }, data: values })
         : await tx.kpiReturn.create({ data: { ...values, createdById: context.user.id } });
+      const commissionerValues = commissionerKpiValues(data);
+      const definitions = await tx.kpiDefinition.findMany({
+        where: {
+          organisationId: context.organisation.id,
+          slug: { in: [...commissionerValues.keys()] },
+          isActive: true,
+        },
+      });
+      for (const definition of definitions) {
+        const actualValue = commissionerValues.get(definition.slug);
+        if (actualValue === undefined) continue;
+        const ragStatus = calculateKpiRag({
+          actual: actualValue,
+          direction: definition.direction,
+          greenThreshold: definition.greenThreshold,
+          amberThreshold: definition.amberThreshold,
+        });
+        const entry = await tx.kpiEntry.findFirst({
+          where: { kpiId: definition.id, locationId, reportingMonth },
+          select: { id: true },
+        });
+        const entryData = {
+          organisationId: context.organisation.id,
+          locationId,
+          kpiId: definition.id,
+          reportingMonth,
+          actualValue,
+          targetValue: definition.targetValue,
+          greenThreshold: definition.greenThreshold,
+          amberThreshold: definition.amberThreshold,
+          ragStatus: ragStatus as KpiRagStatus,
+          notes: `${AUTO_SYNC_NOTE_PREFIX} ${COMMISSIONER_KPI_SOURCE}.`,
+          createdById: context.user.id,
+        };
+        if (entry) await tx.kpiEntry.update({ where: { id: entry.id }, data: entryData });
+        else await tx.kpiEntry.create({ data: entryData });
+      }
       await tx.activityLog.create({ data: {
         organisationId: context.organisation.id,
         locationId,
@@ -53,7 +93,12 @@ export async function POST(request: Request) {
         recordType: "KpiReturn",
         recordId: result.id,
         summary: `${existing ? "Updated" : "Created"} monthly KPI return for ${monthKey(reportingMonth)}`,
-        afterValue: { status: requestedStatus, localAuthority, validationIssues: errors.length },
+        afterValue: {
+          status: requestedStatus,
+          localAuthority,
+          validationIssues: errors.length,
+          commissionerKpisSynced: definitions.length,
+        },
       } });
       return result;
     });

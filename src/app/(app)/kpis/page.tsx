@@ -4,7 +4,8 @@ import { KpiNeedsEntryButton, KpiScorecardEntry } from "@/components/kpi-scoreca
 import { KpiSyncControl } from "@/components/kpi-sync-control";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
-import { KPI_AUTO_SOURCES } from "@/lib/kpi-sync";
+import { commissionerKpiCoverage } from "@/lib/commissioner-kpis";
+import { kpiAutoSource } from "@/lib/kpi-sync";
 import { addMonths, kpiLabel, monthKey, ragClasses } from "@/lib/kpis";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
@@ -35,6 +36,7 @@ export default async function KpiDashboardPage({ searchParams }: { searchParams:
     const selected = definitions.find((item) => item.id === selectedKpiId);
     const comparison = monthEntries.filter((item) => item.kpiId === selectedKpiId);
     const canEdit = hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_EDIT);
+    const workbookCoverage = commissionerKpiCoverage();
     const previous = monthKey(addMonths(reportingMonth, -1)), next = monthKey(addMonths(reportingMonth, 1));
     return <main className="space-y-7">
       <header className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-widest text-emerald-700">Quality intelligence</p><h1 className="text-3xl font-bold">KPI Suite</h1><p className="mt-1 text-slate-600">Monthly commissioner returns, service targets, evidence and performance trends.</p></div><div className="flex flex-wrap gap-2">{canEdit ? <Link href={`/kpis/entry?month=${month}`} className="rounded-xl border border-emerald-700 bg-white px-5 py-3 text-sm font-semibold text-emerald-800">Enter custom KPI</Link> : null}<Link href={`/api/kpis/export?month=${month}${locationId ? `&location=${locationId}` : ""}`} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold">Export scorecard</Link><Link href={`/kpis/report?month=${month}&location=${requestedLocation}`} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold">PDF / Print</Link></div></header>
@@ -43,6 +45,13 @@ export default async function KpiDashboardPage({ searchParams }: { searchParams:
         <div className="grid gap-5 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">Registered Manager workspace</p><h2 className="mt-2 text-2xl font-bold">Monthly local authority KPI return</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50/80">Keep branch delivery, workforce, complaints, safeguarding and referral figures together. QCGMS checks totals and calculates the rates you need for month-end reporting.</p></div>
           <div className="flex flex-wrap gap-2">{canEdit ? <Link href={`/kpis/monthly?month=${month}${locationId ? `&location=${locationId}` : ""}`} className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-emerald-950">Start this month’s return</Link> : null}<Link href="/kpis/returns" className="rounded-xl border border-white/30 px-5 py-3 text-sm font-bold text-white">View return history</Link></div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div><p className="text-xs font-bold uppercase tracking-widest text-blue-700">2026 commissioner workbook coverage</p><h2 className="mt-1 text-xl font-bold text-blue-950">All {workbookCoverage.totalItems} tracker items are included</h2><p className="mt-1 text-sm text-blue-900">{workbookCoverage.nonNumericItems} ECM field, {workbookCoverage.numericInputs} monthly figures and {workbookCoverage.calculatedMeasures} calculated measures. Saving the monthly return updates the matching scorecard items automatically.</p></div>
+          <Link href={`/kpis/monthly?month=${month}${locationId ? `&location=${locationId}` : ""}`} className="rounded-xl bg-blue-900 px-5 py-3 text-sm font-bold text-white">Open complete return</Link>
         </div>
       </section>
 
@@ -63,14 +72,14 @@ export default async function KpiDashboardPage({ searchParams }: { searchParams:
       </section>
 
       <section>
-        <div className="mb-4"><h2 className="text-xl font-bold">KPI scorecard and monthly entry</h2><p className="text-sm text-slate-600">{visible.length} standard indicators for {month}. Enter or correct a result directly on its card.</p></div>
+        <div className="mb-4"><h2 className="text-xl font-bold">KPI scorecard and monthly entry</h2><p className="text-sm text-slate-600">{visible.length} standard and commissioner indicators for {month}. Enter or correct a result directly on its card.</p></div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map(({ definition, entry }) => {
-            const source = KPI_AUTO_SOURCES[definition.slug];
+            const source = kpiAutoSource(definition.slug);
             const automaticallySynced = Boolean(entry?.notes?.startsWith("[Auto-synced]"));
             return <article key={definition.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div><h3 className="font-bold">{definition.name}</h3><p className="mt-1 text-xs text-slate-500">{kpiLabel(definition.direction)} · {definition.unit}</p></div>
+                <div><h3 className="font-bold">{definition.name}</h3><p className="mt-1 text-xs text-slate-500">{kpiLabel(definition.direction)} · {definition.unit}</p>{definition.description ? <p className="mt-2 text-xs leading-5 text-slate-600">{definition.description}</p> : null}</div>
                 {entry ? <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${ragClasses(entry.ragStatus)}`}>{entry.ragStatus}</span> : canEdit ? <KpiNeedsEntryButton definitionId={definition.id} /> : <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">NEEDS ENTRY</span>}
               </div>
               {source ? <p className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${automaticallySynced ? "bg-emerald-50 text-emerald-800" : "bg-blue-50 text-blue-800"}`}>{automaticallySynced ? `Live from ${source}` : `Can be supplied by ${source}`}</p> : <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">Manager entry required — QCGMS does not yet hold this source data.</p>}

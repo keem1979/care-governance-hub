@@ -1,3 +1,5 @@
+import { COMMISSIONER_KPI_SOURCE } from "@/lib/commissioner-kpis";
+
 export const KPI_AUTO_SOURCES: Record<string, string> = {
   "missed-visits": "Missed visits register",
   "late-visits": "Late visits register",
@@ -19,6 +21,10 @@ export const KPI_AUTO_SOURCES: Record<string, string> = {
   "audit-completion": "Audit Centre",
   "policy-compliance": "Policy Centre",
 };
+
+export function kpiAutoSource(slug: string) {
+  return KPI_AUTO_SOURCES[slug] ?? (slug.startsWith("scc-") ? COMMISSIONER_KPI_SOURCE : undefined);
+}
 
 export const REGISTER_KPI_KEYS: Record<string, string> = {
   "missed-visits": "missed-visits",

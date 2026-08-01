@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   compliancePercentage,
   isCurrentComplianceRecord,
+  kpiAutoSource,
   KPI_AUTO_SOURCES,
   REGISTER_KPI_KEYS,
 } from "@/lib/kpi-sync";
@@ -11,6 +12,7 @@ describe("KPI source synchronisation", () => {
     expect(REGISTER_KPI_KEYS.falls).toBe("falls");
     expect(REGISTER_KPI_KEYS["medication-errors"]).toBe("medicines-errors");
     expect(KPI_AUTO_SOURCES["overdue-actions"]).toBe("Action Tracker");
+    expect(kpiAutoSource("scc-total-calls")).toBe("Monthly local authority KPI return");
   });
 
   it("calculates compliance percentages to one decimal place", () => {

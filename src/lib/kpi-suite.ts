@@ -23,12 +23,12 @@ export const KPI_RETURN_SECTIONS: KpiSection[] = [
       { key: "pocsEnded", code: "2.1a", label: "Packages of care ended" },
       { key: "pocsHandedBack", code: "2.1b", label: "Packages handed back" },
       { key: "totalCalls", code: "2.2a", label: "Total scheduled calls" },
-      { key: "lateCalls", code: "2.2b", label: "Late calls", help: "Use the local authority’s current definition of late." },
-      { key: "missedCalls", code: "2.2c", label: "Missed calls" },
-      { key: "rescheduledCalls", code: "2.2d", label: "Calls rescheduled by provider" },
-      { key: "providerCancelledCalls", code: "2.2e", label: "Calls cancelled by provider" },
-      { key: "serviceUserCancelledCalls", code: "2.2f", label: "Calls cancelled by service user" },
-      { key: "serviceUserCancelledUnder24h", code: "2.2g", label: "Service-user cancellations within 24 hours" },
+      { key: "lateCalls", code: "2.3a", label: "Late calls", help: "Use the local authority’s current definition of late." },
+      { key: "missedCalls", code: "3.3b", label: "Missed calls", help: "Code retained exactly as supplied in the 2026 workbook." },
+      { key: "rescheduledCalls", code: "2.3c", label: "Rescheduled calls" },
+      { key: "providerCancelledCalls", code: "2.3d", label: "Calls cancelled by provider" },
+      { key: "serviceUserCancelledCalls", code: "2.3f", label: "Calls cancelled by service user" },
+      { key: "serviceUserCancelledUnder24h", code: "2.3g", label: "Service-user cancellations within 24 hours" },
     ],
   },
   {
@@ -71,8 +71,8 @@ export const KPI_RETURN_SECTIONS: KpiSection[] = [
       { key: "newBackOfficeStaff", code: "5.1c", label: "New office and management staff" },
       { key: "staffLeft", code: "5.1d", label: "Staff who left" },
       { key: "orientationEligible", code: "5.2a", label: "Staff eligible for orientation" },
-      { key: "orientationCompleted", code: "5.2b", label: "Staff who completed orientation" },
-      { key: "careCertificateValid", code: "5.3a", label: "Staff with valid Care Certificate" },
+      { key: "orientationCompleted", code: "5.2b", label: "New staff due to complete orientation training" },
+      { key: "careCertificateValid", code: "5.2c", label: "Staff with valid Care Certificate" },
       { key: "competenciesDue", label: "Competency checks due or overdue" },
       { key: "competenciesCompleted", label: "Competency checks completed" },
       { key: "sponsoredStaffSurrey", code: "6.1a", label: "Sponsored staff working in the authority area" },
@@ -111,7 +111,13 @@ export function percentage(numerator: number, denominator: number) {
 
 export function calculateKpiReturnSummary(data: KpiReturnData) {
   const totalCalls = numberValue(data, "totalCalls");
-  const providerExceptions = ["lateCalls", "missedCalls", "rescheduledCalls", "providerCancelledCalls"]
+  const providerExceptions = [
+    "lateCalls",
+    "missedCalls",
+    "rescheduledCalls",
+    "providerCancelledCalls",
+    "serviceUserCancelledCalls",
+  ]
     .reduce((sum, key) => sum + numberValue(data, key), 0);
   const referralsAnswered = numberValue(data, "referralsPositiveResponse") + numberValue(data, "referralsNegativeResponse");
   const referralRequests = referralsAnswered + numberValue(data, "referralsNoResponse");

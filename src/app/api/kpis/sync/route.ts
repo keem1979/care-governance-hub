@@ -4,10 +4,16 @@ import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { calculateKpiRag, parseKpiMonth } from "@/lib/kpis";
 import {
+  COMMISSIONER_KPI_SLUGS,
+  commissionerKpiValues,
+} from "@/lib/commissioner-kpis";
+import type { KpiReturnData } from "@/lib/kpi-suite";
+import {
   AUTO_SYNC_NOTE_PREFIX,
   compliancePercentage,
   isCurrentComplianceRecord,
   KPI_AUTO_SOURCES,
+  kpiAutoSource,
   REGISTER_KPI_KEYS,
   WORKFORCE_KPI_TYPES,
 } from "@/lib/kpi-sync";
@@ -29,11 +35,22 @@ export async function POST(request: Request) {
     const definitions = await db.kpiDefinition.findMany({
       where: {
         organisationId: context.organisation.id,
-        slug: { in: Object.keys(KPI_AUTO_SOURCES) },
+        slug: { in: [...Object.keys(KPI_AUTO_SOURCES), ...COMMISSIONER_KPI_SLUGS] },
         isActive: true,
       },
     });
     const sourceValues = new Map<string, number>();
+    if (locationId) {
+      const monthlyReturn = await db.kpiReturn.findFirst({
+        where: { organisationId: context.organisation.id, locationId, reportingMonth },
+        select: { data: true },
+      });
+      if (monthlyReturn) {
+        for (const [slug, value] of commissionerKpiValues(monthlyReturn.data as KpiReturnData)) {
+          sourceValues.set(slug, value);
+        }
+      }
+    }
     for (const [slug, registerKey] of Object.entries(REGISTER_KPI_KEYS)) {
       const value = await db.registerEntry.count({
         where: {
@@ -126,7 +143,7 @@ export async function POST(request: Request) {
         greenThreshold: definition.greenThreshold,
         amberThreshold: definition.amberThreshold,
       });
-      const notes = `${AUTO_SYNC_NOTE_PREFIX} ${KPI_AUTO_SOURCES[definition.slug]}. Refreshes when the KPI Suite is opened.`;
+      const notes = `${AUTO_SYNC_NOTE_PREFIX} ${kpiAutoSource(definition.slug)}. Refreshes when connected figures are refreshed.`;
       const data = {
         organisationId: context.organisation.id,
         locationId,

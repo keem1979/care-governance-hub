@@ -8,9 +8,9 @@ describe("monthly KPI return", () => {
   });
 
   it("calculates delivery and exception rates with clear semantics", () => {
-    const summary = calculateKpiReturnSummary({ totalCalls: 100, lateCalls: 3, missedCalls: 1, rescheduledCalls: 2, providerCancelledCalls: 4 });
-    expect(summary.successfulDeliveryRate).toBe(90);
-    expect(summary.providerExceptionRate).toBe(10);
+    const summary = calculateKpiReturnSummary({ totalCalls: 100, lateCalls: 3, missedCalls: 1, rescheduledCalls: 2, providerCancelledCalls: 4, serviceUserCancelledCalls: 5 });
+    expect(summary.successfulDeliveryRate).toBe(85);
+    expect(summary.providerExceptionRate).toBe(15);
   });
 
   it("validates dependent figures", () => {

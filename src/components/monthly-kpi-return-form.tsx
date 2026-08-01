@@ -75,15 +75,16 @@ export function MonthlyKpiReturnForm({
           <label className="text-sm font-medium">Contract or framework<input className={field} name="contractName" defaultValue={initial?.contractName ?? "Care Within the Home"} /></label>
           <label className="text-sm font-medium">Provider code<input className={field} name="providerCode" defaultValue={initial?.providerCode} placeholder="CQC provider ID or commissioner code" /></label>
           <label className="text-sm font-medium">Location code<input className={field} name="locationCode" defaultValue={initial?.locationCode} placeholder="CQC location ID or branch code" /></label>
-          <label className="text-sm font-medium md:col-span-2 xl:col-span-3">Electronic care management system<input className={field} name="ecmSystem" defaultValue={initial?.ecmSystem} placeholder="For example, Nourish or CareNexus" /></label>
+          <label className="text-sm font-medium md:col-span-2 xl:col-span-3"><span className="flex items-center justify-between gap-2"><span>Electronic Call Monitoring System (ECM)</span><span className="font-mono text-xs text-slate-400">1.1a</span></span><input className={field} name="ecmSystem" defaultValue={initial?.ecmSystem} placeholder="Enter the ECM used during this month" /></label>
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <Rate label="Successful delivery" value={summary.successfulDeliveryRate} />
         <Rate label="Provider exception rate" value={summary.providerExceptionRate} />
         <Rate label="Restart acceptance" value={summary.restartAcceptanceRate} />
         <Rate label="Referral response" value={summary.referralResponseRate} />
+        <Rate label="New staff rate" value={summary.staffJoinerRate} />
         <Rate label="Care Certificate" value={summary.careCertificateRate} />
       </section>
 
