@@ -143,7 +143,7 @@ export default async function WorkforcePage() {
                             {person.firstName} {person.lastName}
                           </Link>
                           <p className="mt-1 font-mono text-xs text-slate-500">
-                            {person.employeeReference}
+                            Staff {person.staffNumber} · {person.employeeReference}
                           </p>
                         </td>
                         <td className="px-4 py-4">
@@ -210,4 +210,3 @@ function date(value: Date) {
     timeZone: "Europe/London",
   }).format(value);
 }
-

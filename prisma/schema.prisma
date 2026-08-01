@@ -291,6 +291,7 @@ model Organisation {
   staffMembers           StaffMember[]
   staffComplianceRecords StaffComplianceRecord[]
   clients                Client[]
+  referenceCounters      ReferenceCounter[]
 }
 
 model ServiceLocation {
@@ -1198,6 +1199,7 @@ model StaffMember {
   organisationId    String                @db.Uuid
   locationId        String?               @db.Uuid
   employeeReference String
+  staffNumber       Int
   firstName         String
   lastName          String
   preferredName     String?
@@ -1221,6 +1223,7 @@ model StaffMember {
   registerEntries RegisterEntry[]
 
   @@unique([organisationId, employeeReference])
+  @@unique([organisationId, staffNumber])
   @@index([organisationId, employmentStatus])
   @@index([locationId])
 }
@@ -1230,6 +1233,7 @@ model Client {
   organisationId        String       @db.Uuid
   locationId            String?      @db.Uuid
   clientReference       String
+  clientNumber          Int
   firstName             String
   lastName              String
   preferredName         String?
@@ -1246,6 +1250,14 @@ model Client {
   status                ClientStatus @default(ACTIVE)
   communicationSummary  String?
   emergencyContact      String?
+  nextOfKinName         String?
+  nextOfKinRelationship String?
+  nextOfKinPhone        String?
+  nextOfKinEmail        String?
+  nextOfKinAddress      String?
+  nextOfKinContactAllowed Boolean @default(false)
+  nextOfKinHasAuthority Boolean    @default(false)
+  nextOfKinAuthorityDetails String?
   notes                 String?
   archivedAt            DateTime?
   createdAt             DateTime     @default(now())
@@ -1256,9 +1268,23 @@ model Client {
   registerEntries RegisterEntry[]
 
   @@unique([organisationId, clientReference])
+  @@unique([organisationId, clientNumber])
   @@index([organisationId, status])
   @@index([locationId])
   @@index([organisationId, lastName, firstName])
+}
+
+model ReferenceCounter {
+  id             String       @id @default(uuid()) @db.Uuid
+  organisationId String       @db.Uuid
+  key            String
+  currentValue   Int          @default(0)
+  updatedAt      DateTime     @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  @@unique([organisationId, key])
+  @@index([organisationId])
 }
 
 model StaffComplianceRecord {

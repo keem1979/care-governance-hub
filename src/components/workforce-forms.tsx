@@ -50,10 +50,7 @@ export function StaffMemberForm({ locations }: { locations: Option[] }) {
         </p>
       ) : null}
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="text-sm font-medium">
-          Employee reference
-          <input className={field} name="employeeReference" required maxLength={40} />
-        </label>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"><p className="font-semibold">Staff number and reference</p><p className="mt-1 text-slate-600">Generated automatically when this record is saved, beginning at Staff 1.</p></div>
         <label className="text-sm font-medium">
           Service location
           <select className={field} name="locationId" defaultValue="">

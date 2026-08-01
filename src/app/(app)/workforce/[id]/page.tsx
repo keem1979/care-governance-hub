@@ -48,7 +48,7 @@ export default async function StaffMemberPage({
           <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="font-mono text-sm text-emerald-700">
-                {staff.employeeReference}
+                Staff {staff.staffNumber} · {staff.employeeReference}
               </p>
               <h1 className="text-3xl font-bold">
                 {staff.firstName} {staff.lastName}
@@ -174,4 +174,3 @@ function date(value: Date | null) {
       }).format(value)
     : "Not set";
 }
-

@@ -4,11 +4,11 @@ import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
 import { parseOptionalDate } from "@/lib/policies";
 import { STAFF_STATUSES } from "@/lib/workforce";
+import { formatPersonReference } from "@/lib/people-references";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.WORKFORCE_MANAGE);
   const form = await request.formData();
-  const employeeReference = clean(form.get("employeeReference"), 40);
   const firstName = clean(form.get("firstName"), 80);
   const lastName = clean(form.get("lastName"), 80);
   const preferredName = optional(form.get("preferredName"), 80);
@@ -24,13 +24,12 @@ export async function POST(request: Request) {
   const startDate = parseOptionalDate(form.get("startDate"));
 
   if (
-    !employeeReference ||
     firstName.length < 2 ||
     lastName.length < 2 ||
     jobTitle.length < 2
   ) {
     return NextResponse.json(
-      { error: "Enter the employee reference, name and job title." },
+      { error: "Enter the staff member’s name and job title." },
       { status: 400 },
     );
   }
@@ -53,11 +52,14 @@ export async function POST(request: Request) {
   const db = createDb();
   try {
     const staff = await db.$transaction(async (tx) => {
+      const counter = await tx.referenceCounter.upsert({ where: { organisationId_key: { organisationId: context.organisation.id, key: "STAFF" } }, create: { organisationId: context.organisation.id, key: "STAFF", currentValue: 1 }, update: { currentValue: { increment: 1 } } });
+      const employeeReference = formatPersonReference("STF", counter.currentValue);
       const created = await tx.staffMember.create({
         data: {
           organisationId: context.organisation.id,
           locationId,
           employeeReference,
+          staffNumber: counter.currentValue,
           firstName,
           lastName,
           preferredName,
