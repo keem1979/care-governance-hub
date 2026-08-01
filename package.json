@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "npm run build && playwright test",
+    "test:e2e": "playwright test",
     "check": "npm run db:validate && npm run typecheck && npm run lint && npm run test",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",

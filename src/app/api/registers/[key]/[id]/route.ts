@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@/generated/prisma/client";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
 import { parseOptionalDate } from "@/lib/policies";
 import { syncRegisterEvidence } from "@/lib/register-evidence";
+import { assessmentPrerequisites, assessmentType } from "@/lib/assessments";
+import { clientScopeWhere } from "@/lib/clients";
 import { collectRegisterData, parseRegisterFields, registerScopeWhere, REGISTER_RISK_LEVELS, REGISTER_STATUSES } from "@/lib/registers";
+import { workforceScopeWhere } from "@/lib/workforce";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ key: string; id: string }> }) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -37,27 +41,39 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ke
     const summary = String(form.get("summary") ?? "").trim();
     const locationId = String(form.get("locationId") ?? "") || null;
     const ownerId = String(form.get("ownerId") ?? "") || null;
+    const clientId = String(form.get("clientId") ?? "") || null;
+    const staffMemberId = String(form.get("staffMemberId") ?? "") || null;
     const riskLevel = String(form.get("riskLevel") ?? "LOW");
     const status = String(form.get("status") ?? "OPEN");
     if (title.length < 3 || summary.length < 3) throw new Error("Enter a title and summary.");
     if (locationId && !context.locations.some((item) => item.id === locationId)) throw new Error("Choose an authorised location.");
     if (!REGISTER_RISK_LEVELS.includes(riskLevel as never) || !REGISTER_STATUSES.includes(status as never)) throw new Error("Choose valid values.");
     if (ownerId && !(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: ownerId, status: "ACTIVE" } }))) throw new Error("Choose an active owner.");
+    if (clientId && !(await db.client.findFirst({ where: { id: clientId, ...clientScopeWhere(context) } }))) throw new Error("Choose an authorised client record.");
+    if (staffMemberId && !(await db.staffMember.findFirst({ where: { id: staffMemberId, ...workforceScopeWhere(context) } }))) throw new Error("Choose an authorised staff record.");
+    if (assessmentType(key)?.stage !== "SERVICE" && key.startsWith("assessment-") && !clientId) throw new Error("Choose the client this assessment relates to.");
     const evidenceIds = form.getAll("evidenceIds").map(String).filter(Boolean);
     for (const evidenceId of evidenceIds) if (!(await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context) } }))) throw new Error("Linked evidence could not be found.");
-    const data = collectRegisterData(form, parseRegisterFields(entry.definition.fieldSchema));
+    const data: Record<string, unknown> = collectRegisterData(form, parseRegisterFields(entry.definition.fieldSchema));
+    const prerequisiteReferences: Record<string, string> = {};
+    for (const prerequisite of assessmentPrerequisites(key)) {
+      const exists = clientId && await db.registerEntry.findFirst({ where: { organisationId: context.organisation.id, clientId, id: { not: id }, status: { not: "ARCHIVED" }, definition: { key: prerequisite.key } }, select: { reference: true }, orderBy: { eventDate: "desc" } });
+      if (!exists) throw new Error(`${prerequisite.label} must be completed for this client first.`);
+      prerequisiteReferences[prerequisite.key] = exists.reference;
+    }
+    if (Object.keys(prerequisiteReferences).length) data.prerequisiteReferences = prerequisiteReferences;
     const eventDate = parseOptionalDate(form.get("eventDate")) ?? entry.eventDate;
     const snapshot = { title, summary, riskLevel, status, data };
 
     await db.$transaction(async (tx) => {
-      await tx.registerEntry.update({ where: { id }, data: { title, summary, locationId, ownerId, riskLevel: riskLevel as never, status: status as never, eventDate, closureDate: parseOptionalDate(form.get("closureDate")), data, evidenceLinks: { deleteMany: {}, create: evidenceIds.map((evidenceId) => ({ evidenceId })) } } });
+      await tx.registerEntry.update({ where: { id }, data: { title, summary, locationId, clientId, staffMemberId, ownerId, riskLevel: riskLevel as never, status: status as never, eventDate, closureDate: parseOptionalDate(form.get("closureDate")), data: data as Prisma.InputJsonValue, evidenceLinks: { deleteMany: {}, create: evidenceIds.map((evidenceId) => ({ evidenceId })) } } });
       await syncRegisterEvidence(tx, {
         entryId: id, organisationId: context.organisation.id, locationId,
         definitionKey: key, definitionName: entry.definition.name, reference: entry.reference,
         title, summary, eventDate, ownerId, actorId: context.user.id, archived: status === "ARCHIVED",
       });
-      await tx.registerEntryHistory.create({ data: { entryId: id, userId: context.user.id, action: "UPDATED", snapshot } });
-      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "RegisterEntry", recordId: id, summary: `Updated ${entry.definition.name} entry: ${entry.reference}`, beforeValue: { title: entry.title, status: entry.status }, afterValue: snapshot } });
+      await tx.registerEntryHistory.create({ data: { entryId: id, userId: context.user.id, action: "UPDATED", snapshot: snapshot as Prisma.InputJsonValue } });
+      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "RegisterEntry", recordId: id, summary: `Updated ${entry.definition.name} entry: ${entry.reference}`, beforeValue: { title: entry.title, status: entry.status }, afterValue: snapshot as Prisma.InputJsonValue } });
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

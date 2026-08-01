@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {ASSESSMENT_TYPES,assessmentType,isAssessmentKey} from "./assessments";
+import {ASSESSMENT_TYPES,assessmentPrerequisites,assessmentType,isAssessmentKey} from "./assessments";
 
 describe("assessment catalogue",()=>{
   it("starts with initial assessment and decision-specific consent",()=>{
@@ -14,5 +14,11 @@ describe("assessment catalogue",()=>{
   it("recognises assessment keys",()=>{
     expect(isAssessmentKey("assessment-falls")).toBe(true);
     expect(isAssessmentKey("falls")).toBe(false);
+  });
+  it("enforces the assessment sequence",()=>{
+    expect(assessmentPrerequisites("assessment-initial-needs")).toEqual([]);
+    expect(assessmentPrerequisites("assessment-consent-authority")).toHaveLength(1);
+    expect(assessmentPrerequisites("assessment-falls")).toHaveLength(2);
+    expect(assessmentPrerequisites("assessment-equality-impact")).toEqual([]);
   });
 });

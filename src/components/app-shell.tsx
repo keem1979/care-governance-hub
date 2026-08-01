@@ -24,6 +24,7 @@ import {
   ShieldEllipsis,
   SignpostBig,
   UsersRound,
+  ContactRound,
   UserRoundCheck,
   HeartPulse,
   PlugZap,
@@ -36,6 +37,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+  { href: "/clients", label: "Client Directory", icon: ContactRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
   { href: "/policies", label: "Policies", icon: BookOpenCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
   { href: "/evidence", label: "Evidence Library", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
   { href: "/audits", label: "Audit Centre", icon: ClipboardCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE] },
@@ -60,6 +62,7 @@ const moduleConnections: Record<string, {
   source: string;
   links: { href: string; label: string }[];
 }> = {
+  clients: { source: "Controlled client profiles linked to assessments, reviews, incidents and evidence", links: [{ href: "/assessments", label: "Start assessment" }, { href: "/registers/care-plan-reviews", label: "Care-plan reviews" }, { href: "/evidence", label: "Linked evidence" }] },
   policies: { source: "Controlled policy records, approvals, review dates and document versions", links: [{ href: "/reports/policy-compliance", label: "Policy report" }, { href: "/inspection", label: "Inspection evidence" }, { href: "/activity?recordType=Policy", label: "Policy activity" }] },
   evidence: { source: "Uploaded evidence, template copies and linked module records", links: [{ href: "/reports/evidence-index", label: "Evidence report" }, { href: "/inspection", label: "Inspection links" }, { href: "/audits", label: "Audit evidence" }] },
   audits: { source: "Completed audit forms, responses, findings and scores", links: [{ href: "/reports/audit", label: "Audit report" }, { href: "/actions", label: "Improvement actions" }, { href: "/inspection", label: "Inspection evidence" }] },

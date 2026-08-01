@@ -34,6 +34,10 @@ const reports = [PERMISSIONS.REPORTS_EXPORT];
 
 export const ASSISTANT_TOPICS: AssistantTopic[] = [
   topic("Dashboard", "/dashboard", ["dashboard", "home", "overview", "alerts", "tasks", "summary"], "The Dashboard summarises current governance priorities from live records.", "Use it to review due policy work, audits, evidence expiry, open register items, risks, actions, meetings and recent activity.", undefined, []),
+  topic("Client Directory", "/clients", ["client", "clients", "service user", "person", "people", "client record", "client profile"], "Client Directory keeps one controlled profile for each person receiving support and links their governance records in one place.", "Add the person once using an internal client reference. Start assessments, reviews and incidents from their profile, or select their name when completing a register form. Linked records and evidence then remain accessible under that client.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT], [
+    link("Open Client Directory", "/clients", ["open", "find", "search", "list"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT]),
+    link("Add a client", "/clients/new", ["add", "new", "create"], [PERMISSIONS.GOVERNANCE_EDIT]),
+  ]),
   topic("Policies", "/policies", ["policy", "policies", "approval", "review date", "version", "remove policy", "restore policy"], "Policies controls policy ownership, approval, review dates, status and file versions.", "Open a policy to inspect its metadata and versions. Users with governance-edit access can create, update, approve, remove and restore policies. Removing a policy hides it from the active library while retaining its versions and audit history.", view, [
     link("Open Policies", "/policies", ["view", "list", "search"], view),
     link("Add a policy", "/policies/new", ["add", "create", "new", "upload"], edit),
@@ -132,6 +136,10 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
 ];
 
 export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
+  "/clients": {
+    hsc: "a controlled client directory lets staff find the right person and keeps assessments, reviews, incidents and outcomes connected without repeatedly entering identifying details.",
+    cqc: "linked person-level records can support safe, effective, responsive and well-led evidence when access is proportionate, information is accurate and records show involvement, consent, review and action. The directory itself is not evidence that care was delivered well.",
+  },
   "/dashboard": {
     hsc: "a governance dashboard gives leaders one place to notice overdue work, emerging risks and gaps before they affect people’s care.",
     cqc: "it can support the well-led question by showing active oversight, but inspectors will still test the underlying records, decisions, actions and outcomes.",

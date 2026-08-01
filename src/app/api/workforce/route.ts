@@ -11,8 +11,12 @@ export async function POST(request: Request) {
   const employeeReference = clean(form.get("employeeReference"), 40);
   const firstName = clean(form.get("firstName"), 80);
   const lastName = clean(form.get("lastName"), 80);
+  const preferredName = optional(form.get("preferredName"), 80);
+  const workEmail = optional(form.get("workEmail"), 160);
+  const workPhone = optional(form.get("workPhone"), 40);
   const jobTitle = clean(form.get("jobTitle"), 120);
   const department = optional(form.get("department"), 120);
+  const employmentType = optional(form.get("employmentType"), 80);
   const lineManager = optional(form.get("lineManager"), 120);
   const notes = optional(form.get("notes"), 2000);
   const locationId = optional(form.get("locationId"), 40);
@@ -56,8 +60,12 @@ export async function POST(request: Request) {
           employeeReference,
           firstName,
           lastName,
+          preferredName,
+          workEmail,
+          workPhone,
           jobTitle,
           department,
+          employmentType,
           startDate,
           employmentStatus: employmentStatus as never,
           lineManager,
@@ -102,4 +110,3 @@ function clean(value: FormDataEntryValue | null, limit: number) {
 function optional(value: FormDataEntryValue | null, limit: number) {
   return clean(value, limit) || null;
 }
-

@@ -6,9 +6,9 @@ import type { RegisterField } from "@/lib/registers";
 import { REGISTER_RISK_LEVELS, REGISTER_STATUSES, registerFormExperience, registerStatusLabel } from "@/lib/registers";
 
 type Option = { id: string; name: string };
-type Initial = { id: string; reference: string; eventDate: string; title: string; summary: string; riskLevel: string; status: string; locationId: string; ownerId: string; closureDate: string; data: Record<string, unknown>; evidenceIds: string[] };
+type Initial = { id: string; reference: string; eventDate: string; title: string; summary: string; riskLevel: string; status: string; locationId: string; ownerId: string; clientId: string; staffMemberId: string; closureDate: string; data: Record<string, unknown>; evidenceIds: string[] };
 
-export function RegisterEntryForm({ registerKey, registerName, fields, locations, owners, evidence, initial }: { registerKey: string; registerName: string; fields: RegisterField[]; locations: Option[]; owners: Option[]; evidence: { id: string; title: string }[]; initial?: Initial }) {
+export function RegisterEntryForm({ registerKey, registerName, fields, locations, owners, clients, staff, evidence, clientRequired=false, defaultClientId="", initial }: { registerKey: string; registerName: string; fields: RegisterField[]; locations: Option[]; owners: Option[]; clients: Option[]; staff: Option[]; evidence: { id: string; title: string }[]; clientRequired?: boolean; defaultClientId?: string; initial?: Initial }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,6 +40,8 @@ export function RegisterEntryForm({ registerKey, registerName, fields, locations
         <label className="text-sm font-medium">{experience.dateLabel} *<input className={cls} name="eventDate" type="date" defaultValue={initial?.eventDate ?? new Date().toISOString().slice(0, 10)} required /></label>
         <label className="text-sm font-medium md:col-span-2">{experience.titleLabel} *<input className={cls} name="title" defaultValue={initial?.title} required minLength={3} placeholder={experience.titlePlaceholder} /></label>
         <label className="text-sm font-medium md:col-span-2">{experience.summaryLabel} *<textarea className={`${cls} min-h-28`} name="summary" defaultValue={initial?.summary} required placeholder={experience.summaryPlaceholder} /></label>
+        <DirectorySelect name="clientId" label="Person/client this record relates to" options={clients} initialId={initial?.clientId||defaultClientId} required={clientRequired} help="Type a name or reference, then choose the person. The record will appear on their Client Directory profile."/>
+        <DirectorySelect name="staffMemberId" label="Staff member involved or being reviewed" options={staff} initialId={initial?.staffMemberId??""} help="Type a name or employee reference, then choose the worker from Workforce Compliance."/>
       </div>
     </FormSection>
 
@@ -68,6 +70,14 @@ export function RegisterEntryForm({ registerKey, registerName, fields, locations
 
 function FormSection({ number, title, description, children }: { number: string; title: string; description: string; children: React.ReactNode }) {
   return <section><div className="flex gap-3"><span className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-900 text-xs font-bold text-white">{number}</span><div><h2 className="text-lg font-bold">{title}</h2><p className="mt-0.5 text-sm text-slate-600">{description}</p></div></div><div className="mt-4">{children}</div></section>;
+}
+
+function DirectorySelect({name,label,options,initialId="",required=false,help}:{name:string;label:string;options:Option[];initialId?:string;required?:boolean;help:string}){
+  const initial=options.find((item)=>item.id===initialId);
+  const [text,setText]=useState(initial?.name??"");
+  const match=options.find((item)=>item.name===text);
+  const listId=`${name}-options`;
+  return <label className="text-sm font-medium">{label}{required?" *":""}<input className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm" list={listId} value={text} onChange={(event)=>setText(event.target.value)} placeholder="Start typing a name or reference" required={required}/><input type="hidden" name={name} value={match?.id??""}/><datalist id={listId}>{options.map((item)=><option key={item.id} value={item.name}/>)}</datalist><span className="mt-1 block text-xs font-normal text-slate-500">{help}</span>{text&&!match?<span className="mt-1 block text-xs font-semibold text-amber-700">Choose an exact match from the list to link this record.</span>:null}</label>
 }
 
 function DynamicField({ field, value }: { field: RegisterField; value: unknown }) {

@@ -229,6 +229,14 @@ enum StaffEmploymentStatus {
   LEFT
 }
 
+enum ClientStatus {
+  PROSPECT
+  ACTIVE
+  PAUSED
+  ENDED
+  ARCHIVED
+}
+
 enum StaffComplianceType {
   DBS
   RIGHT_TO_WORK
@@ -282,6 +290,7 @@ model Organisation {
   templates              Template[]
   staffMembers           StaffMember[]
   staffComplianceRecords StaffComplianceRecord[]
+  clients                Client[]
 }
 
 model ServiceLocation {
@@ -311,6 +320,7 @@ model ServiceLocation {
   kpiReturns             KpiReturn[]
   complianceRequirements ComplianceRequirement[]
   staffMembers           StaffMember[]
+  clients                Client[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -627,6 +637,8 @@ model RegisterEntry {
   organisationId  String              @db.Uuid
   definitionId    String              @db.Uuid
   locationId      String?             @db.Uuid
+  clientId        String?             @db.Uuid
+  staffMemberId   String?             @db.Uuid
   reference       String
   eventDate       DateTime
   title           String
@@ -645,6 +657,8 @@ model RegisterEntry {
   organisation    Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   definition      RegisterDefinition              @relation(fields: [definitionId], references: [id], onDelete: Restrict)
   location        ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  client          Client?                         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  staffMember     StaffMember?                    @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
   owner           User?                           @relation("RegisterEntryOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   createdBy       User                            @relation("RegisterEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
   evidenceLinks   RegisterEntryEvidence[]
@@ -654,6 +668,8 @@ model RegisterEntry {
   @@unique([organisationId, definitionId, reference])
   @@index([organisationId, definitionId, status])
   @@index([locationId, eventDate])
+  @@index([clientId, eventDate])
+  @@index([staffMemberId, eventDate])
 }
 
 model RegisterEntryEvidence {
@@ -1184,8 +1200,12 @@ model StaffMember {
   employeeReference String
   firstName         String
   lastName          String
+  preferredName     String?
+  workEmail         String?
+  workPhone         String?
   jobTitle          String
   department        String?
+  employmentType    String?
   startDate         DateTime?
   endDate           DateTime?
   employmentStatus  StaffEmploymentStatus @default(ACTIVE)
@@ -1198,10 +1218,47 @@ model StaffMember {
   organisation Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   location     ServiceLocation?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
   records      StaffComplianceRecord[]
+  registerEntries RegisterEntry[]
 
   @@unique([organisationId, employeeReference])
   @@index([organisationId, employmentStatus])
   @@index([locationId])
+}
+
+model Client {
+  id                    String       @id @default(uuid()) @db.Uuid
+  organisationId        String       @db.Uuid
+  locationId            String?      @db.Uuid
+  clientReference       String
+  firstName             String
+  lastName              String
+  preferredName         String?
+  dateOfBirth           DateTime?
+  pronouns              String?
+  phone                 String?
+  email                 String?
+  addressLine           String?
+  town                  String?
+  postcode              String?
+  commissionerReference String?
+  serviceStartDate      DateTime?
+  serviceEndDate        DateTime?
+  status                ClientStatus @default(ACTIVE)
+  communicationSummary  String?
+  emergencyContact      String?
+  notes                 String?
+  archivedAt            DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  organisation    Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location        ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  registerEntries RegisterEntry[]
+
+  @@unique([organisationId, clientReference])
+  @@index([organisationId, status])
+  @@index([locationId])
+  @@index([organisationId, lastName, firstName])
 }
 
 model StaffComplianceRecord {

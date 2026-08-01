@@ -74,12 +74,28 @@ export function StaffMemberForm({ locations }: { locations: Option[] }) {
           <input className={field} name="lastName" required maxLength={80} />
         </label>
         <label className="text-sm font-medium">
+          Preferred name
+          <input className={field} name="preferredName" maxLength={80} />
+        </label>
+        <label className="text-sm font-medium">
+          Work email
+          <input className={field} name="workEmail" type="email" maxLength={160} />
+        </label>
+        <label className="text-sm font-medium">
+          Work phone
+          <input className={field} name="workPhone" type="tel" maxLength={40} />
+        </label>
+        <label className="text-sm font-medium">
           Job title
           <input className={field} name="jobTitle" required maxLength={120} />
         </label>
         <label className="text-sm font-medium">
           Department
           <input className={field} name="department" maxLength={120} />
+        </label>
+        <label className="text-sm font-medium">
+          Employment type
+          <select className={field} name="employmentType" defaultValue="Permanent"><option>Permanent</option><option>Fixed-term</option><option>Bank</option><option>Agency</option><option>Volunteer</option><option>Other</option></select>
         </label>
         <label className="text-sm font-medium">
           Start date

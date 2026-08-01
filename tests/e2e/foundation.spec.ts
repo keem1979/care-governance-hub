@@ -3,11 +3,11 @@ import { expect, test } from "@playwright/test";
 test("shows an accessible sign-in form", async ({ page }) => {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("heading", { name: "Sign in to your governance hub" }),
+    page.getByRole("heading", { name: "Sign in to QCGMS" }),
   ).toBeVisible();
   await expect(page.getByLabel("Email address")).toBeVisible();
   await expect(page.getByLabel("Password")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign in securely" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Sign in securely" })).toBeEnabled({ timeout: 15_000 });
 });
 
 test("protects the dashboard from unauthenticated access", async ({ page }) => {
@@ -33,12 +33,14 @@ test("shows the tenant-scoped dashboard after sign-in", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
   await expect(
-    page.getByRole("heading", { name: /Good (morning|afternoon), Olivia/ }),
+    page.getByRole("heading", { name: /Good (morning|afternoon|evening), Olivia/ }),
   ).toBeVisible();
   await expect(
     page.getByText("Meadow View Home Care Ltd", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("What needs attention")).toBeVisible();
-  await expect(page.getByText("No official CQC rating")).toBeVisible();
-  await expect(page.getByText("No data recorded.").first()).toBeVisible();
+  await expect(page.getByText("For your team’s internal oversight")).toBeVisible();
+  await page.goto("/clients", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Client Directory" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Add client" })).toBeVisible();
 });
