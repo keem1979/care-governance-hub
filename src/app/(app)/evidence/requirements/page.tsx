@@ -24,13 +24,14 @@ export default async function EvidenceRequirementsPage({ searchParams }: { searc
   const serviceSpecific = String(query.scope ?? "all");
   const db = createDb();
   const evidence = await db.evidence.findMany({
-    where: { ...evidenceScopeWhere(context), status: "ACTIVE", relatedModule: { in: ["EvidenceRequirement", "RegisterEntry", "Audit"] } },
+    where: { ...evidenceScopeWhere(context), status: "ACTIVE", relatedModule: { in: ["EvidenceRequirement", "RegisterEntry", "Audit", "Risk"] } },
     select: { id: true, title: true, relatedModule: true, relatedRecordId: true, reviewExpiryDate: true, tags: true, location: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   }).finally(() => db.$disconnect());
   const rows = EVIDENCE_REQUIREMENTS.map((requirement) => {
     const linked = evidence.filter((item) => item.relatedModule === "EvidenceRequirement"
       ? item.relatedRecordId === requirement.key
+      : item.relatedModule === "Risk" ? requirement.key==="well-risk-register"
       : item.relatedModule === "Audit"
         ? auditEvidenceRequirementKeys(auditKeyFromEvidenceTags(item.tags)??"").includes(requirement.key)
         : registerEvidenceRequirementKey(registerKeyFromEvidenceTags(item.tags) ?? "") === requirement.key);

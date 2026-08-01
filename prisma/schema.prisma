@@ -682,36 +682,57 @@ model RegisterEntryHistory {
 }
 
 model Risk {
-  id                  String     @id @default(uuid()) @db.Uuid
-  organisationId      String     @db.Uuid
-  locationId          String?    @db.Uuid
-  reference           String
-  title               String
-  description         String
-  category            String
-  existingControls    String
-  likelihood          Int
-  impact              Int
-  initialScore        Int
-  initialLevel        RiskLevel
-  furtherControls     String?
-  ownerId             String?    @db.Uuid
-  targetDate          DateTime?
-  residualLikelihood  Int
-  residualImpact      Int
-  residualScore       Int
-  residualLevel       RiskLevel
-  reviewFrequency     String
-  lastReviewDate      DateTime?
-  nextReviewDate      DateTime
-  status              RiskStatus @default(OPEN)
-  closureRationale    String?
-  closureApprovedById String?    @db.Uuid
-  closureDate         DateTime?
-  archivedAt          DateTime?
-  createdById         String     @db.Uuid
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  id                   String     @id @default(uuid()) @db.Uuid
+  organisationId       String     @db.Uuid
+  locationId           String?    @db.Uuid
+  reference            String
+  title                String
+  description          String
+  cause                String?
+  riskEvent            String?
+  consequence          String?
+  peopleAffected       String?
+  category             String
+  sourceType           String?
+  sourceReference      String?
+  identifiedDate       DateTime?
+  existingControls     String
+  controlEffectiveness String?
+  controlAssurance     String?
+  likelihood           Int
+  impact               Int
+  initialScore         Int
+  initialLevel         RiskLevel
+  furtherControls      String?
+  treatmentStrategy    String?
+  ownerId              String?    @db.Uuid
+  targetDate           DateTime?
+  residualLikelihood   Int
+  residualImpact       Int
+  residualScore        Int
+  residualLevel        RiskLevel
+  appetite             String?
+  toleranceScore       Int?
+  acceptanceRationale  String?
+  targetLikelihood     Int?
+  targetImpact         Int?
+  targetScore          Int?
+  targetLevel          RiskLevel?
+  keyRiskIndicator     String?
+  indicatorThreshold   String?
+  escalationRoute      String?
+  reviewTriggers       String?
+  reviewFrequency      String
+  lastReviewDate       DateTime?
+  nextReviewDate       DateTime
+  status               RiskStatus @default(OPEN)
+  closureRationale     String?
+  closureApprovedById  String?    @db.Uuid
+  closureDate          DateTime?
+  archivedAt           DateTime?
+  createdById          String     @db.Uuid
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   organisation      Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   location          ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
@@ -749,6 +770,11 @@ model RiskReview {
   score             Int
   level             RiskLevel
   controlsEffective Boolean
+  controlChanges    String?
+  assuranceChecked  String?
+  trend             String?
+  decision          String?
+  escalated         Boolean   @default(false)
   nextReviewDate    DateTime
   createdAt         DateTime  @default(now())
 

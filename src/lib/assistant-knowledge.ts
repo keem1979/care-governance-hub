@@ -58,7 +58,7 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
   topic("Registers", "/registers", ["register", "registers", "complaint", "incident", "safeguarding", "accident", "breach", "feedback"], "Registers provides consistent records for complaints, incidents, safeguarding and other governance events.", "Choose a register, add an entry, assign its owner and risk level, link evidence, update status and export or print a register report.", view, [
     link("Open Registers", "/registers", ["view", "list", "choose"], view),
   ]),
-  topic("Risk Register", "/risks", ["risk", "risks", "likelihood", "impact", "control", "residual"], "Risk Register records initial and residual risk, controls, ownership and review dates.", "Use it to add risks, document controls, schedule reviews, record review outcomes, close risks with approval and produce a risk report.", view, [
+  topic("Risk Register", "/risks", ["risk", "risks", "likelihood", "impact", "control", "residual", "inherent", "tolerance", "appetite", "target risk"], "Risk Register gives managers one controlled view of threats to people, care quality and the organisation. It separates inherent risk before controls, current residual risk after controls and the target level management is working towards.", "Start with a cause, uncertain event and consequence; score the inherent risk; test the controls; set appetite and tolerance; then assign a treatment owner, target date and early-warning indicator. Every risk creates accessible evidence automatically, and each review records assurance checked, trend and the management decision.", view, [
     link("Open Risk Register", "/risks", ["view", "list", "search"], view),
     link("Add a risk", "/risks/new", ["add", "create", "new"], edit),
     link("Open risk report", "/risks/report", ["report", "print", "pdf"], reports),
@@ -156,8 +156,8 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
     cqc: "these records can support the safe, responsive and well-led questions and fundamental standards relating to safeguarding, complaints, good governance and duty of candour.",
   },
   "/risks": {
-    hsc: "a risk register helps leaders identify possible harm, record controls, assign ownership and check whether risk is reducing.",
-    cqc: "current risks, effective controls and documented reviews can support evidence about safe systems, learning and good governance. Inspectors may test whether controls work in practice.",
+    hsc: "a risk register helps leaders identify possible harm, describe what might happen and why, understand who could be affected, distinguish risk before and after controls, assign treatment and monitor early-warning indicators. Risks above tolerance should be actively treated or formally accepted with a clear rationale.",
+    cqc: "a current, person-centred risk register can support Regulation 12 and Regulation 17 evidence about safe systems when it shows proportionate assessment, working controls, ownership, review, escalation and improvement. Inspectors may test the record against practice, so the linked assurance evidence and review conclusions matter as much as the score.",
   },
   "/actions": {
     hsc: "an action tracker turns findings and decisions into owned work with deadlines, progress records and evidence of completion.",
