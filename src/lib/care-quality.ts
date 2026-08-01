@@ -22,7 +22,8 @@ export const CARE_QUALITY_REGISTER_KEYS = [...new Set(CARE_QUALITY_AREAS.flatMap
 export const CARE_QUALITY_KPI_SLUGS = ["care-plan-reviews", "risk-assessments-reviewed", "mar-audit-compliance", "medication-errors", "missed-visits", "outcomes-achieved", "service-user-satisfaction", "complaints-responded-on-time", "business-continuity-test-compliance"] as const;
 
 export function isQualityAttention(status: string, riskLevel: string) {
-  return !["CLOSED", "ARCHIVED"].includes(status) || ["HIGH", "CRITICAL"].includes(riskLevel);
+  void riskLevel;
+  return !["CLOSED", "ARCHIVED"].includes(status);
 }
 
 export function qualityAreaForRegister(key: string) {
