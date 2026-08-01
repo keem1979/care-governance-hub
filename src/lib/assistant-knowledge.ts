@@ -58,6 +58,11 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
   topic("Registers", "/registers", ["register", "registers", "complaint", "incident", "safeguarding", "accident", "breach", "feedback"], "Registers provides consistent records for complaints, incidents, safeguarding and other governance events.", "Choose a register, add an entry, assign its owner and risk level, link evidence, update status and export or print a register report.", view, [
     link("Open Registers", "/registers", ["view", "list", "choose"], view),
   ]),
+  topic("Assessment Centre", "/assessments", ["assessment", "assessments", "initial assessment", "consent", "environmental assessment", "impact assessment", "falls assessment", "moving handling", "capacity assessment"], "Assessment Centre organises initial needs, decision-specific consent, person-centred risk assessments and service impact assessments in one clear pathway.", "Begin with Initial Needs & Suitability, then complete the Consent & Authority checklist. Choose only specialist assessments indicated by need or risk. Each specialist form requires the two source references, records involvement, findings, controls and review, supports voice typing and becomes accessible evidence automatically.", view, [
+    link("Open Assessment Centre", "/assessments", ["open", "view", "types"], view),
+    link("Start initial assessment", "/registers/assessment-initial-needs/new", ["start", "initial", "new"], edit),
+    link("Record consent and authority", "/registers/assessment-consent-authority/new", ["consent", "authority"], edit),
+  ]),
   topic("Risk Register", "/risks", ["risk", "risks", "likelihood", "impact", "control", "residual", "inherent", "tolerance", "appetite", "target risk"], "Risk Register gives managers one controlled view of threats to people, care quality and the organisation. It separates inherent risk before controls, current residual risk after controls and the target level management is working towards.", "Start with a cause, uncertain event and consequence; score the inherent risk; test the controls; set appetite and tolerance; then assign a treatment owner, target date and early-warning indicator. Every risk creates accessible evidence automatically, and each review records assurance checked, trend and the management decision.", view, [
     link("Open Risk Register", "/risks", ["view", "list", "search"], view),
     link("Add a risk", "/risks/new", ["add", "create", "new"], edit),
@@ -154,6 +159,10 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/registers": {
     hsc: "registers create a consistent record of complaints, incidents, safeguarding concerns and other events so patterns, responses and learning are not lost.",
     cqc: "these records can support the safe, responsive and well-led questions and fundamental standards relating to safeguarding, complaints, good governance and duty of candour.",
+  },
+  "/assessments": {
+    hsc: "assessments should begin with the person’s needs, preferences and desired outcomes, then use decision-specific consent and only the specialist assessments indicated by need or risk. They should be proportionate, involve the person and be reviewed after change.",
+    cqc: "assessment records can support Regulations 9, 11, 12, 14, 15 and 17 when they show competent assessment, people’s involvement, lawful decision making, practical controls and timely review. A completed form alone does not prove safe practice.",
   },
   "/risks": {
     hsc: "a risk register helps leaders identify possible harm, describe what might happen and why, understand who could be affected, distinguish risk before and after controls, assign treatment and monitor early-warning indicators. Risks above tolerance should be actively treated or formally accepted with a clear rationale.",

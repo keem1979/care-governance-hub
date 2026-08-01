@@ -12,6 +12,12 @@ import { PERMISSIONS } from "@/lib/permissions";
 
 const areas = [
   {
+    title: "Complete an assessment",
+    detail: "Start with initial needs and decision-specific consent, then choose only the specialist assessments indicated by need or risk.",
+    href: "/assessments",
+    icon: ShieldCheck,
+  },
+  {
     title: "Review a person’s care plan",
     detail: "Record who took part, what changed, agreed outcomes and the next review date.",
     href: "/registers/care-plan-reviews",

@@ -6,7 +6,7 @@ export function parseRegisterFields(value:unknown):RegisterField[]{if(!Array.isA
 export function registerStatusLabel(value:string){return value.replaceAll("_"," ").toLowerCase().replace(/^\w/,(letter)=>letter.toUpperCase());}
 export function makeRegisterReference(key:string,now=new Date(),random=Math.floor(Math.random()*1000)){const prefix=key.split("-").map((part)=>part[0]).join("").toUpperCase().slice(0,4);const date=`${now.getUTCFullYear()}${String(now.getUTCMonth()+1).padStart(2,"0")}${String(now.getUTCDate()).padStart(2,"0")}`;return `${prefix}-${date}-${String(random).padStart(3,"0")}`;}
 export function registerScopeWhere(context:{organisation:{id:string};allLocations:boolean;locations:{id:string}[]}){return{organisationId:context.organisation.id,...(context.allLocations?{}:{OR:[{locationId:null},{locationId:{in:context.locations.map((item)=>item.id)}}]})};}
-export function collectRegisterData(form:FormData,fields:RegisterField[]):Record<string,string|boolean>{return Object.fromEntries(fields.map((field)=>{const value=form.get(`field_${field.key}`);return[field.key,field.type==="boolean"?value==="true":String(value??"").trim()];}));}
+export function collectRegisterData(form:FormData,fields:RegisterField[]):Record<string,string|boolean>{return Object.fromEntries(fields.map((field)=>{const value=form.get(`field_${field.key}`);const parsed=field.type==="boolean"?value==="true":String(value??"").trim();if(field.required&&field.type!=="boolean"&&!parsed)throw new Error(`Complete ${field.label.toLowerCase()}.`);return[field.key,parsed];}));}
 
 const EXPERIENCES:Record<string,Partial<RegisterFormExperience>>={
   complaints:{dateLabel:"Date complaint received",titleLabel:"What is the complaint about?",titlePlaceholder:"For example, missed evening call and poor communication",summaryLabel:"What did the person say happened?",summaryPlaceholder:"Record the concern in the person’s own words, the impact and the outcome they are seeking.",detailsIntro:"Record acknowledgement, investigation, response, outcome and learning.",saveLabel:"Save complaint"},
@@ -75,6 +75,7 @@ const EXPERIENCES:Record<string,Partial<RegisterFormExperience>>={
 
 export function registerFormExperience(key:string,name:string):RegisterFormExperience{
   const specific=EXPERIENCES[key]??{};
+  if(isAssessmentKey(key))return{dateLabel:"Assessment date",titleLabel:key==="assessment-initial-needs"?"Whose initial assessment is this?":"Which person, service or decision is being assessed?",titlePlaceholder:"Use a secure internal reference and a clear assessment subject",summaryLabel:"Assessment conclusion and immediate next step",summaryPlaceholder:"Summarise the main findings, decision, controls and any urgent escalation.",detailsIntro:key==="assessment-consent-authority"?"Record each consent decision separately. Consent must be informed, voluntary, current and capable of withdrawal; do not use a blanket decision.":"Complete the relevant findings, controls, involvement, evidence and review plan. Use recognised clinical tools where required and attach them as evidence.",saveLabel:`Save ${name.toLowerCase()}`};
   return{dateLabel:specific.dateLabel??"Date recorded",titleLabel:specific.titleLabel??`What ${name.toLowerCase()} record are you adding?`,titlePlaceholder:specific.titlePlaceholder??`Enter a clear, specific ${name.toLowerCase()} title`,summaryLabel:specific.summaryLabel??"What happened and what needs attention?",summaryPlaceholder:specific.summaryPlaceholder??"Record the facts, impact, response and next step.",detailsIntro:specific.detailsIntro??`Complete the information needed for this ${name.toLowerCase()} record.`,saveLabel:specific.saveLabel??`Save ${name.toLowerCase()} record`};
 }
 
@@ -142,6 +143,8 @@ export function registerGroupKey(key:string):string{
 }
 
 export function registerGuidance(key:string){
+  const assessment=assessmentType(key);if(assessment)return{group:{key:"people",name:"Assessment Centre",description:"Structured person-centred and service assessment records."},sourceUrl:assessment.sourceUrl,when:key==="assessment-initial-needs"?"Complete before accepting or starting a service, then review whenever needs or circumstances materially change.":key==="assessment-consent-authority"?"Complete after the initial assessment and before specialist assessment or planned support. Record each decision separately and reassess when the decision or capacity changes.":"Complete only where the initial assessment indicates this assessment is relevant. Link the initial assessment and consent record, involve the person, and review after change or at the planned date."};
   const group=REGISTER_GROUPS.find((item)=>item.key===registerGroupKey(key))??REGISTER_GROUPS[6];
   return{group,sourceUrl:SOURCE_BY_KEY[key]??CQC_REGULATIONS,when:WHEN_BY_KEY[key]??`Use this register whenever a ${key.replaceAll("-"," ")} event, decision or exception needs accountable oversight, evidence or follow-up.`};
 }
+import { assessmentType, isAssessmentKey } from "@/lib/assessments";

@@ -12,7 +12,7 @@ export default async function RegistersPage({ searchParams }: { searchParams: Pr
   const db = createDb();
   const [definitions, counts] = await Promise.all([
     db.registerDefinition.findMany({
-      where: { isPublished: true, OR: [{ organisationId: null }, { organisationId: context.organisation.id }] },
+      where: { isPublished: true, key: { not: { startsWith: "assessment-" } }, OR: [{ organisationId: null }, { organisationId: context.organisation.id }] },
       orderBy: { sortOrder: "asc" },
     }),
     db.registerEntry.groupBy({ by: ["definitionId"], where: registerScopeWhere(context), _count: { _all: true } }),

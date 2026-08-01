@@ -11,6 +11,9 @@ describe("register framework", () => {
     const form=new FormData(); form.set("field_learning","Shared at team meeting"); form.set("field_notified","true");
     expect(collectRegisterData(form,[{key:"learning",label:"Learning",type:"text"},{key:"notified",label:"Notified",type:"boolean"}])).toEqual({learning:"Shared at team meeting",notified:true});
   });
+  it("rejects a missing required assessment answer on the server", () => {
+    expect(()=>collectRegisterData(new FormData(),[{key:"findings",label:"Assessment findings",type:"textarea",required:true}])).toThrow("Complete assessment findings");
+  });
   it("formats status", () => expect(registerStatusLabel("AWAITING_ACTION")).toBe("Awaiting action"));
   it("uses record-specific natural prompts", () => {
     const fall=registerFormExperience("falls","Falls"), notification=registerFormExperience("cqc-notifications","CQC notifications"), candour=registerFormExperience("duty-of-candour","Duty of candour");
@@ -24,5 +27,9 @@ describe("register framework", () => {
     expect(registerGroupKey("data-subject-rights")).toBe("governance");
     expect(registerGuidance("riddor-reports").sourceUrl).toContain("hse.gov.uk");
     expect(registerGuidance("duty-of-candour").when).toContain("Regulation 20");
+  });
+  it("uses assessment-specific prompts and official guidance",()=>{
+    expect(registerFormExperience("assessment-consent-authority","Consent and authority checklist").detailsIntro).toContain("blanket");
+    expect(registerGuidance("assessment-initial-needs").when).toContain("before accepting");
   });
 });

@@ -12,6 +12,8 @@ describe("register evidence mapping", () => {
     expect(registerEvidenceRequirementKey("incidents")).toBe("safe-incidents");
     expect(registerEvidenceRequirementKey("call-log")).toBe("responsive-call-log");
     expect(registerEvidenceRequirementKey("unknown-register")).toBeUndefined();
+    expect(registerEvidenceRequirementKey("assessment-consent-authority")).toBe("effective-consent");
+    expect(registerEvidenceRequirementKey("assessment-data-protection-impact")).toBe("well-data-protection");
   });
 
   it("reads the register source from evidence tags", () => {

@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { assessmentType, isAssessmentKey } from "@/lib/assessments";
 
 export type RegisterEvidenceInput = {
   entryId: string;
@@ -135,10 +136,12 @@ const REQUIREMENT_BY_REGISTER: Record<string, string> = {
 };
 
 export function registerEvidenceCategory(key: string): string {
+  if (isAssessmentKey(key)) return key.includes("data-protection") ? "Certificates" : key.includes("workplace") || key.includes("coshh") || key.includes("fire-premises") || key.includes("lone-working") ? "Health and safety" : "Audits";
   return CATEGORY_BY_REGISTER[key] ?? "Other";
 }
 
 export function registerEvidenceRequirementKey(key: string): string | undefined {
+  if (isAssessmentKey(key)) return assessmentType(key)?.evidenceRequirement;
   return REQUIREMENT_BY_REGISTER[key];
 }
 
