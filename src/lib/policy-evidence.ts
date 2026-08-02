@@ -22,7 +22,7 @@ export function generatedPolicyEvidenceData(input: GeneratedPolicyEvidenceInput)
   return {
     organisationId: input.organisationId,
     title: `Policy: ${input.title}`.slice(0, 180),
-    description: `Live ${approved ? "approved" : "draft"} policy from the ATOM Policy Studio. The Evidence Library links to the controlled policy; it does not store a duplicate document.`,
+    description: `${approved ? "Approved" : "Draft"} policy held in the Policy Library. This evidence entry opens the current policy and does not keep a second document.`,
     category: "Policies",
     evidenceType: approved ? "Approved policy" : "Policy record",
     ownerId: input.ownerId,
@@ -42,7 +42,7 @@ export function generatedPolicyEvidenceData(input: GeneratedPolicyEvidenceInput)
     confidentiality: "INTERNAL" as const,
     status: archived ? "ARCHIVED" as const : "ACTIVE" as const,
     archivedAt: archived ? new Date() : null,
-    notes: `One-copy live evidence link. Policy Studio edition ${input.templateVersion ?? "organisation authored"}; changes, approval and review dates stay synchronised from the source policy.`,
+    notes: `Evidence Library reference to the current policy. No separate file is stored. Policy Studio edition ${input.templateVersion ?? "organisation authored"}; owner, approval and review details follow the policy record.`,
   };
 }
 

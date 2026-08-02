@@ -68,9 +68,9 @@ export async function POST(request: Request) {
             nextReviewDate,
             status: "DRAFT" as const,
             approvalStatus: "NOT_SUBMITTED" as const,
-            tags: ["premium policy", "source grounded", template.cqcKey.toLowerCase()],
+            tags: ["policy studio", template.cqcKey.toLowerCase()],
             complianceAreas: template.complianceAreas,
-            notes: "Prepared through the ATOM Policy Studio for organisation review, consultation and approval.",
+            notes: "Prepared in Policy Studio for local review, consultation and approval.",
             templateKey: template.key,
             templateVersion: POLICY_TEMPLATE_VERSION,
             generatedSections: generatePolicySections(template, brand),
@@ -92,12 +92,12 @@ export async function POST(request: Request) {
         });
         records.push(record);
       }
-      await tx.activityLog.create({ data: { organisationId: context.organisation.id, userId: context.user.id, action: "CREATE", recordType: "PolicyPack", recordId: context.organisation.id, summary: `Generated or refreshed ${records.length} branded policy draft${records.length === 1 ? "" : "s"}.`, afterValue: { templateVersion: POLICY_TEMPLATE_VERSION, created: records.map(({ id, title }) => ({ id, title })), skippedExisting: skipped } } });
+      await tx.activityLog.create({ data: { organisationId: context.organisation.id, userId: context.user.id, action: "CREATE", recordType: "PolicyPack", recordId: context.organisation.id, summary: `Prepared or refreshed ${records.length} policy draft${records.length === 1 ? "" : "s"}.`, afterValue: { templateVersion: POLICY_TEMPLATE_VERSION, created: records.map(({ id, title }) => ({ id, title })), skippedExisting: skipped } } });
       return { records, skipped };
     });
     return NextResponse.json({ created: created.records.length, skipped: created.skipped, firstId: created.records[0]?.id ?? null }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "The policy drafts could not be generated." }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "The policy drafts could not be prepared." }, { status: 400 });
   } finally {
     await db.$disconnect();
   }

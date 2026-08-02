@@ -57,13 +57,10 @@ export default async function WorkforcePage() {
       <main className="space-y-7">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold uppercase tracking-widest text-emerald-700">
-              Workforce assurance
-            </p>
             <h1 className="text-3xl font-bold">Staff Compliance & Competency</h1>
             <p className="mt-1 max-w-3xl text-slate-600">
-              Track safer recruitment checks, training, competencies,
-              professional registrations, supervision, appraisals and spot checks.
+              Keep recruitment checks, training, competencies, professional
+              registrations, supervision, appraisals and spot checks with each staff record.
             </p>
           </div>
           <div className="flex flex-wrap gap-3"><Link href="/workforce/training" className="rounded-xl border border-emerald-300 bg-white px-5 py-3 text-sm font-semibold text-emerald-800">Training matrix</Link>{canManage ? <Link href="/workforce/new" className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white">Add staff record</Link> : null}</div>

@@ -32,13 +32,10 @@ export default async function AssurancePage() {
   return (
     <main className="space-y-7">
       <header>
-        <p className="text-sm font-bold uppercase tracking-widest text-emerald-700">
-          Organisational assurance
-        </p>
         <h1 className="text-3xl font-bold">Security & Integration Readiness</h1>
         <p className="mt-1 max-w-3xl text-slate-600">
-          Distinguish controls already enforced by the Hub from controls that
-          must be configured with your cloud, devices, policies and assurance programmes.
+          Check which security controls are active in QCGMS and which ones your
+          organisation must arrange through its cloud, devices, policies and suppliers.
         </p>
       </header>
       <section className="rounded-2xl border border-slate-200 bg-white p-5">

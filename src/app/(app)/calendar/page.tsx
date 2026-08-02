@@ -39,7 +39,7 @@ export default async function ComplianceCalendarPage({ searchParams }: { searchP
     const title = view === "month" ? new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(anchor) : view === "week" ? `Week of ${formatDate(range.start)}` : `${formatDate(range.start)} to ${formatDate(range.end)}`;
     return <main className="space-y-7">
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div><p className="text-sm font-bold uppercase tracking-widest text-emerald-700">Assurance schedule</p><h1 className="text-3xl font-bold">Compliance Calendar</h1><p className="mt-1 text-slate-600">One timeline for reviews, meetings, deadlines, renewals and expiries.</p></div>
+        <div><h1 className="text-3xl font-bold">Compliance Calendar</h1><p className="mt-1 text-slate-600">See upcoming reviews, meetings, deadlines, renewals and expiry dates.</p></div>
         {canEdit ? <Link href="/calendar/new" className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white">Add deadline</Link> : null}
       </header>
 

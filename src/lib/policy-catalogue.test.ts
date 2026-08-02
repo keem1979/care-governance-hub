@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generatePolicySections, POLICY_CATALOGUE, policyBrandFromOrganisation, policyTemplate, sourceAnnex } from "@/lib/policy-catalogue";
 
-describe("premium policy catalogue", () => {
+describe("policy catalogue", () => {
   it("contains a comprehensive catalogue with unique keys", () => { expect(POLICY_CATALOGUE.length).toBeGreaterThanOrEqual(35); expect(new Set(POLICY_CATALOGUE.map(({ key }) => key)).size).toBe(POLICY_CATALOGUE.length); });
   it("grounds every policy in authoritative sources", () => { for (const template of POLICY_CATALOGUE) { expect(sourceAnnex(template).length).toBeGreaterThanOrEqual(2); expect(sourceAnnex(template).every(({ url }) => url.startsWith("https://"))).toBe(true); } });
   it("generates branded paragraph-led content without bullet markers", () => { const template = policyTemplate("adult-safeguarding")!; const sections = generatePolicySections(template, { name: "Example Care Ltd" }); expect(sections[0].paragraphs.join(" ")).toContain("Example Care Ltd"); expect(sections.length).toBeGreaterThanOrEqual(10); expect(sections.flatMap(({ paragraphs }) => paragraphs).every((paragraph) => !/^\s*[-*•]/.test(paragraph))).toBe(true); });

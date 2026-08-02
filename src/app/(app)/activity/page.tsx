@@ -67,9 +67,8 @@ export default async function ActivityPage({
     const query = makeQuery(filters);
     return <main className="space-y-7">
       <header>
-        <p className="text-sm font-bold uppercase tracking-widest text-emerald-700">Immutable governance history</p>
         <h1 className="text-3xl font-bold">Activity Log</h1>
-        <p className="mt-1 text-slate-600">Read-only history of important activity within your authorised organisation and locations.</p>
+        <p className="mt-1 text-slate-600">See who changed a record, what changed and when. Entries on this page cannot be edited.</p>
       </header>
       <section className="grid gap-4 sm:grid-cols-3">
         <Stat label="Matching events" value={total}/>

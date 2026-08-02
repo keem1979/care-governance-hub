@@ -38,7 +38,7 @@ export function MeetingForm({ members, locations, evidence, openActions, initial
 
   return <form onSubmit={submit} className="space-y-7">
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <FormPurpose title="Run a meeting that leaves a clear trail" description="Prepare the agenda, show what was reviewed, record each decision and turn agreed work into owned actions. Approved minutes automatically appear in the Evidence Library." steps={["Prepare and invite", "Meet, decide and assign", "Approve and evidence"]} />
+      <FormPurpose title="Run a meeting that leaves a clear trail" description="Prepare the agenda, show what was reviewed, record each decision and turn agreed work into owned actions. Approved minutes will also appear in the Evidence Library." steps={["Prepare and invite", "Meet, decide and assign", "Approve and evidence"]} />
       <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-950"><strong>Prefer to speak?</strong> Click any notes, decision or minutes box, then choose <strong>Voice type</strong>. Read the text back before saving.</p>
     </div>
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">{error}</p>}

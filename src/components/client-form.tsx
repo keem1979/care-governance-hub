@@ -23,7 +23,7 @@ export function ClientForm({ locations }: { locations: Option[] }) {
     {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
     <Section title="Identity and service" description="Use your internal reference so records can be traced without repeating unnecessary personal details.">
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"><p className="font-semibold">Client number and reference</p><p className="mt-1 text-slate-600">Generated automatically when this record is saved, beginning at Client 1.</p></div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"><p className="font-semibold">Client number and reference</p><p className="mt-1 text-slate-600">QCGMS assigns the next client number when you save this record.</p></div>
         <Label title="Service location"><select className={field} name="locationId" defaultValue=""><option value="">Organisation-wide</option>{locations.map((x)=><option key={x.id} value={x.id}>{x.name}</option>)}</select></Label>
         <Label title="First name *"><input className={field} name="firstName" required maxLength={80}/></Label>
         <Label title="Last name *"><input className={field} name="lastName" required maxLength={80}/></Label>

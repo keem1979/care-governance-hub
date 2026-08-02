@@ -19,7 +19,7 @@ function sources(value: unknown): PolicySource[] {
   return value.filter((item): item is PolicySource => Boolean(item && typeof item === "object" && "title" in item && typeof item.title === "string" && "url" in item && typeof item.url === "string" && "publisher" in item && typeof item.publisher === "string"));
 }
 
-export default async function PremiumPolicyDocument({ params }: { params: Promise<{ id: string }> }) {
+export default async function PolicyDocument({ params }: { params: Promise<{ id: string }> }) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_VIEW);
   const { id } = await params;
   const db = createDb();

@@ -15,7 +15,7 @@ describe("generated policy evidence", () => {
     expect(data.generatedPolicyId).toBe("policy-1");
     expect(data.generatedPolicyTemplateKey).toBe("medicines");
     expect(data.relatedModule).toBe("Policy");
-    expect(data.notes).toContain("One-copy live evidence link");
+    expect(data.notes).toContain("No separate file is stored");
     expect(data.status).toBe("ACTIVE");
   });
 
