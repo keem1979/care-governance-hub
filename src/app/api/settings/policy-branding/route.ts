@@ -13,18 +13,17 @@ export async function PATCH(request: Request) {
   const context = await requirePermission(PERMISSIONS.ORGANISATION_MANAGE);
   try {
     const form = await request.formData();
-    const policyBrandName = clean(form, "policyBrandName", 140);
+    const policyBrandName = context.organisation.name;
     const policyRegistrationNumber = clean(form, "policyRegistrationNumber", 80);
     const policyAddress = clean(form, "policyAddress", 500);
     const policyEmail = clean(form, "policyEmail", 180);
     const policyPhone = clean(form, "policyPhone", 80);
     const policyWebsite = clean(form, "policyWebsite", 250);
-    const policyFooterText = clean(form, "policyFooterText", 300);
     const policyPrimaryColour = String(form.get("policyPrimaryColour") ?? "#0f766e").trim();
     if (!/^#[0-9a-f]{6}$/i.test(policyPrimaryColour)) throw new Error("Choose a valid brand colour.");
     if (policyEmail && !/^\S+@\S+\.\S+$/.test(policyEmail)) throw new Error("Enter a valid policy contact email.");
     if (policyWebsite && !/^https:\/\//i.test(policyWebsite)) throw new Error("The website must begin with https://.");
-    const data = { policyBrandName, policyRegistrationNumber, policyAddress, policyEmail, policyPhone, policyWebsite, policyFooterText, policyPrimaryColour };
+    const data = { policyBrandName, policyRegistrationNumber, policyAddress, policyEmail, policyPhone, policyWebsite, policyPrimaryColour };
     const db = createDb();
     try {
       await db.$transaction([

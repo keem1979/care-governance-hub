@@ -308,6 +308,9 @@ model Organisation {
   policyPrimaryColour      String   @default("#0f766e")
   policyFooterText         String?
   policyLogoStorageKey     String?
+  policyLogoContentType    String?
+  policyLogoFileName       String?
+  policyLogoUploadedAt     DateTime?
 
   locations              ServiceLocation[]
   memberships            OrganisationMembership[]

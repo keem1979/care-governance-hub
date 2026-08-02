@@ -52,7 +52,7 @@ export async function POST(request: Request) {
             approvalStatus: "NOT_SUBMITTED",
             tags: ["premium policy", "source grounded", template.cqcKey.toLowerCase()],
             complianceAreas: template.complianceAreas,
-            notes: "Controlled draft generated from the QCGMS Policy Studio. Complete local review and approval before use.",
+            notes: "Prepared through the ATOM Policy Studio for organisation review, consultation and approval.",
             templateKey: template.key,
             templateVersion: POLICY_TEMPLATE_VERSION,
             generatedSections: generatePolicySections(template, brand),

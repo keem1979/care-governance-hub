@@ -41,7 +41,15 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (request.nextUrl.pathname === "/login" && claims) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
-  return NextResponse.next();
+  const response = NextResponse.next();
+  if (request.nextUrl.pathname.startsWith("/policies")) {
+    response.headers.set("Cache-Control", "private, no-store, max-age=0");
+    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    response.headers.set("Referrer-Policy", "same-origin");
+  }
+  return response;
 }
 
 export const config = {
