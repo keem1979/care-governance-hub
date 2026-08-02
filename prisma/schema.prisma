@@ -299,6 +299,15 @@ model Organisation {
   updatedAt    DateTime  @updatedAt
   archivedAt   DateTime?
   licenceSeats Int       @default(10)
+  policyBrandName          String?
+  policyRegistrationNumber String?
+  policyAddress            String?
+  policyEmail              String?
+  policyPhone              String?
+  policyWebsite            String?
+  policyPrimaryColour      String   @default("#0f766e")
+  policyFooterText         String?
+  policyLogoStorageKey     String?
 
   locations              ServiceLocation[]
   memberships            OrganisationMembership[]
@@ -428,6 +437,13 @@ model Policy {
   tags             String[]             @default([])
   complianceAreas  String[]             @default([])
   notes            String?
+  templateKey      String?
+  templateVersion  String?
+  generatedSections Json?
+  sourceAnnex      Json?
+  sourceCheckedAt  DateTime?
+  customisationNotes String?
+  updateAvailable  Boolean              @default(false)
   status           PolicyWorkflowStatus @default(DRAFT)
   archivedAt       DateTime?
   createdById      String               @db.Uuid
@@ -444,6 +460,7 @@ model Policy {
   @@index([organisationId, status])
   @@index([organisationId, nextReviewDate])
   @@index([organisationId, category])
+  @@index([organisationId, templateKey])
 }
 
 model PolicyVersion {

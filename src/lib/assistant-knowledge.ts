@@ -46,6 +46,10 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Open Evidence Library", "/evidence", ["view", "list", "search"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD]),
     link("Add evidence", "/evidence/new", ["add", "create", "new", "upload"], [PERMISSIONS.EVIDENCE_UPLOAD]),
   ]),
+  topic("Agency Policy Studio", "/policies/catalogue", ["policy studio", "policy pack", "policy template", "branded policy", "generate policies", "policy sources"], "Agency Policy Studio creates branded, source-grounded adult social care policy drafts and places them inside the controlled Policy Library.", "Choose the required policies, assign an accountable owner and record local drafting instructions. Every document starts as an unapproved draft and includes an authoritative source annex. The Registered Manager must tailor local pathways, service scope and actual practice before approval.", [PERMISSIONS.GOVERNANCE_EDIT], [
+    link("Open Agency Policy Studio", "/policies/catalogue", ["open", "create", "generate", "build"], [PERMISSIONS.GOVERNANCE_EDIT]),
+    link("Open Policy Library", "/policies", ["library", "existing", "review"], [PERMISSIONS.GOVERNANCE_VIEW]),
+  ]),
   topic("Evidence Requirements", "/evidence/requirements", ["required evidence", "evidence gap", "missing evidence", "inspection evidence", "what evidence do i need"], "The Evidence Requirements Register is a sourced homecare baseline across the five CQC key questions.", "Use it to see current, expiring, expired and missing evidence, read the regulatory basis, and upload directly against each requirement. Service-specific items must be tailored by the Registered Manager.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD], [
     link("Show missing evidence", "/evidence/requirements?status=NEEDS_EVIDENCE", ["missing", "gap", "needed"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD]),
     link("Open requirements register", "/evidence/requirements", ["open", "requirements", "list"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD]),
@@ -147,6 +151,10 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/policies": {
     hsc: "policies turn legislation, recognised guidance and the organisation’s agreed approach into consistent expectations for staff.",
     cqc: "controlled, current policies can support process evidence across all five key questions, including safeguarding, staffing and good governance. A policy alone is not proof that practice follows it.",
+  },
+  "/policies/catalogue": {
+    hsc: "the Agency Policy Studio turns current care regulation, official guidance and employment-law sources into controlled drafts that an organisation can tailor to its service model and local pathways.",
+    cqc: "source-grounded policies can support evidence across all five key questions, but CQC assesses implementation, people’s experiences, outcomes and leadership as well as documents. Policy Studio drafts are not approved policies or predicted ratings until local governance completes review and approval.",
   },
   "/evidence": {
     hsc: "evidence shows what the service actually did, how it checked quality and whether people experienced safe, effective and person-centred care.",
