@@ -459,6 +459,7 @@ model Policy {
   approvedBy     User?           @relation("PolicyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   currentVersion PolicyVersion?  @relation("CurrentPolicyVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
   versions       PolicyVersion[] @relation("PolicyVersions")
+  evidenceRecord Evidence?       @relation("GeneratedPolicyEvidence")
 
   @@index([organisationId, status])
   @@index([organisationId, nextReviewDate])
@@ -502,6 +503,8 @@ model Evidence {
   tags             String[]                @default([])
   relatedModule    String?
   relatedRecordId  String?
+  generatedPolicyId String?                 @unique @db.Uuid
+  generatedPolicyTemplateKey String?
   confidentiality  EvidenceConfidentiality @default(INTERNAL)
   status           EvidenceWorkflowStatus  @default(ACTIVE)
   notes            String?
@@ -525,11 +528,13 @@ model Evidence {
   inspectionLinks ComplianceRequirementEvidence[]
   staffComplianceRecords StaffComplianceRecord[]
   actionUpdates          ActionUpdate[]
+  generatedPolicy        Policy?                         @relation("GeneratedPolicyEvidence", fields: [generatedPolicyId], references: [id], onDelete: Cascade)
 
   @@index([organisationId, status])
   @@index([organisationId, category])
   @@index([organisationId, reviewExpiryDate])
   @@index([locationId])
+  @@unique([organisationId, generatedPolicyTemplateKey])
 }
 
 model AuditTemplate {
