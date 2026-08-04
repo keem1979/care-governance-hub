@@ -7,6 +7,7 @@
 - Added original catalogue photography, a coded platform demonstration, accessible interactions and A4 print/PDF styling.
 - Added catalogue maintenance and asset-plan documentation.
 - Linked the catalogue from the QCGMS sign-in page.
+- Added the ATOM introduction film with accessible playback controls, responsive presentation, poster artwork and a download fallback.
 
 All notable changes are documented here.
 

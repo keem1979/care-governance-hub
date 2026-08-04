@@ -303,6 +303,36 @@ export default function CataloguePage() {
         </div>
       </section>
 
+      <section className="catalogue-section film-section" id="film" aria-labelledby="film-heading">
+        <div className="catalogue-container film-grid">
+          <div className="film-copy">
+            <p className="catalogue-eyebrow">Meet ATOM</p>
+            <h2 id="film-heading">Your governance department, working alongside your service.</h2>
+            <p>
+              See how ATOM brings the system, professional oversight and quality assurance together to help care providers stay organised, act earlier and remain ready for scrutiny.
+            </p>
+            <a className="button button-copper" href="#packages">
+              Explore support packages <ArrowRight aria-hidden="true" />
+            </a>
+          </div>
+          <div className="film-frame">
+            <video
+              controls
+              playsInline
+              preload="metadata"
+              poster="/catalogue/atom-leadership-hero.png"
+              aria-label="ATOM: Your Outsourced Governance Department"
+            >
+              <source src="/catalogue/atom-outsourced-governance-department.mp4" type="video/mp4" />
+              Your browser cannot play this video. You can download the ATOM film using the link below.
+            </video>
+            <a className="film-download" href="/catalogue/atom-outsourced-governance-department.mp4" download>
+              Download the ATOM film
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section className="catalogue-section challenge-section catalogue-print-page" id="challenge">
         <div className="catalogue-container challenge-grid">
           <div>

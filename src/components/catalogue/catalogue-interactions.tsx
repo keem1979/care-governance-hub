@@ -4,6 +4,7 @@ import { ChevronDown, Menu, Printer, X } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
+  ["Watch", "film"],
   ["Solution", "solution"],
   ["Platform", "platform"],
   ["How it works", "process"],
