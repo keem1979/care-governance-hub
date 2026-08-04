@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { LoginForm } from "@/components/login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -64,6 +65,11 @@ export default function LoginPage() {
           <p className="mt-8 text-center text-xs leading-5 text-muted">
             Access is logged for security and governance. Do not share your
             account.
+          </p>
+          <p className="mt-4 text-center text-sm">
+            <Link className="font-semibold text-brand underline-offset-4 hover:underline" href="/catalogue">
+              Explore ATOM services and packages
+            </Link>
           </p>
         </div>
       </section>

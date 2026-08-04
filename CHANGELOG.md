@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-04 — ATOM digital service catalogue
+
+- Added a public, responsive ATOM service catalogue at `/catalogue`.
+- Added the three approved MVP packages, full comparison table, operating model, daily governance workflow, onboarding, FAQ and legal positioning.
+- Added original catalogue photography, a coded platform demonstration, accessible interactions and A4 print/PDF styling.
+- Added catalogue maintenance and asset-plan documentation.
+- Linked the catalogue from the QCGMS sign-in page.
+
 All notable changes are documented here.
 
 ## 2026-08-01 — Workforce Suite

@@ -21,15 +21,15 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: "/atom-logo.png",
     },
     openGraph: {
-      title: "Quality, Compliance and Governance Management System — QCGMS",
-      description: "Clear evidence. Calm governance.",
+      title: "ATOM — Your Outsourced Quality, Compliance & Governance Department",
+      description: "Technology, dedicated governance expertise and continuous quality assurance in one managed service.",
       type: "website",
       images: [{ url: "/og.png", width: 1536, height: 910 }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Quality, Compliance and Governance Management System — QCGMS",
-      description: "Clear evidence. Calm governance.",
+      title: "ATOM — Your Outsourced Quality, Compliance & Governance Department",
+      description: "Technology, governance expertise and continuous assurance for UK adult social care.",
       images: ["/og.png"],
     },
   };
