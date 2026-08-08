@@ -8,6 +8,7 @@
 - Added catalogue maintenance and asset-plan documentation.
 - Linked the catalogue from the QCGMS sign-in page.
 - Added the ATOM introduction film with accessible playback controls, responsive presentation, poster artwork and a download fallback.
+- Removed setup and mobilisation fees from every catalogue package and the comparison table.
 
 All notable changes are documented here.
 

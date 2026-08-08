@@ -72,8 +72,6 @@ const packages = [
     name: "Compliance Foundation",
     price: "£995",
     cadence: "per month",
-    setupLabel: "One-off setup fee",
-    setup: "£1,500",
     summary:
       "For small providers that need one organised place for governance evidence and structured monthly compliance support.",
     suited: "New agencies, small domiciliary care providers and single-location services.",
@@ -96,8 +94,6 @@ const packages = [
     name: "Managed Governance",
     price: "£1,995",
     cadence: "per month",
-    setupLabel: "One-off setup fee",
-    setup: "£2,500",
     summary:
       "For providers that need help maintaining the compliance system and monitoring governance actions throughout the month.",
     suited: "Growing providers, inspection preparation and services with limited internal compliance capacity.",
@@ -121,8 +117,6 @@ const packages = [
     name: "Complete Governance Department",
     price: "From £4,995",
     cadence: "per month",
-    setupLabel: "One-off mobilisation fee",
-    setup: "£5,000",
     summary:
       "For providers that want ATOM to operate as their outsourced Quality, Compliance and Governance Department.",
     suited: "Medium-sized, multi-location or higher-risk services requiring continuous management assurance.",
@@ -148,7 +142,6 @@ const packages = [
 
 const comparison = [
   ["Monthly price", "£995", "£1,995", "From £4,995"],
-  ["Setup fee", "£1,500", "£2,500", "£5,000"],
   ["Compliance Support System", "Included", "Included", "Included"],
   ["System configuration", "Included", "Included", "Included"],
   ["Monthly compliance review", "Included", "Included", "Included"],
@@ -468,7 +461,6 @@ export default function CataloguePage() {
                 <h3>{item.name}</h3>
                 <p className="pricing-summary">{item.summary}</p>
                 <div className="price"><strong>{item.price}</strong><span>{item.cadence}</span></div>
-                <p className="setup-fee"><span>{item.setupLabel}</span><strong>{item.setup}</strong></p>
                 <CheckList items={item.features} />
                 <div className="pricing-fit"><strong>Best suited to</strong><p>{item.suited}</p></div>
                 <a className={`button ${item.popular ? "button-copper" : "button-navy"}`} href="#contact">
