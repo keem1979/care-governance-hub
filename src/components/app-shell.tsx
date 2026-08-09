@@ -226,6 +226,16 @@ export function AppShell({
               <ArrowLeft aria-hidden="true" size={18} />
               <span className="hidden sm:inline">Back</span>
             </button>
+            {context.organisation.policyLogoStorageKey ? (
+              <Image
+                src="/api/settings/policy-branding/logo"
+                alt={`${context.organisation.name} logo`}
+                width={48}
+                height={48}
+                unoptimized
+                className="size-12 shrink-0 rounded-lg border border-slate-200 bg-white object-contain p-1"
+              />
+            ) : null}
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
                 {context.organisation.name}
