@@ -28,7 +28,7 @@ export default async function PolicyDocument({ params }: { params: Promise<{ id:
   const content = sections(policy.generatedSections);
   if (content.length === 0) notFound();
   const annex = sources(policy.sourceAnnex);
-  const brandName = policy.organisation.name;
+  const brandName = policy.organisation.policyBrandName?.trim() || policy.organisation.name;
   const colour = policy.organisation.policyPrimaryColour;
   const policyReference = `QCGMS-${policy.id.slice(0, 8).toUpperCase()}`;
   const licenceReference = `ORG-${policy.organisation.id.slice(0, 8).toUpperCase()}`;

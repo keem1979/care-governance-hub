@@ -13,7 +13,8 @@ export async function PATCH(request: Request) {
   const context = await requirePermission(PERMISSIONS.ORGANISATION_MANAGE);
   try {
     const form = await request.formData();
-    const policyBrandName = context.organisation.name;
+    const policyBrandName = clean(form, "policyBrandName", 160);
+    if (!policyBrandName) throw new Error("Enter a policy display name.");
     const policyRegistrationNumber = clean(form, "policyRegistrationNumber", 80);
     const policyAddress = clean(form, "policyAddress", 500);
     const policyEmail = clean(form, "policyEmail", 180);

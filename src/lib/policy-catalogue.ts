@@ -118,5 +118,5 @@ export function generatePolicySections(template: PolicyTemplate, brand: PolicyBr
 }
 
 export function policyBrandFromOrganisation(organisation: { name: string; policyBrandName: string | null; policyRegistrationNumber: string | null; policyAddress: string | null; policyEmail: string | null; policyPhone: string | null; policyWebsite: string | null; policyPrimaryColour: string; policyFooterText: string | null }): PolicyBrand {
-  return { name: organisation.name, registrationNumber: organisation.policyRegistrationNumber, address: organisation.policyAddress, email: organisation.policyEmail, phone: organisation.policyPhone, website: organisation.policyWebsite, primaryColour: organisation.policyPrimaryColour, footerText: organisation.policyFooterText };
+  return { name: organisation.policyBrandName?.trim() || organisation.name, registrationNumber: organisation.policyRegistrationNumber, address: organisation.policyAddress, email: organisation.policyEmail, phone: organisation.policyPhone, website: organisation.policyWebsite, primaryColour: organisation.policyPrimaryColour, footerText: organisation.policyFooterText };
 }

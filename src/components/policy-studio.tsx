@@ -59,9 +59,9 @@ export function PolicyStudio({ templates, members, brand, canBrand }: { template
     </section>
 
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div><h2 className="text-xl font-bold">Policy header</h2><p className="mt-1 text-sm text-slate-600">The organisation name, logo, colour and contact details shown here will appear at the top of each policy. The ATOM copyright and licence notice remains in the footer.</p></div>
+      <div><h2 className="text-xl font-bold">Policy header</h2><p className="mt-1 text-sm text-slate-600">The display name, logo, colour and contact details shown here will appear at the top of each policy. The ATOM copyright and licence notice remains in the footer.</p></div>
       {canBrand ? <form onSubmit={saveBrand} className="mt-5 grid gap-4 md:grid-cols-2">
-        <label className="text-sm font-semibold text-slate-700">Licensed organisation name<input value={brand.policyBrandName ?? ""} readOnly aria-readonly="true" className={`${fieldClass} bg-slate-100 font-semibold`} /><span className="mt-1 block text-xs font-normal text-slate-500">This is taken from the registered organisation account and cannot be replaced inside Policy Studio.</span></label>
+        <label className="text-sm font-semibold text-slate-700">Policy display name<input name="policyBrandName" defaultValue={brand.policyBrandName ?? brand.name ?? ""} maxLength={160} required className={`${fieldClass} font-semibold`} /><span className="mt-1 block text-xs font-normal text-slate-500">You can use a trading name or another name for policy documents. This does not rename the organisation account.</span></label>
         <Field label="CQC or company registration reference" name="policyRegistrationNumber" value={brand.policyRegistrationNumber ?? ""} />
         <Field label="Policy contact email" name="policyEmail" value={brand.policyEmail ?? ""} type="email" />
         <Field label="Policy contact telephone" name="policyPhone" value={brand.policyPhone ?? ""} />
