@@ -119,7 +119,7 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[276px_1fr]">
+    <div data-has-company-logo={Boolean(context.organisation.policyLogoStorageKey)} className="min-h-screen lg:grid lg:grid-cols-[276px_1fr]">
       {open ? (
         <button
           className="fixed inset-0 z-30 bg-slate-950/35 lg:hidden"

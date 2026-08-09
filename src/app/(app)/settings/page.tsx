@@ -32,6 +32,8 @@ export default async function SettingsPage() {
           isDemo: true,
           createdAt: true,
           licenceSeats: true,
+          policyLogoFileName: true,
+          policyLogoStorageKey: true,
         },
       }),
       db.serviceLocation.findMany({
@@ -136,7 +138,7 @@ export default async function SettingsPage() {
             {organisation.isDemo ? " · Demonstration organisation" : ""}
           </p>
           {canOrganisation ? (
-            <OrganisationForm name={organisation.name} />
+            <OrganisationForm name={organisation.name} logoFileName={organisation.policyLogoFileName} hasLogo={Boolean(organisation.policyLogoStorageKey)} />
           ) : (
             <p className="text-sm text-slate-600">
               You can view these settings but cannot change organisation

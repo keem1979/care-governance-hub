@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -55,22 +56,52 @@ function useSubmit(endpoint: string, method: "POST" | "PATCH") {
   return { submit, busy, message };
 }
 
-export function OrganisationForm({ name }: { name: string }) {
+export function OrganisationForm({ name, logoFileName, hasLogo }: { name: string; logoFileName: string | null; hasLogo: boolean }) {
   const state = useSubmit("/api/settings/organisation", "PATCH");
+  const logoState = useSubmit("/api/settings/policy-branding/logo", "POST");
+  const router = useRouter();
+  const [removingLogo, setRemovingLogo] = useState(false);
+  const [logoMessage, setLogoMessage] = useState("");
+
+  async function removeLogo() {
+    setRemovingLogo(true);
+    setLogoMessage("");
+    const response = await fetch("/api/settings/policy-branding/logo", { method: "DELETE" });
+    const result = await response.json().catch(() => ({}));
+    setLogoMessage(response.ok ? result.message : result.error ?? "The company logo could not be removed.");
+    if (response.ok) router.refresh();
+    setRemovingLogo(false);
+  }
+
   return (
-    <form onSubmit={state.submit} className="space-y-3">
-      <label className="block text-sm font-medium">
-        Organisation name
-        <input
-          name="name"
-          defaultValue={name}
-          required
-          minLength={3}
-          className={field}
-        />
-      </label>
-      <Save state={state} />
-    </form>
+    <div className="space-y-6">
+      <form onSubmit={state.submit} className="space-y-3">
+        <label className="block text-sm font-medium">
+          Organisation name
+          <input name="name" defaultValue={name} required minLength={3} className={field} />
+        </label>
+        <Save state={state} />
+      </form>
+      <div className="border-t border-slate-200 pt-5">
+        <h3 className="font-bold">Company logo</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-600">Upload once and the logo will automatically appear on all system-generated documents, including policies, reports, meeting agendas and minutes.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-[160px_1fr] md:items-center">
+          <div className="flex h-28 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-3">
+            {hasLogo ? <img src="/api/settings/policy-branding/logo" alt={`${name} company logo`} className="max-h-20 max-w-full object-contain" /> : <span className="text-center text-sm text-slate-500">No company logo uploaded</span>}
+          </div>
+          <form onSubmit={logoState.submit} className="space-y-3">
+            <label className="block text-sm font-medium">Choose company logo<input name="logo" type="file" accept="image/png,image/jpeg,image/webp" required className="mt-2 block max-w-full text-sm" /></label>
+            <p className="text-xs text-slate-500">PNG, JPEG or WebP, up to 2 MB.{logoFileName ? ` Current file: ${logoFileName}` : ""}</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button disabled={logoState.busy} className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{logoState.busy ? "Uploading…" : hasLogo ? "Replace company logo" : "Upload company logo"}</button>
+              {hasLogo ? <button type="button" onClick={removeLogo} disabled={removingLogo} className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-800 disabled:opacity-50">{removingLogo ? "Removing…" : "Remove logo"}</button> : null}
+            </div>
+            {logoState.message ? <p role="status" className="text-sm text-emerald-700">{logoState.message}</p> : null}
+            {logoMessage ? <p role="status" className="text-sm text-emerald-700">{logoMessage}</p> : null}
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }
 

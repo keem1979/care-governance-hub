@@ -1,3 +1,32 @@
-import{notFound}from"next/navigation";import{requirePermission}from"@/lib/auth/dal";import{createDb}from"@/lib/db";import{meetingScopeWhere}from"@/lib/meetings";import{PERMISSIONS}from"@/lib/permissions";
-export default async function AgendaPage({params}:{params:Promise<{id:string}>}){const context=await requirePermission(PERMISSIONS.REPORTS_EXPORT),{id}=await params,db=createDb();try{const meeting=await db.governanceMeeting.findFirst({where:{id,...meetingScopeWhere(context)},include:{chair:{select:{name:true}},attendees:{include:{user:{select:{name:true}}}},agendaItems:{orderBy:{sortOrder:"asc"}}}});if(!meeting)notFound();const actions=await db.action.findMany({where:{id:{in:meeting.previousActionIds},organisationId:context.organisation.id},include:{owner:{select:{name:true}}}});return <Print title="Meeting agenda" organisation={context.organisation.name} meeting={meeting}><section><h2 className="text-xl font-bold">Attendance</h2><p className="mt-2"><strong>Chair:</strong> {meeting.chair.name}</p><p><strong>Invited:</strong> {meeting.attendees.filter((item)=>item.attendance!=="APOLOGY").map((item)=>item.user.name).join(", ")||"None"}</p><p><strong>Apologies:</strong> {meeting.attendees.filter((item)=>item.attendance==="APOLOGY").map((item)=>item.user.name).join(", ")||"None"}</p></section>{actions.length>0&&<section className="mt-6"><h2 className="text-xl font-bold">Previous actions</h2><ol className="mt-2 list-decimal pl-5">{actions.map((action)=><li key={action.id}>{action.reference} · {action.title} · {action.owner.name}</li>)}</ol></section>}<section className="mt-6"><h2 className="text-xl font-bold">Agenda</h2><ol className="mt-3 space-y-4">{meeting.agendaItems.map((item)=><li key={item.id} className="border-b pb-3"><p className="text-xs font-bold uppercase text-emerald-800">{item.sortOrder}. {item.topic}</p><p className="font-bold">{item.title}</p>{item.notes&&<p className="mt-1 text-sm">{item.notes}</p>}</li>)}</ol></section></Print>}finally{await db.$disconnect()}}
-function Print({title,organisation,meeting,children}:{title:string;organisation:string;meeting:{title:string;meetingType:string;meetingDate:Date;meetingTime:string;locationOrLink:string};children:React.ReactNode}){return <main className="mx-auto max-w-4xl bg-white p-8 print:p-0"><header className="border-b-4 border-emerald-800 pb-5"><p className="font-bold uppercase tracking-widest text-emerald-800">{organisation}</p><h1 className="mt-2 text-4xl font-bold">{title}</h1><h2 className="mt-2 text-2xl">{meeting.title}</h2><p className="mt-1">{meeting.meetingType} · {date(meeting.meetingDate)} · {meeting.meetingTime} · {meeting.locationOrLink}</p><p className="mt-3 w-fit rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white print:hidden">Press Ctrl+P to save PDF</p></header><div className="mt-6">{children}</div></main>}function date(value:Date){return new Intl.DateTimeFormat("en-GB",{dateStyle:"long"}).format(value)}
+import { notFound } from "next/navigation";
+import { requirePermission } from "@/lib/auth/dal";
+import { createDb } from "@/lib/db";
+import { meetingScopeWhere } from "@/lib/meetings";
+import { PERMISSIONS } from "@/lib/permissions";
+export default async function AgendaPage({ params }: {
+    params: Promise<{
+        id: string;
+    }>;
+}) { const context = await requirePermission(PERMISSIONS.REPORTS_EXPORT), { id } = await params, db = createDb(); try {
+    const meeting = await db.governanceMeeting.findFirst({ where: { id, ...meetingScopeWhere(context) }, include: { chair: { select: { name: true } }, attendees: { include: { user: { select: { name: true } } } }, agendaItems: { orderBy: { sortOrder: "asc" } } } });
+    if (!meeting)
+        notFound();
+    const actions = await db.action.findMany({ where: { id: { in: meeting.previousActionIds }, organisationId: context.organisation.id }, include: { owner: { select: { name: true } } } });
+    return <Print title="Meeting agenda" organisation={context.organisation.name} meeting={meeting}><section><h2 className="text-xl font-bold">Attendance</h2><p className="mt-2"><strong>Chair:</strong> {meeting.chair.name}</p><p><strong>Invited:</strong> {meeting.attendees.filter((item) => item.attendance !== "APOLOGY").map((item) => item.user.name).join(", ") || "None"}</p><p><strong>Apologies:</strong> {meeting.attendees.filter((item) => item.attendance === "APOLOGY").map((item) => item.user.name).join(", ") || "None"}</p></section>{actions.length > 0 && <section className="mt-6"><h2 className="text-xl font-bold">Previous actions</h2><ol className="mt-2 list-decimal pl-5">{actions.map((action) => <li key={action.id}>{action.reference} · {action.title} · {action.owner.name}</li>)}</ol></section>}<section className="mt-6"><h2 className="text-xl font-bold">Agenda</h2><ol className="mt-3 space-y-4">{meeting.agendaItems.map((item) => <li key={item.id} className="border-b pb-3"><p className="text-xs font-bold uppercase text-emerald-800">{item.sortOrder}. {item.topic}</p><p className="font-bold">{item.title}</p>{item.notes && <p className="mt-1 text-sm">{item.notes}</p>}</li>)}</ol></section></Print>;
+}
+finally {
+    await db.$disconnect();
+} }
+function Print({ title, organisation, meeting, children }: {
+    title: string;
+    organisation: string;
+    meeting: {
+        title: string;
+        meetingType: string;
+        meetingDate: Date;
+        meetingTime: string;
+        locationOrLink: string;
+    };
+    children: React.ReactNode;
+}) { return <main className="mx-auto max-w-4xl bg-white p-8 print:p-0"><header className="border-b-4 border-emerald-800 pb-5"><p className="font-bold uppercase tracking-widest text-emerald-800">{organisation}</p><h1 className="mt-2 text-4xl font-bold">{title}</h1><h2 className="mt-2 text-2xl">{meeting.title}</h2><p className="mt-1">{meeting.meetingType} · {date(meeting.meetingDate)} · {meeting.meetingTime} · {meeting.locationOrLink}</p><p className="mt-3 w-fit rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white print:hidden">Press Ctrl+P to save PDF</p></header><div className="mt-6">{children}</div></main>; }
+function date(value: Date) { return new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(value); }

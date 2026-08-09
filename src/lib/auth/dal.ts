@@ -15,7 +15,7 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
 export type AuthorisedContext = {
   user: { id: string; name: string; email: string };
   sessionId: string;
-  organisation: { id: string; name: string; slug: string; isDemo: boolean };
+  organisation: { id: string; name: string; slug: string; isDemo: boolean; policyLogoStorageKey: string | null };
   membershipId: string;
   role: { key: string; name: string };
   accessMode: "STANDARD" | "READ_ONLY";
@@ -57,7 +57,7 @@ export const getAuthorisedContext = cache(
                 accessMode: true,
                 permissionOverridesEnabled: true,
                 organisation: {
-                  select: { id: true, name: true, slug: true, isDemo: true },
+                  select: { id: true, name: true, slug: true, isDemo: true, policyLogoStorageKey: true },
                 },
                 role: {
                   select: {
