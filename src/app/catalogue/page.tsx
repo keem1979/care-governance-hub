@@ -239,7 +239,7 @@ export default function CataloguePage() {
     <main id="catalogue-top" className="catalogue-page">
       <header className="catalogue-header">
         <a className="catalogue-brand" href="#catalogue-top" aria-label="ATOM catalogue home">
-          <Image src="/atom-logo.png" alt="ATOM" width={58} height={58} priority unoptimized />
+          <Image src="/atom-wordmark.png" alt="ATOM" width={135} height={50} priority unoptimized />
           <span>
             <strong>ATOM</strong>
             <small>Governance, organised.</small>
@@ -631,7 +631,7 @@ export default function CataloguePage() {
       <footer className="catalogue-footer">
         <div className="catalogue-footer-main">
           <div className="catalogue-brand catalogue-brand-footer">
-            <Image src="/atom-logo.png" alt="ATOM" width={72} height={72} unoptimized />
+            <Image src="/atom-wordmark.png" alt="ATOM" width={162} height={60} unoptimized />
             <span><strong>ATOM</strong><small>Your Outsourced Quality, Compliance &amp; Governance Department</small></span>
           </div>
           <div><p>[INSERT EMAIL]</p><p>[INSERT TELEPHONE]</p><p>[INSERT WEBSITE]</p></div>

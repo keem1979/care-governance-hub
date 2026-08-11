@@ -47,7 +47,7 @@
 }
 
 .catalogue-brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
-.catalogue-brand img { width: 54px; height: 54px; border-radius: 14px; background: white; object-fit: contain; }
+.catalogue-brand img { width: 135px; height: auto; object-fit: contain; }
 .catalogue-brand span { display: grid; line-height: 1.05; }
 .catalogue-brand strong { font-size: 19px; letter-spacing: .13em; }
 .catalogue-brand small { margin-top: 5px; color: #c9dbd4; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
@@ -355,7 +355,7 @@
   .catalogue-container { width: min(100% - 28px, 1180px); }
   .catalogue-section { padding: 72px 0; }
   .catalogue-header { min-height: 68px; padding-inline: 14px; }
-  .catalogue-brand img { width: 46px; height: 46px; }
+  .catalogue-brand img { width: 112px; height: auto; }
   .catalogue-brand small { display: none; }
   .catalogue-header-actions .button { display: none; }
   .catalogue-nav-links { top: 68px; }

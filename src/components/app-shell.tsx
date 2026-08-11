@@ -135,13 +135,13 @@ export function AppShell({
         <div className="flex min-h-24 items-center justify-between border-b border-white/10 px-4 py-3">
           <Link href="/dashboard" className="flex min-w-0 items-center gap-3 font-semibold">
             <Image
-              src="/atom-logo.png"
+              src="/atom-wordmark.png"
               alt="ATOM"
-              width={64}
-              height={64}
+              width={120}
+              height={45}
               priority
               unoptimized
-              className="size-16 shrink-0 rounded-xl bg-white object-contain"
+              className="h-auto w-28 shrink-0 object-contain"
             />
             <span className="min-w-0 leading-tight">
               <span className="block text-base">QCGMS</span>

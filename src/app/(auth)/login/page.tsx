@@ -11,13 +11,13 @@ export default function LoginPage() {
       <section className="hidden bg-brand-dark p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-4 text-lg font-semibold">
           <Image
-            src="/atom-logo.png"
+            src="/atom-wordmark.png"
             alt="ATOM"
-            width={112}
-            height={112}
+            width={210}
+            height={78}
             priority
             unoptimized
-            className="size-28 rounded-2xl bg-white object-contain"
+            className="h-auto w-52 shrink-0 object-contain"
           />
           <span>Quality, Compliance and Governance Management System</span>
         </div>
@@ -42,13 +42,13 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="mb-10 flex items-center gap-3 lg:hidden">
             <Image
-              src="/atom-logo.png"
+              src="/atom-wordmark.png"
               alt="ATOM"
-              width={88}
-              height={88}
+              width={154}
+              height={58}
               priority
               unoptimized
-              className="size-22 rounded-xl border border-border bg-white object-contain"
+              className="h-auto w-36 rounded-xl bg-brand-dark p-2 object-contain"
             />
             <span className="font-semibold">QCGMS</span>
           </div>
