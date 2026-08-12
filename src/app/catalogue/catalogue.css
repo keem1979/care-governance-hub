@@ -304,6 +304,10 @@
 .contact-list div { display: grid; }
 .contact-list dt { color: #8fb2ac; font-size: 9px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
 .contact-list dd { margin: 6px 0 0; color: white; font-size: 13px; }
+.contact-list a,
+.catalogue-footer-main > div:nth-child(2) a { color: inherit; text-underline-offset: 3px; }
+.contact-list a:hover,
+.catalogue-footer-main > div:nth-child(2) a:hover { color: #f2c982; }
 
 .catalogue-footer { padding: 52px max(20px, calc((100vw - 1180px) / 2)) 35px; background: #071d26; color: white; }
 .catalogue-footer-main { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: 40px; align-items: center; padding-bottom: 35px; border-bottom: 1px solid rgb(255 255 255 / 12%); }
@@ -406,6 +410,7 @@
   .onboarding-grid article::after { display: none; }
   .catalogue-cta { min-height: 760px; }
   .catalogue-footer-main { grid-template-columns: 1fr; }
+  .catalogue-brand-footer img { width: 140px; }
   .catalogue-footer nav { flex-wrap: wrap; }
   .contact-list { flex-direction: column; }
   .back-to-top { right: 14px; bottom: 14px; }

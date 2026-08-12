@@ -620,7 +620,7 @@ export default function CataloguePage() {
             <a className="button button-copper" href="mailto:[INSERT EMAIL]">Book a Governance Discovery Call</a>
             <a className="button button-ghost" href="mailto:[INSERT EMAIL]?subject=Request%20the%20ATOM%20Catalogue">Request the ATOM Catalogue</a>
           </div>
-          <dl className="contact-list"><div><dt>Email</dt><dd>[INSERT EMAIL]</dd></div><div><dt>Telephone</dt><dd>[INSERT TELEPHONE]</dd></div><div><dt>Website</dt><dd>[INSERT WEBSITE]</dd></div></dl>
+          <dl className="contact-list"><div><dt>Email</dt><dd>[INSERT EMAIL]</dd></div><div><dt>Telephone</dt><dd>[INSERT TELEPHONE]</dd></div><div><dt>Website</dt><dd><a href="https://atomcom.co.uk">atomcom.co.uk</a></dd></div></dl>
         </div>
       </section>
 
@@ -629,7 +629,7 @@ export default function CataloguePage() {
           <div className="catalogue-brand catalogue-brand-footer">
             <Image src="/atom-wordmark.png" alt="ATOM" width={162} height={60} unoptimized />
           </div>
-          <div><p>[INSERT EMAIL]</p><p>[INSERT TELEPHONE]</p><p>[INSERT WEBSITE]</p></div>
+          <div><p>[INSERT EMAIL]</p><p>[INSERT TELEPHONE]</p><p><a href="https://atomcom.co.uk">atomcom.co.uk</a></p></div>
           <nav aria-label="Legal"><a href="#contact">Privacy</a><a href="#contact">Terms</a><Link href="/login">Client sign in</Link></nav>
         </div>
         <div className="catalogue-footer-legal">
