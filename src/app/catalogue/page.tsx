@@ -620,7 +620,7 @@ export default function CataloguePage() {
             <a className="button button-copper" href="mailto:info@atomcom.co.uk">Book a Governance Discovery Call</a>
             <a className="button button-ghost" href="mailto:info@atomcom.co.uk?subject=Request%20the%20ATOM%20Catalogue">Request the ATOM Catalogue</a>
           </div>
-          <dl className="contact-list"><div><dt>Email</dt><dd><a href="mailto:info@atomcom.co.uk">info@atomcom.co.uk</a></dd></div><div><dt>Telephone</dt><dd>To be added</dd></div><div><dt>Website</dt><dd><a href="https://atomcom.co.uk">atomcom.co.uk</a></dd></div></dl>
+          <dl className="contact-list"><div><dt>Email</dt><dd><a href="mailto:info@atomcom.co.uk">info@atomcom.co.uk</a></dd></div><div><dt>Telephone</dt><dd><a href="tel:+447477203260">07477 203260</a></dd></div><div><dt>Website</dt><dd><a href="https://atomcom.co.uk">atomcom.co.uk</a></dd></div><div><dt>Address</dt><dd>71-75 Shelton Street, Covent Garden, London, United Kingdom, WC2H 9JQ</dd></div></dl>
         </div>
       </section>
 
@@ -629,7 +629,7 @@ export default function CataloguePage() {
           <div className="catalogue-brand catalogue-brand-footer">
             <Image src="/atom-wordmark.png" alt="ATOM" width={162} height={60} unoptimized />
           </div>
-          <div><p><a href="mailto:info@atomcom.co.uk">info@atomcom.co.uk</a></p><p>Telephone to be added</p><p><a href="https://atomcom.co.uk">atomcom.co.uk</a></p></div>
+          <div><p><a href="mailto:info@atomcom.co.uk">info@atomcom.co.uk</a></p><p><a href="tel:+447477203260">07477 203260</a></p><p><a href="https://atomcom.co.uk">atomcom.co.uk</a></p><p>71-75 Shelton Street, Covent Garden, London, United Kingdom, WC2H 9JQ</p></div>
           <nav aria-label="Legal"><a href="#contact">Privacy</a><a href="#contact">Terms</a><Link href="/login">Client sign in</Link></nav>
         </div>
         <div className="catalogue-footer-legal">

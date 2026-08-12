@@ -47,7 +47,7 @@ export function SiteFooter() {
         </div>
         <div><h2>Explore</h2><Link href="/services">Services</Link><Link href="/platform">Platform</Link><Link href="/how-it-works">How it works</Link><Link href="/catalogue">Catalogue</Link></div>
         <div><h2>Company</h2><Link href="/about">About ATOM</Link><Link href="/resources">Resources</Link><Link href="/contact">Contact</Link><Link href="/login">Client sign in</Link></div>
-        <div><h2>Contact</h2><a href="mailto:info@atomcom.co.uk">info@atomcom.co.uk</a><a href="https://atomcom.co.uk">atomcom.co.uk</a><p>Telephone and office address coming soon.</p></div>
+        <div><h2>Contact</h2><a href="mailto:info@atomcom.co.uk">info@atomcom.co.uk</a><a href="tel:+447477203260">07477 203260</a><a href="https://atomcom.co.uk">atomcom.co.uk</a><p>71-75 Shelton Street, Covent Garden, London, United Kingdom, WC2H 9JQ</p></div>
       </div>
       <div className="footer-bottom"><p>© {new Date().getFullYear()} ATOM. All rights reserved.</p><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></div></div>
     </footer>
