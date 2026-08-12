@@ -240,10 +240,6 @@ export default function CataloguePage() {
       <header className="catalogue-header">
         <a className="catalogue-brand" href="#catalogue-top" aria-label="ATOM catalogue home">
           <Image src="/atom-wordmark.png" alt="ATOM" width={135} height={50} priority unoptimized />
-          <span>
-            <strong>ATOM</strong>
-            <small>Governance, organised.</small>
-          </span>
         </a>
         <CatalogueNavigation />
         <div className="catalogue-header-actions">
@@ -265,7 +261,7 @@ export default function CataloguePage() {
         />
         <div className="catalogue-hero-overlay" />
         <div className="catalogue-hero-content reveal">
-          <p className="catalogue-kicker">Technology · Governance expertise · Continuous assurance</p>
+          <p className="catalogue-kicker">Governance, organised.</p>
           <h1>
             <span>ATOM</span>
             Your Outsourced Quality, Compliance &amp; Governance Department
@@ -632,7 +628,6 @@ export default function CataloguePage() {
         <div className="catalogue-footer-main">
           <div className="catalogue-brand catalogue-brand-footer">
             <Image src="/atom-wordmark.png" alt="ATOM" width={162} height={60} unoptimized />
-            <span><strong>ATOM</strong><small>Your Outsourced Quality, Compliance &amp; Governance Department</small></span>
           </div>
           <div><p>[INSERT EMAIL]</p><p>[INSERT TELEPHONE]</p><p>[INSERT WEBSITE]</p></div>
           <nav aria-label="Legal"><a href="#contact">Privacy</a><a href="#contact">Terms</a><Link href="/login">Client sign in</Link></nav>

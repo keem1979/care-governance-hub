@@ -48,9 +48,6 @@
 
 .catalogue-brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
 .catalogue-brand img { width: 135px; height: auto; object-fit: contain; }
-.catalogue-brand span { display: grid; line-height: 1.05; }
-.catalogue-brand strong { font-size: 19px; letter-spacing: .13em; }
-.catalogue-brand small { margin-top: 5px; color: #c9dbd4; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .catalogue-nav-links { display: flex; justify-content: center; gap: clamp(14px, 2.3vw, 34px); }
 .catalogue-nav-links a { color: #e8f1ee; font-size: 13px; font-weight: 650; text-decoration: none; }
 .catalogue-nav-links a:hover { color: #f2c982; }
@@ -310,7 +307,7 @@
 
 .catalogue-footer { padding: 52px max(20px, calc((100vw - 1180px) / 2)) 35px; background: #071d26; color: white; }
 .catalogue-footer-main { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: 40px; align-items: center; padding-bottom: 35px; border-bottom: 1px solid rgb(255 255 255 / 12%); }
-.catalogue-brand-footer small { max-width: 340px; line-height: 1.4; }
+.catalogue-brand-footer img { width: 162px; }
 .catalogue-footer-main > div:nth-child(2) p { margin: 5px 0; color: #b7ccca; font-size: 12px; }
 .catalogue-footer nav { display: flex; gap: 20px; }
 .catalogue-footer nav a { color: #dce7e4; font-size: 12px; text-decoration: none; }
@@ -356,7 +353,6 @@
   .catalogue-section { padding: 72px 0; }
   .catalogue-header { min-height: 68px; padding-inline: 14px; }
   .catalogue-brand img { width: 112px; height: auto; }
-  .catalogue-brand small { display: none; }
   .catalogue-header-actions .button { display: none; }
   .catalogue-nav-links { top: 68px; }
   .catalogue-hero { min-height: 860px; }
