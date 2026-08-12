@@ -23,6 +23,9 @@ export type AssistantReply = {
   navigate: boolean;
 };
 
+const MANAGEMENT_ESCALATION =
+  "I’m not confident that I have a reliable answer to that question, so I will not guess. Please escalate it to your management team for review and guidance.";
+
 type ModuleContext = {
   hsc: string;
   cqc: string;
@@ -260,8 +263,8 @@ export function answerAssistant(query: string, permissions: readonly string[], c
   }
   if (!topic) {
     return {
-      answer: "I’m not quite sure which part of QCGMS you mean. Tell me whether you’re working with policies, evidence, audits, registers, risks, actions, meetings, the calendar, KPIs, inspection preparation, templates, reports, the activity log or settings. For clinical or regulatory decisions, please follow your organisation’s approved guidance.",
-      links: accessible(ASSISTANT_TOPICS.map((item) => ({ label: item.name, href: item.href, requiredAny: item.requiredAny })), permissions).slice(0, 6),
+      answer: MANAGEMENT_ESCALATION,
+      links: [],
       navigate: false,
     };
   }
@@ -359,6 +362,6 @@ function scoreText(query: string, candidate: string): number {
   return score;
 }
 function normalise(value: string): string { return value.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, " ").trim(); }
-function tokens(value: string): string[] { return normalise(value).split(" ").filter((token) => token.length > 2 && !["the","and","how","can","does","this","page","please","want","need"].includes(token)); }
+function tokens(value: string): string[] { return normalise(value).split(" ").filter((token) => token.length > 2 && !["the","and","how","what","can","does","this","page","please","want","need"].includes(token)); }
 function allowed(requiredAny: readonly string[] | undefined, permissions: readonly string[]): boolean { return !requiredAny?.length || requiredAny.some((item) => permissions.includes(item)); }
 function accessible(items: Array<{ label: string; href: string; requiredAny?: readonly string[] }>, permissions: readonly string[]) { return items.filter((item) => allowed(item.requiredAny, permissions)).map(({ label, href }) => ({ label, href })); }

@@ -24,6 +24,14 @@ describe("Abi governance assistant", () => {
     expect(answerAssistant("Hello", all).answer).toContain("I’m Abi");
   });
 
+  it("escalates to management instead of guessing when an answer is unknown", () => {
+    const reply = answerAssistant("What colour is the moon on planet Zorba?", all);
+    expect(reply.answer).toContain("I will not guess");
+    expect(reply.answer).toContain("escalate it to your management team");
+    expect(reply.links).toEqual([]);
+    expect(reply.navigate).toBe(false);
+  });
+
   it("answers workflow questions with the correct destination", () => {
     const reply = answerAssistant("How do I add evidence?", all);
     expect(reply.answer).toContain("Evidence Library");
