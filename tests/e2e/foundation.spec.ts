@@ -80,3 +80,23 @@ test("shows Care Quality as a connected overview rather than a duplicate registe
   await expect(page.getByRole("heading", { name: "One source of truth—no duplicate records" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Quality assurance report", exact: true })).toBeVisible();
 });
+
+test("shows the RM-grade Inspection Centre with calculated assurance and one framework", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/login?returnTo=%2Finspection", { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Email address").fill("owner@meadowview.demo");
+  await page.getByLabel("Password").fill("DemoCare!2026");
+  await page.getByRole("button", { name: "Sign in securely" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
+  await page.goto("/inspection", { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: "Inspection Centre" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Registered Manager assurance workspace")).toBeVisible();
+  await expect(page.getByText("Calculated assurance", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Framework coverage" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "RM assurance pack" })).toBeVisible();
+  await page.getByRole("link", { name: "Framework coverage" }).click();
+  await expect(page).toHaveURL(/view=framework/);
+  await expect(page.getByRole("heading", { name: "Six CQC evidence categories" })).toBeVisible();
+  await page.goto("/evidence/requirements", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/inspection\?view=framework$/);
+});

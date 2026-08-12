@@ -7,9 +7,10 @@ import {
 
 describe("dashboard configuration", () => {
   it("uses live counts for completed policy and evidence modules", () => {
-    const summaries = dashboardSummaries({ policiesDue: 2, overdueAudits: 1, trainingEvidenceExpiring: 3, documentsExpiring: 4, openComplaints: 5, openSafeguarding: 1, incidentsAwaitingReview: 2, risksOverdueReview: 6, openHighRiskActions: 7, overdueActions: 8, governanceMeetingsDue: 3, workforceChecksDue: 9, competencyActions: 4, kpiReturnsOutstanding: 2 });
+    const summaries = dashboardSummaries({ policiesDue: 2, overdueAudits: 1, trainingEvidenceExpiring: 3, documentsExpiring: 4, openComplaints: 5, openSafeguarding: 1, incidentsAwaitingReview: 2, risksOverdueReview: 6, openHighRiskActions: 7, overdueActions: 8, governanceMeetingsDue: 3, workforceChecksDue: 9, competencyActions: 4, kpiReturnsOutstanding: 2, inspectionAttention: 10 });
 
-    expect(summaries).toHaveLength(13);
+    expect(summaries).toHaveLength(14);
+    expect(summaries.find(({ label }) => label === "Inspection requirements needing attention")?.value).toBe(10);
     expect(summaries.find(({ label }) => label === "Monthly KPI returns outstanding")?.value).toBe(2);
     expect(summaries.find(({ label }) => label === "Policies due for review")?.value).toBe(2);
     expect(summaries.find(({ label }) => label === "Overdue audits")?.value).toBe(1);

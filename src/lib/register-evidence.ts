@@ -158,6 +158,7 @@ export async function syncRegisterEvidence(tx: Prisma.TransactionClient, input: 
     },
     select: { id: true },
   });
+  const requirementKey = registerEvidenceRequirementKey(input.definitionKey);
   const data = {
     organisationId: input.organisationId,
     locationId: input.locationId,
@@ -167,7 +168,7 @@ export async function syncRegisterEvidence(tx: Prisma.TransactionClient, input: 
     evidenceType: "Record",
     ownerId: input.ownerId ?? input.actorId,
     evidenceDate: input.eventDate,
-    tags: ["system-generated", "register", `register:${input.definitionKey}`, input.reference.toLowerCase()],
+    tags: ["system-generated", "register", `register:${input.definitionKey}`, ...(requirementKey ? [`requirement:${requirementKey}`] : []), input.reference.toLowerCase()],
     relatedModule: "RegisterEntry",
     relatedRecordId: input.entryId,
     confidentiality: "CONFIDENTIAL" as const,

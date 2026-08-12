@@ -39,7 +39,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     for (const userId of [ownerId, text(form, "verifiedById")].filter(Boolean)) if (!(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId, status: "ACTIVE" } }))) throw new Error("Choose active organisation members.");
     const [sourceType, rawId] = String(form.get("source") ?? "MANUAL:").split(":", 2);
     if (!ACTION_SOURCE_TYPES.includes(sourceType as never)) throw new Error("Choose a valid source.");
-    const source = await resolveActionSource(db, context.organisation.id, sourceType, rawId || null);
+    const source = await resolveActionSource(db, context, sourceType, rawId || null);
+    if (source.locationId && locationId !== source.locationId) throw new Error("The action location must match its source record.");
     const evidenceIds = [...new Set([...form.getAll("evidenceIds").map(String).filter(Boolean), ...(sourceType === "EVIDENCE" && rawId ? [rawId] : [])])];
     const evidenceCount = evidenceIds.length ? await db.evidence.count({ where: { id: { in: evidenceIds }, ...evidenceScopeWhere(context) } }) : 0;
     if (evidenceCount !== evidenceIds.length) throw new Error("One or more linked evidence records could not be found.");

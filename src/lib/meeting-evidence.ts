@@ -32,7 +32,7 @@ export async function syncMeetingEvidence(tx: Prisma.TransactionClient, input: M
     ownerId: input.chairId,
     evidenceDate: input.meetingDate,
     reviewExpiryDate: input.nextMeetingDate,
-    tags: ["system-generated", "governance-meeting", input.reference.toLowerCase(), `meeting-status:${input.status.toLowerCase()}`],
+    tags: ["system-generated", "governance-meeting", "requirement:well-governance-minutes", "evidence-category:staff-and-leader-feedback", input.reference.toLowerCase(), `meeting-status:${input.status.toLowerCase()}`],
     relatedModule: "GovernanceMeeting",
     relatedRecordId: input.meetingId,
     confidentiality: "CONFIDENTIAL" as const,

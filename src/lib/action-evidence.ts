@@ -36,7 +36,7 @@ export async function syncActionEvidence(tx: Prisma.TransactionClient, input: Ac
     ownerId: input.ownerId,
     evidenceDate: new Date(),
     reviewExpiryDate: input.reviewDate ?? input.dueDate,
-    tags: ["system-generated", "action-tracker", input.reference.toLowerCase(), input.category.toLowerCase(), input.priority.toLowerCase()],
+    tags: ["system-generated", "action-tracker", "requirement:well-actions", "evidence-category:outcomes", input.reference.toLowerCase(), input.category.toLowerCase(), input.priority.toLowerCase()],
     relatedModule: "Action",
     relatedRecordId: input.actionId,
     confidentiality: "CONFIDENTIAL" as const,

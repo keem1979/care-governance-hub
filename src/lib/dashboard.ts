@@ -64,8 +64,15 @@ export function formatUkDateTime(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number; workforceChecksDue?:number; competencyActions?:number; kpiReturnsOutstanding?:number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number; workforceChecksDue?:number; competencyActions?:number; kpiReturnsOutstanding?:number;inspectionAttention?:number }): DashboardSummary[] {
   return [
+    {
+      label: "Inspection requirements needing attention",
+      href: "/inspection?view=gaps",
+      icon: ShieldAlert,
+      value: counts?.inspectionAttention ?? null,
+      qualifier: counts ? "Calculated from live records, RM review and sign-off" : "Inspection data unavailable",
+    },
     {
       label: "Monthly KPI returns outstanding",
       href: "/kpis/returns",

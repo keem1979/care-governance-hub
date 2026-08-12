@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AuthorisedContext } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
+import { getInspectionRequirements } from "@/lib/inspection-data";
 import {
   dateKey,
   filterReportRows,
@@ -195,16 +196,7 @@ export async function generateReport(
     }
 
     if (sources.includes("INSPECTION")) {
-      const requirements = await db.complianceRequirement.findMany({
-        where: { organisationId: context.organisation.id, ...selectedOptionalLocation },
-        include: {
-          location: { select: { name: true } },
-          owner: { select: { name: true } },
-          _count: { select: { evidenceLinks: true, auditLinks: true, registerLinks: true, actionLinks: true } },
-        },
-        orderBy: { updatedAt: "desc" },
-        take: 1000,
-      });
+      const requirements = (await getInspectionRequirements(context)).filter((item) => !filters.locationId || item.locationId === filters.locationId);
       rows.push(...requirements.map((item) => ({
         type: "Inspection requirement",
         reference: item.id.slice(0, 8).toUpperCase(),
@@ -213,9 +205,9 @@ export async function generateReport(
         date: dateKey(item.updatedAt),
         location: item.location?.name ?? "Organisation-wide",
         category: label(item.keyQuestion),
-        status: item.evidenceStatus,
+        status: item.assurance.status,
         owner: item.owner?.name ?? "Unassigned",
-        detail: `${item._count.evidenceLinks} evidence, ${item._count.auditLinks} audits, ${item._count.registerLinks} register entries, ${item._count.actionLinks} actions`,
+        detail: `${item.assurance.score}% calculated assurance; ${item.connectedRecords.length} connected records; ${item.assurance.categoryCoverage}% evidence-category coverage; ${item.assurance.blockers.length ? item.assurance.blockers.join("; ") : "no blockers"}`,
       })));
     }
 

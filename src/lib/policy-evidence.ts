@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { policyRequirementKeys } from "@/lib/inspection-sync";
 
 export type GeneratedPolicyEvidenceInput = {
   policyId: string;
@@ -33,6 +34,8 @@ export function generatedPolicyEvidenceData(input: GeneratedPolicyEvidenceInput)
       "policy-studio",
       `policy-template:${input.templateKey}`,
       `policy-status:${input.status.toLowerCase()}`,
+      ...policyRequirementKeys(input.templateKey, input.title).map((key) => `requirement:${key}`),
+      "evidence-category:processes",
       ...input.complianceAreas.map((value) => value.toLowerCase()),
     ],
     relatedModule: "Policy",

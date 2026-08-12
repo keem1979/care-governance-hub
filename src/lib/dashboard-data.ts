@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AuthorisedContext } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
+import { getInspectionRequirements } from "@/lib/inspection-data";
 
 export type RecentDashboardActivity = {
   id: string;
@@ -26,6 +27,7 @@ export type DashboardCounts = {
   workforceChecksDue: number;
   competencyActions: number;
   kpiReturnsOutstanding: number;
+  inspectionAttention: number;
 };
 
 export async function getDashboardCounts(context: AuthorisedContext): Promise<DashboardCounts> {
@@ -53,7 +55,8 @@ export async function getDashboardCounts(context: AuthorisedContext): Promise<Da
       db.staffComplianceRecord.count({ where: { organisationId: context.organisation.id, type: "COMPETENCY", outcome: { in: ["PENDING","DEVELOPMENT_REQUIRED"] }, staffMember: { archivedAt: null, ...staffLocationScope } } }),
       db.kpiReturn.count({ where: { organisationId: context.organisation.id, reportingMonth: monthStart, status: { in: ["READY_FOR_REVIEW", "SUBMITTED", "LOCKED"] }, ...(context.allLocations ? {} : { locationId: { in: context.locations.map(({ id }) => id) } }) } }),
     ]);
-    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions, governanceMeetingsDue, workforceChecksDue, competencyActions, kpiReturnsOutstanding: Math.max(0, context.locations.length - submittedKpiLocations) };
+    const inspection = await getInspectionRequirements(context);
+    return { policiesDue, overdueAudits, trainingEvidenceExpiring, documentsExpiring, openComplaints, openSafeguarding, incidentsAwaitingReview, risksOverdueReview, openHighRiskActions, overdueActions, governanceMeetingsDue, workforceChecksDue, competencyActions, kpiReturnsOutstanding: Math.max(0, context.locations.length - submittedKpiLocations), inspectionAttention: inspection.filter((item) => !["ASSURED", "NOT_APPLICABLE"].includes(item.assurance.status)).length };
   } finally { await db.$disconnect(); }
 }
 

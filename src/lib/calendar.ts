@@ -1,5 +1,5 @@
 export const CALENDAR_ITEM_TYPES=["CERTIFICATE_EXPIRY","INSURANCE_EXPIRY","TRAINING_EXPIRY","SUPERVISION_DEADLINE","APPRAISAL_DEADLINE","SERVICE_REVIEW","BUSINESS_CONTINUITY_TEST","OTHER"]as const;
-export const CALENDAR_RECORD_TYPES=["POLICY_REVIEW","AUDIT_DUE","GOVERNANCE_MEETING","RISK_REVIEW","ACTION_DEADLINE","EVIDENCE_EXPIRY",...CALENDAR_ITEM_TYPES]as const;
+export const CALENDAR_RECORD_TYPES=["POLICY_REVIEW","AUDIT_DUE","GOVERNANCE_MEETING","RISK_REVIEW","ACTION_DEADLINE","EVIDENCE_EXPIRY","INSPECTION_REVIEW",...CALENDAR_ITEM_TYPES]as const;
 export const CALENDAR_STATUSES=["UPCOMING","OVERDUE","COMPLETED","CANCELLED"]as const;
 export const REMINDER_OFFSETS=[90,60,30,14,7,0,-1]as const;
 export type CalendarEvent={key:string;title:string;description:string;date:Date;type:string;status:string;href:string|null;locationId:string|null;locationName:string;ownerId:string|null;ownerName:string;riskLevel:string|null};

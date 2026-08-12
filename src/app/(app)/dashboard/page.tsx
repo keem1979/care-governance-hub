@@ -157,7 +157,7 @@ export default async function DashboardPage() {
             These figures update as your team adds and reviews records.
           </p>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           {summaries.map(({ label, href, icon: Icon, value, qualifier }) => (
             <Link
               className="group rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
