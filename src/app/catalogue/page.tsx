@@ -34,19 +34,19 @@ import {
 import "./catalogue.css";
 
 export const metadata: Metadata = {
-  title: "ATOM — Your Outsourced Quality, Compliance & Governance Department",
+  title: "ATOM | Your Outsourced Quality, Compliance & Governance Department",
   description:
     "Technology, dedicated governance expertise and continuous quality assurance in one managed service for UK adult social care providers.",
   alternates: { canonical: "/catalogue" },
   openGraph: {
-    title: "ATOM — Your Outsourced Quality, Compliance & Governance Department",
+    title: "ATOM | Your Outsourced Quality, Compliance & Governance Department",
     description: "Technology, dedicated governance expertise and continuous quality assurance in one managed service.",
     type: "website",
     images: [{ url: "/og.png", width: 1680, height: 945, alt: "ATOM outsourced quality, compliance and governance department" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ATOM — Your Outsourced Quality, Compliance & Governance Department",
+    title: "ATOM | Your Outsourced Quality, Compliance & Governance Department",
     description: "Technology, governance expertise and continuous assurance for UK adult social care.",
     images: ["/og.png"],
   },
@@ -367,7 +367,7 @@ export default function CataloguePage() {
                 number: "02",
                 icon: UsersRound,
                 title: "Assigned Governance Support",
-                copy: "Structured consultancy, an assigned Governance Coordinator or a dedicated Governance Manager—matched to the support your service needs.",
+                copy: "Structured consultancy, an assigned Governance Coordinator or a dedicated Governance Manager, matched to the support your service needs.",
               },
               {
                 number: "03",
@@ -446,7 +446,7 @@ export default function CataloguePage() {
           <SectionHeading
             eyebrow="MVP packages"
             title="Choose the level of governance support your service needs"
-            copy="Three clear service levels—from organised foundations to a fully managed outsourced department."
+            copy="Three clear service levels, from organised foundations to a fully managed outsourced department."
             align="centre"
           />
           <div className="pricing-grid">
@@ -536,7 +536,7 @@ export default function CataloguePage() {
           <SectionHeading eyebrow="Why ATOM is different" title="More than software. More than consultancy." align="centre" />
           <div className="difference-grid">
             {[
-              [Sparkles, "Technology plus people", "Providers receive a governance platform and professional support—not only a software licence."],
+              [Sparkles, "Technology plus people", "Providers receive a governance platform and professional support, not only a software licence."],
               [HeartHandshake, "Support, not another burden", "ATOM can help maintain the framework, monitor gaps and keep actions moving."],
               [Clock3, "Daily operational visibility", "The complete package brings yesterday’s risk indicators to management attention today."],
               [Target, "Evidence-led accountability", "Findings connect to named actions, owners, dates, evidence and verification."],
@@ -614,7 +614,7 @@ export default function CataloguePage() {
         <div className="catalogue-cta-overlay" />
         <div className="catalogue-cta-content">
           <p className="catalogue-eyebrow">Begin with discovery</p>
-          <h2>Build a service that is ready every day—not only when an inspector calls.</h2>
+          <h2>Build a service that is ready every day, not only when an inspector calls.</h2>
           <p>Bring your governance evidence, compliance activity, management reporting and quality oversight into one structured operating model.</p>
           <div className="catalogue-hero-actions">
             <a className="button button-copper" href="mailto:info@atomcom.co.uk">Book a Governance Discovery Call</a>
