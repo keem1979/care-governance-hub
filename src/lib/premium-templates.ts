@@ -119,15 +119,15 @@ function uuidFor(title: string): string {
 }
 
 export async function ensurePremiumTemplates(db: PrismaClient): Promise<void> {
-  const installed = await db.template.count({ where: { organisationId: null, tags: { has: "rm-grade-v2" } } });
+  const installed = await db.template.count({ where: { organisationId: null, tags: { has: "rm-grade-v3" } } });
   if (installed >= PREMIUM_TEMPLATES.length) return;
   for (const item of PREMIUM_TEMPLATES) {
     const data = {
       title: item.title,
       category: item.category,
       description: item.description,
-      version: "2.0",
-      tags: [...item.tags, "rm-grade-v2"],
+      version: "3.0",
+      tags: [...item.tags, "rm-grade-v3", "structured-tables", "print-ready"],
       status: "PUBLISHED" as const,
       fileName: `${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}.html`,
       contentType: "text/html",
