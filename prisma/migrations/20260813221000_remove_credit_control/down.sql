@@ -1,0 +1,2 @@
+-- This migration intentionally removes an unused feature whose tables were
+-- verified empty before deletion. Recreate only from the preceding migration.
