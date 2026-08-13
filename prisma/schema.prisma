@@ -20,6 +20,41 @@ enum MembershipAccessMode {
   READ_ONLY
 }
 
+enum CreditPayerType {
+  LOCAL_AUTHORITY
+  NHS_ICB
+  PRIVATE_SELF_FUNDER
+  FAMILY_THIRD_PARTY
+  CHARITY
+  OTHER
+}
+
+enum CreditInvoiceStatus {
+  OPEN
+  PART_PAID
+  DISPUTED
+  PAYMENT_PLAN
+  PAID
+  WRITTEN_OFF
+  CANCELLED
+}
+
+enum CreditRiskRating {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum CreditContactMethod {
+  PHONE
+  EMAIL
+  PAYER_PORTAL
+  LETTER
+  MEETING
+  OTHER
+}
+
 enum ActivityAction {
   CREATE
   UPDATE
@@ -385,6 +420,10 @@ model Organisation {
   trainingRequirements   StaffTrainingRequirement[]
   staffLeaveRequests     StaffLeaveRequest[]
   clients                Client[]
+  creditAccounts         CreditAccount[]
+  creditInvoices         CreditInvoice[]
+  creditPayments         CreditPayment[]
+  creditContacts         CreditContact[]
   referenceCounters      ReferenceCounter[]
 }
 
@@ -417,6 +456,8 @@ model ServiceLocation {
   complianceRequirements ComplianceRequirement[]
   staffMembers           StaffMember[]
   clients                Client[]
+  creditAccounts         CreditAccount[]
+  creditInvoices         CreditInvoice[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -458,6 +499,10 @@ model User {
   actionOccurrenceCreated ActionOccurrence[]       @relation("ActionOccurrenceCreator")
   actionOccurrenceDecided ActionOccurrence[]       @relation("ActionOccurrenceDecider")
   actionUpdates           ActionUpdate[]
+  creditInvoicesOwned     CreditInvoice[]          @relation("CreditInvoiceOwner")
+  creditInvoicesCreated   CreditInvoice[]          @relation("CreditInvoiceCreator")
+  creditPaymentsRecorded  CreditPayment[]
+  creditContactsRecorded  CreditContact[]
   meetingsChaired         GovernanceMeeting[]      @relation("MeetingChair")
   meetingsCreated         GovernanceMeeting[]      @relation("MeetingCreator")
   meetingsApproved        GovernanceMeeting[]      @relation("MeetingApprover")
@@ -1070,6 +1115,111 @@ model ActionEvidence {
 
   @@id([actionId, evidenceId])
   @@index([evidenceId])
+}
+
+model CreditAccount {
+  id               String           @id @default(uuid()) @db.Uuid
+  organisationId   String           @db.Uuid
+  locationId       String?          @db.Uuid
+  payerType        CreditPayerType
+  payerName        String
+  accountReference String
+  contactName      String?
+  contactEmail     String?
+  contactPhone     String?
+  paymentTermsDays Int              @default(30)
+  creditLimitPence Int?
+  riskRating       CreditRiskRating @default(LOW)
+  riskReason       String?
+  portalOrRoute    String?
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  invoices     CreditInvoice[]
+
+  @@unique([organisationId, accountReference])
+  @@index([organisationId, payerType, active])
+  @@index([locationId])
+}
+
+model CreditInvoice {
+  id                 String              @id @default(uuid()) @db.Uuid
+  organisationId     String              @db.Uuid
+  locationId         String?             @db.Uuid
+  accountId          String              @db.Uuid
+  invoiceNumber      String
+  serviceReference   String?
+  servicePeriodStart DateTime?
+  servicePeriodEnd   DateTime?
+  invoiceDate        DateTime
+  dueDate            DateTime
+  amountPence        Int
+  status             CreditInvoiceStatus @default(OPEN)
+  disputeReason      String?
+  purchaseOrderRef   String?
+  ownerId            String              @db.Uuid
+  nextActionDate     DateTime?
+  nextAction         String?
+  continuityRisk     Boolean             @default(false)
+  createdById        String              @db.Uuid
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  account      CreditAccount    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  owner        User             @relation("CreditInvoiceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy    User             @relation("CreditInvoiceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  payments     CreditPayment[]
+  contacts     CreditContact[]
+
+  @@unique([organisationId, invoiceNumber])
+  @@index([organisationId, status, dueDate])
+  @@index([accountId, dueDate])
+  @@index([ownerId, nextActionDate])
+  @@index([locationId])
+}
+
+model CreditPayment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organisationId String   @db.Uuid
+  invoiceId      String   @db.Uuid
+  amountPence    Int
+  receivedAt     DateTime
+  reference      String?
+  recordedById   String   @db.Uuid
+  createdAt      DateTime @default(now())
+
+  organisation Organisation  @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  invoice      CreditInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  recordedBy   User          @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, receivedAt])
+  @@index([invoiceId])
+}
+
+model CreditContact {
+  id             String              @id @default(uuid()) @db.Uuid
+  organisationId String              @db.Uuid
+  invoiceId      String              @db.Uuid
+  contactedAt    DateTime
+  method         CreditContactMethod
+  outcome        String
+  promiseDate    DateTime?
+  promisePence   Int?
+  nextAction     String?
+  recordedById   String              @db.Uuid
+  createdAt      DateTime            @default(now())
+
+  organisation Organisation  @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  invoice      CreditInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  recordedBy   User          @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, contactedAt])
+  @@index([invoiceId, contactedAt])
 }
 
 model GovernanceMeeting {
