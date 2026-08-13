@@ -2,66 +2,105 @@ export const REPORT_DEFINITIONS = {
   "monthly-governance": {
     title: "Monthly governance report",
     description: "A cross-module view of audits, risks, actions and KPI performance.",
+    group: "Executive assurance",
+    cadence: "Monthly",
+    audience: "Registered Manager, provider and governance meeting",
     sources: ["AUDIT", "RISK", "ACTION", "KPI"],
   },
   "quality-assurance": {
     title: "Quality assurance report",
     description: "Audit outcomes, improvement actions and KPI performance.",
+    group: "Executive assurance",
+    cadence: "Monthly or quarterly",
+    audience: "Quality lead, Registered Manager and provider",
     sources: ["AUDIT", "ACTION", "KPI"],
   },
   audit: {
     title: "Audit report",
     description: "Completed and in-progress audits, scores and findings.",
+    group: "Quality and compliance",
+    cadence: "Following the audit programme",
+    audience: "Auditors, service leads and Registered Manager",
     sources: ["AUDIT"],
   },
   risk: {
     title: "Risk report",
     description: "Current organisational and location risks and controls.",
+    group: "Risk and improvement",
+    cadence: "Monthly and after material change",
+    audience: "Risk owners and governance meeting",
     sources: ["RISK"],
   },
   "action-status": {
     title: "Action status report",
     description: "Action ownership, priorities, due dates and closure evidence.",
+    group: "Risk and improvement",
+    cadence: "Weekly or monthly",
+    audience: "Action owners and accountable managers",
     sources: ["ACTION"],
   },
   complaints: {
     title: "Complaints report",
     description: "Complaint register records and their current status.",
+    group: "People, safety and experience",
+    cadence: "Monthly",
+    audience: "Registered Manager and complaints lead",
     sources: ["COMPLAINT"],
   },
   incidents: {
     title: "Incident report",
     description: "Incident register records, risk levels and outcomes.",
+    group: "People, safety and experience",
+    cadence: "Monthly",
+    audience: "Registered Manager and safety leads",
     sources: ["INCIDENT"],
   },
   safeguarding: {
     title: "Safeguarding report",
     description: "Safeguarding register records and governance follow-up.",
+    group: "People, safety and experience",
+    cadence: "Monthly",
+    audience: "Safeguarding lead and Registered Manager",
     sources: ["SAFEGUARDING"],
   },
   "policy-compliance": {
     title: "Policy compliance report",
     description: "Policy approval, review and publication status.",
+    group: "Quality and compliance",
+    cadence: "Monthly",
+    audience: "Policy owners and governance meeting",
     sources: ["POLICY"],
   },
   kpi: {
     title: "KPI report",
     description: "Recorded KPI results, targets and RAG status.",
+    group: "Performance and evidence",
+    cadence: "Monthly",
+    audience: "Registered Manager, provider and commissioners",
     sources: ["KPI"],
   },
   "inspection-readiness": {
     title: "Inspection-readiness report",
     description: "Internal evidence coverage against configured requirements.",
+    group: "Quality and compliance",
+    cadence: "Monthly and before inspection",
+    audience: "Registered Manager and inspection leads",
     sources: ["INSPECTION"],
   },
   "evidence-index": {
     title: "Evidence index",
     description: "A searchable index of evidence records and review dates.",
+    group: "Performance and evidence",
+    cadence: "On demand",
+    audience: "Governance, audit and inspection teams",
     sources: ["EVIDENCE"],
   },
   "board-summary": {
     title: "Board summary report",
     description: "A concise executive view of assurance, risk and improvement activity.",
+    group: "Executive assurance",
+    cadence: "Monthly or quarterly",
+    audience: "Provider board, nominated individual and Registered Manager",
     sources: ["AUDIT", "RISK", "ACTION", "KPI"],
   },
 } as const;
@@ -88,6 +127,19 @@ export type ReportRow = {
   status: string;
   owner: string;
   detail: string;
+  attention: boolean;
+  overdue: boolean;
+  attentionReason: string;
+};
+
+export type ReportSummary = {
+  total: number;
+  attention: number;
+  overdue: number;
+  completed: number;
+  locations: number;
+  assurance: "Assured" | "Partially assured" | "Not assured" | "No assurance available";
+  conclusion: string;
 };
 
 export function isReportType(value: string): value is ReportType {
@@ -136,7 +188,7 @@ export function filterReportRows(rows: ReportRow[], filters: ReportFilters): Rep
 }
 
 export function reportCsv(rows: ReportRow[]): string {
-  const header = ["Record type", "Reference", "Title", "Date", "Location", "Category", "Status", "Owner", "Detail"];
+  const header = ["Record type", "Reference", "Title", "Date", "Location", "Category", "Status", "Owner", "Attention required", "Overdue", "Attention reason", "Detail"];
   return `\uFEFF${[header, ...rows.map((row) => [
     row.type,
     row.reference,
@@ -146,8 +198,22 @@ export function reportCsv(rows: ReportRow[]): string {
     row.category,
     row.status,
     row.owner,
+    row.attention ? "Yes" : "No",
+    row.overdue ? "Yes" : "No",
+    row.attentionReason,
     row.detail,
   ])].map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
+}
+
+export function summariseReport(rows: ReportRow[]): ReportSummary {
+  const attention = rows.filter((row) => row.attention).length;
+  const overdue = rows.filter((row) => row.overdue).length;
+  const completed = rows.filter((row) => isCompletedStatus(row.status)).length;
+  const locations = new Set(rows.map((row) => row.location)).size;
+  if (!rows.length) return { total: 0, attention: 0, overdue: 0, completed: 0, locations: 0, assurance: "No assurance available", conclusion: "No records match the selected scope. Management should confirm whether this reflects expected activity or a gap in recording." };
+  if (overdue > 0 || attention / rows.length >= 0.25) return { total: rows.length, attention, overdue, completed, locations, assurance: "Not assured", conclusion: `${attention} record${attention === 1 ? " requires" : "s require"} attention${overdue ? `, including ${overdue} overdue` : ""}. Management review, named ownership and time-bound follow-up are required.` };
+  if (attention > 0) return { total: rows.length, attention, overdue, completed, locations, assurance: "Partially assured", conclusion: `Most records do not trigger an exception, but ${attention} item${attention === 1 ? " requires" : "s require"} management review before full assurance can be recorded.` };
+  return { total: rows.length, attention, overdue, completed, locations, assurance: "Assured", conclusion: "No automated exception was identified in the selected records. Management must still validate quality, completeness and sustained effectiveness." };
 }
 
 export function label(value: string): string {
@@ -166,7 +232,12 @@ function parseDate(value: string | string[] | undefined, endOfDay: boolean): Dat
   const text = single(value);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return undefined;
   const parsed = new Date(`${text}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  if (Number.isNaN(parsed.getTime()) || dateKey(parsed) !== text) return undefined;
+  return parsed;
+}
+
+function isCompletedStatus(value: string): boolean {
+  return ["CLOSED", "COMPLETED", "APPROVED", "PUBLISHED", "GREEN", "COMPLIANT", "ASSURED", "CURRENT"].includes(value.toUpperCase());
 }
 
 function csvCell(value: unknown): string {

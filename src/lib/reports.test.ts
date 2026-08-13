@@ -18,6 +18,9 @@ const row: ReportRow = {
   status: "OPEN",
   owner: "A Manager",
   detail: "Residual score 6",
+  attention: false,
+  overdue: false,
+  attentionReason: "",
 };
 
 describe("reports", () => {
@@ -39,5 +42,9 @@ describe("reports", () => {
 
   it("escapes report CSV values", () => {
     expect(reportCsv([{ ...row, title: 'Risk, "high"' }])).toContain('"Risk, ""high"""');
+  });
+
+  it("rejects impossible calendar dates", () => {
+    expect(parseReportFilters({ from: "2026-02-31" }, []).from).toBeUndefined();
   });
 });

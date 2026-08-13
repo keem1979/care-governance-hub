@@ -8,6 +8,7 @@ import {
   filterReportRows,
   label,
   REPORT_DEFINITIONS,
+  summariseReport,
   type ReportFilters,
   type ReportRow,
   type ReportType,
@@ -18,6 +19,8 @@ export type GeneratedReport = {
   statuses: string[];
   categories: string[];
   sourceCounts: { source: string; count: number }[];
+  statusCounts: { status: string; count: number }[];
+  summary: import("@/lib/reports").ReportSummary;
 };
 
 export async function generateReport(
@@ -39,6 +42,7 @@ export async function generateReport(
   const selectedRequiredLocation = filters.locationId
     ? { locationId: filters.locationId }
     : requiredLocationScope;
+  const now = new Date();
 
   try {
     const sources = REPORT_DEFINITIONS[type].sources as readonly string[];
@@ -56,7 +60,9 @@ export async function generateReport(
         orderBy: { auditDate: "desc" },
         take: 1000,
       });
-      rows.push(...audits.map((item) => ({
+      rows.push(...audits.map((item) => {
+        const attention = (item.overallScore !== null && item.overallScore < 80) || item._count.findings > 0;
+        return {
         type: "Audit",
         reference: item.id.slice(0, 8).toUpperCase(),
         title: item.title,
@@ -67,7 +73,10 @@ export async function generateReport(
         status: item.status,
         owner: item.auditor.name,
         detail: `${item.overallScore === null ? "Score not recorded" : `${item.overallScore}% score`}; ${item._count.findings} findings`,
-      })));
+        attention,
+        overdue: false,
+        attentionReason: attention ? "Score below 80% or findings recorded" : "",
+      };}));
     }
 
     if (sources.includes("RISK")) {
@@ -77,7 +86,10 @@ export async function generateReport(
         orderBy: { createdAt: "desc" },
         take: 1000,
       });
-      rows.push(...risks.map((item) => ({
+      rows.push(...risks.map((item) => {
+        const overdue = item.nextReviewDate < now;
+        const attention = item.residualScore >= 12 || overdue;
+        return {
         type: "Risk",
         reference: item.reference,
         title: item.title,
@@ -88,7 +100,10 @@ export async function generateReport(
         status: item.status,
         owner: item.owner?.name ?? "Unassigned",
         detail: `Residual score ${item.residualScore} (${label(item.residualLevel)}); next review ${dateKey(item.nextReviewDate)}`,
-      })));
+        attention,
+        overdue,
+        attentionReason: overdue ? "Risk review is overdue" : item.residualScore >= 12 ? "High residual risk score" : "",
+      };}));
     }
 
     if (sources.includes("ACTION")) {
@@ -102,7 +117,11 @@ export async function generateReport(
         orderBy: { createdAt: "desc" },
         take: 1000,
       });
-      rows.push(...actions.map((item) => ({
+      rows.push(...actions.map((item) => {
+        const closed = ["CLOSED", "COMPLETED", "CANCELLED"].includes(item.status);
+        const overdue = !closed && item.dueDate < now;
+        const attention = overdue || ["HIGH", "URGENT", "CRITICAL"].includes(item.priority);
+        return {
         type: "Action",
         reference: item.reference,
         title: item.title,
@@ -113,7 +132,10 @@ export async function generateReport(
         status: item.status,
         owner: item.owner.name,
         detail: `${label(item.priority)} priority; due ${dateKey(item.dueDate)}; ${item._count.evidenceLinks} evidence links`,
-      })));
+        attention,
+        overdue,
+        attentionReason: overdue ? "Action is overdue" : attention ? `${label(item.priority)} priority action` : "",
+      };}));
     }
 
     if (sources.includes("KPI")) {
@@ -127,7 +149,9 @@ export async function generateReport(
         orderBy: { reportingMonth: "desc" },
         take: 1000,
       });
-      rows.push(...entries.map((item) => ({
+      rows.push(...entries.map((item) => {
+        const attention = item.ragStatus !== "GREEN";
+        return {
         type: "KPI",
         reference: item.id.slice(0, 8).toUpperCase(),
         title: item.kpi.name,
@@ -138,7 +162,10 @@ export async function generateReport(
         status: item.ragStatus,
         owner: item.createdBy.name,
         detail: `${item.actualValue} ${item.kpi.unit}; target ${item.targetValue}`,
-      })));
+        attention,
+        overdue: false,
+        attentionReason: attention ? `${label(item.ragStatus)} KPI result` : "",
+      };}));
     }
 
     if (sources.some((source) => ["COMPLAINT", "INCIDENT", "SAFEGUARDING"].includes(source))) {
@@ -160,7 +187,9 @@ export async function generateReport(
         orderBy: { eventDate: "desc" },
         take: 1000,
       });
-      rows.push(...entries.map((item) => ({
+      rows.push(...entries.map((item) => {
+        const attention = ["HIGH", "CRITICAL"].includes(item.riskLevel);
+        return {
         type: label(source),
         reference: item.reference,
         title: item.title,
@@ -171,7 +200,10 @@ export async function generateReport(
         status: item.status,
         owner: item.owner?.name ?? "Unassigned",
         detail: `${label(item.riskLevel)} risk; ${item._count.evidenceLinks} evidence links`,
-      })));
+        attention,
+        overdue: false,
+        attentionReason: attention ? `${label(item.riskLevel)} risk record` : "",
+      };}));
     }
 
     if (sources.includes("POLICY")) {
@@ -181,7 +213,10 @@ export async function generateReport(
         orderBy: { updatedAt: "desc" },
         take: 1000,
       });
-      rows.push(...policies.map((item) => ({
+      rows.push(...policies.map((item) => {
+        const overdue = Boolean(item.nextReviewDate && item.nextReviewDate < now);
+        const attention = overdue || !["APPROVED", "PUBLISHED"].includes(item.approvalStatus);
+        return {
         type: "Policy",
         reference: item.id.slice(0, 8).toUpperCase(),
         title: item.title,
@@ -192,12 +227,17 @@ export async function generateReport(
         status: item.status,
         owner: item.owner.name,
         detail: `${label(item.approvalStatus)}; next review ${item.nextReviewDate ? dateKey(item.nextReviewDate) : "not set"}`,
-      })));
+        attention,
+        overdue,
+        attentionReason: overdue ? "Policy review is overdue" : attention ? `Approval is ${label(item.approvalStatus)}` : "",
+      };}));
     }
 
     if (sources.includes("INSPECTION")) {
       const requirements = (await getInspectionRequirements(context)).filter((item) => !filters.locationId || item.locationId === filters.locationId);
-      rows.push(...requirements.map((item) => ({
+      rows.push(...requirements.map((item) => {
+        const attention = item.assurance.score < 80 || item.assurance.blockers.length > 0;
+        return {
         type: "Inspection requirement",
         reference: item.id.slice(0, 8).toUpperCase(),
         title: item.title,
@@ -208,7 +248,10 @@ export async function generateReport(
         status: item.assurance.status,
         owner: item.owner?.name ?? "Unassigned",
         detail: `${item.assurance.score}% calculated assurance; ${item.connectedRecords.length} connected records; ${item.assurance.categoryCoverage}% evidence-category coverage; ${item.assurance.blockers.length ? item.assurance.blockers.join("; ") : "no blockers"}`,
-      })));
+        attention,
+        overdue: false,
+        attentionReason: attention ? item.assurance.blockers.join("; ") || "Calculated assurance below 80%" : "",
+      };}));
     }
 
     if (sources.includes("EVIDENCE")) {
@@ -222,7 +265,10 @@ export async function generateReport(
         orderBy: { createdAt: "desc" },
         take: 1000,
       });
-      rows.push(...evidence.map((item) => ({
+      rows.push(...evidence.map((item) => {
+        const overdue = Boolean(item.reviewExpiryDate && item.reviewExpiryDate < now);
+        const attention = overdue || !item.currentVersion;
+        return {
         type: "Evidence",
         reference: item.id.slice(0, 8).toUpperCase(),
         title: item.title,
@@ -233,7 +279,10 @@ export async function generateReport(
         status: item.status,
         owner: item.owner.name,
         detail: `${item.evidenceType}; v${item.currentVersion?.versionNumber ?? "—"}; review ${item.reviewExpiryDate ? dateKey(item.reviewExpiryDate) : "not set"}`,
-      })));
+        attention,
+        overdue,
+        attentionReason: overdue ? "Evidence review is overdue" : !item.currentVersion ? "No current evidence version" : "",
+      };}));
     }
 
     const filtered = filterReportRows(rows, filters).sort((a, b) => b.date.localeCompare(a.date));
@@ -245,6 +294,11 @@ export async function generateReport(
         source,
         count: filtered.filter((row) => row.type === source).length,
       })),
+      statusCounts: [...new Set(filtered.map((row) => row.status))].sort().map((status) => ({
+        status,
+        count: filtered.filter((row) => row.status === status).length,
+      })),
+      summary: summariseReport(filtered),
     };
   } finally {
     await db.$disconnect();
