@@ -1,0 +1,30 @@
+DROP TABLE IF EXISTS "ActionOccurrence";
+DROP INDEX IF EXISTS "Action_organisationId_lifecycleStatus_lastSeenAt_idx";
+DROP INDEX IF EXISTS "Action_clientId_category_lifecycleStatus_idx";
+DROP INDEX IF EXISTS "Action_staffMemberId_category_lifecycleStatus_idx";
+ALTER TABLE "Action"
+  DROP COLUMN IF EXISTS "clientId",
+  DROP COLUMN IF EXISTS "staffMemberId",
+  DROP COLUMN IF EXISTS "lifecycleStatus",
+  DROP COLUMN IF EXISTS "issueKey",
+  DROP COLUMN IF EXISTS "medicationIssueType",
+  DROP COLUMN IF EXISTS "firstSeenAt",
+  DROP COLUMN IF EXISTS "lastSeenAt",
+  DROP COLUMN IF EXISTS "recurrenceCount",
+  DROP COLUMN IF EXISTS "monitoringUntil",
+  DROP COLUMN IF EXISTS "managementResponse",
+  DROP COLUMN IF EXISTS "managementResponseById",
+  DROP COLUMN IF EXISTS "managementResponseAt",
+  DROP COLUMN IF EXISTS "completedActionSummary",
+  DROP COLUMN IF EXISTS "evidenceReviewedSummary",
+  DROP COLUMN IF EXISTS "immediateRiskControlled",
+  DROP COLUMN IF EXISTS "underlyingRecordCorrected",
+  DROP COLUMN IF EXISTS "staffSupportCompleted",
+  DROP COLUMN IF EXISTS "widerRecordsChecked",
+  DROP COLUMN IF EXISTS "recurrenceChecked",
+  DROP COLUMN IF EXISTS "verificationRationale",
+  DROP COLUMN IF EXISTS "nextRecurrenceReviewDate",
+  DROP COLUMN IF EXISTS "sustainedImprovementAt";
+DROP TYPE IF EXISTS "OccurrenceDecision";
+DROP TYPE IF EXISTS "MedicationIssueType";
+DROP TYPE IF EXISTS "AssuranceLifecycleStatus";

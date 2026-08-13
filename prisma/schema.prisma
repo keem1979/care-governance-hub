@@ -130,6 +130,45 @@ enum ActionStatus {
   ARCHIVED
 }
 
+enum AssuranceLifecycleStatus {
+  NEW_FINDING
+  UNDER_REVIEW
+  DUPLICATE_CANDIDATE
+  LINKED_TO_EXISTING_ACTION
+  ACTION_REQUIRED
+  ACTION_IN_PROGRESS
+  AWAITING_EVIDENCE
+  MANAGEMENT_RESPONSE_RECORDED
+  AWAITING_VERIFICATION
+  CLOSED_VERIFIED
+  MONITORING_RECURRENCE
+  REOPENED_REPEAT_FINDING
+  NO_ACTION_REQUIRED
+}
+
+enum MedicationIssueType {
+  OUT_OF_STOCK
+  DISCONTINUED_BY_PRESCRIBER
+  NOT_DUE
+  PRN_NOT_REQUIRED
+  SERVICE_USER_REFUSAL
+  OMITTED_DOSE
+  RECORDING_ERROR
+  MAR_ENTRY_UNAVAILABLE
+  SUPPLY_REQUEST_SUBMITTED
+  SUPPLY_RECEIVED
+  CLARIFICATION_PENDING
+  RESOLVED_VERIFIED
+}
+
+enum OccurrenceDecision {
+  ORIGINAL
+  SUGGESTED
+  LINK_CONFIRMED
+  MATCH_REJECTED
+  RECURRENCE_CONFIRMED
+}
+
 enum ActionPriority {
   LOW
   MEDIUM
@@ -299,21 +338,21 @@ enum StaffLeaveStatus {
 }
 
 model Organisation {
-  id           String    @id @default(uuid()) @db.Uuid
-  name         String
-  slug         String    @unique
-  isDemo       Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  archivedAt   DateTime?
-  licenceSeats Int       @default(10)
+  id                       String    @id @default(uuid()) @db.Uuid
+  name                     String
+  slug                     String    @unique
+  isDemo                   Boolean   @default(false)
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  archivedAt               DateTime?
+  licenceSeats             Int       @default(10)
   policyBrandName          String?
   policyRegistrationNumber String?
   policyAddress            String?
   policyEmail              String?
   policyPhone              String?
   policyWebsite            String?
-  policyPrimaryColour      String   @default("#0f766e")
+  policyPrimaryColour      String    @default("#0f766e")
   policyFooterText         String?
   policyLogoStorageKey     String?
   policyLogoContentType    String?
@@ -331,6 +370,7 @@ model Organisation {
   registerEntries        RegisterEntry[]
   risks                  Risk[]
   actions                Action[]
+  actionOccurrences      ActionOccurrence[]
   meetings               GovernanceMeeting[]
   calendarItems          CalendarItem[]
   calendarReminders      CalendarReminder[]
@@ -369,6 +409,7 @@ model ServiceLocation {
   registerEntries        RegisterEntry[]
   risks                  Risk[]
   actions                Action[]
+  actionOccurrences      ActionOccurrence[]
   meetings               GovernanceMeeting[]
   calendarItems          CalendarItem[]
   kpiEntries             KpiEntry[]
@@ -413,6 +454,9 @@ model User {
   actionsOwned            Action[]                 @relation("ActionOwner")
   actionsCreated          Action[]                 @relation("ActionCreator")
   actionsVerified         Action[]                 @relation("ActionVerifier")
+  actionResponses         Action[]                 @relation("ActionManagementResponder")
+  actionOccurrenceCreated ActionOccurrence[]       @relation("ActionOccurrenceCreator")
+  actionOccurrenceDecided ActionOccurrence[]       @relation("ActionOccurrenceDecider")
   actionUpdates           ActionUpdate[]
   meetingsChaired         GovernanceMeeting[]      @relation("MeetingChair")
   meetingsCreated         GovernanceMeeting[]      @relation("MeetingCreator")
@@ -430,38 +474,38 @@ model User {
   inspectionSignedOff     ComplianceRequirement[]  @relation("InspectionSignoff")
   templatesAuthored       Template[]               @relation("TemplateAuthor")
   staffComplianceVerified StaffComplianceRecord[]  @relation("StaffComplianceVerifier")
-  staffLeaveRequested     StaffLeaveRequest[]       @relation("StaffLeaveRequester")
-  staffLeaveDecided       StaffLeaveRequest[]       @relation("StaffLeaveDecision")
+  staffLeaveRequested     StaffLeaveRequest[]      @relation("StaffLeaveRequester")
+  staffLeaveDecided       StaffLeaveRequest[]      @relation("StaffLeaveDecision")
 }
 
 model Policy {
-  id               String               @id @default(uuid()) @db.Uuid
-  organisationId   String               @db.Uuid
-  title            String
-  category         String
-  ownerId          String               @db.Uuid
-  currentVersionId String?              @unique @db.Uuid
-  effectiveDate    DateTime?
-  lastReviewDate   DateTime?
-  nextReviewDate   DateTime?
-  approvalStatus   PolicyApprovalStatus @default(NOT_SUBMITTED)
-  approvedById     String?              @db.Uuid
-  approvedAt       DateTime?
-  tags             String[]             @default([])
-  complianceAreas  String[]             @default([])
-  notes            String?
-  templateKey      String?
-  templateVersion  String?
-  generatedSections Json?
-  sourceAnnex      Json?
-  sourceCheckedAt  DateTime?
+  id                 String               @id @default(uuid()) @db.Uuid
+  organisationId     String               @db.Uuid
+  title              String
+  category           String
+  ownerId            String               @db.Uuid
+  currentVersionId   String?              @unique @db.Uuid
+  effectiveDate      DateTime?
+  lastReviewDate     DateTime?
+  nextReviewDate     DateTime?
+  approvalStatus     PolicyApprovalStatus @default(NOT_SUBMITTED)
+  approvedById       String?              @db.Uuid
+  approvedAt         DateTime?
+  tags               String[]             @default([])
+  complianceAreas    String[]             @default([])
+  notes              String?
+  templateKey        String?
+  templateVersion    String?
+  generatedSections  Json?
+  sourceAnnex        Json?
+  sourceCheckedAt    DateTime?
   customisationNotes String?
-  updateAvailable  Boolean              @default(false)
-  status           PolicyWorkflowStatus @default(DRAFT)
-  archivedAt       DateTime?
-  createdById      String               @db.Uuid
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
+  updateAvailable    Boolean              @default(false)
+  status             PolicyWorkflowStatus @default(DRAFT)
+  archivedAt         DateTime?
+  createdById        String               @db.Uuid
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   organisation   Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   owner          User            @relation("PolicyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
@@ -499,52 +543,53 @@ model PolicyVersion {
 }
 
 model Evidence {
-  id               String                  @id @default(uuid()) @db.Uuid
-  organisationId   String                  @db.Uuid
-  locationId       String?                 @db.Uuid
-  title            String
-  description      String?
-  category         String
-  evidenceType     String
-  ownerId          String                  @db.Uuid
-  currentVersionId String?                 @unique @db.Uuid
-  evidenceDate     DateTime?
-  reviewExpiryDate DateTime?
-  tags             String[]                @default([])
-  relatedModule    String?
-  relatedRecordId  String?
-  generatedPolicyId String?                 @unique @db.Uuid
+  id                         String                  @id @default(uuid()) @db.Uuid
+  organisationId             String                  @db.Uuid
+  locationId                 String?                 @db.Uuid
+  title                      String
+  description                String?
+  category                   String
+  evidenceType               String
+  ownerId                    String                  @db.Uuid
+  currentVersionId           String?                 @unique @db.Uuid
+  evidenceDate               DateTime?
+  reviewExpiryDate           DateTime?
+  tags                       String[]                @default([])
+  relatedModule              String?
+  relatedRecordId            String?
+  generatedPolicyId          String?                 @unique @db.Uuid
   generatedPolicyTemplateKey String?
-  confidentiality  EvidenceConfidentiality @default(INTERNAL)
-  status           EvidenceWorkflowStatus  @default(ACTIVE)
-  notes            String?
-  archivedAt       DateTime?
-  uploadedById     String                  @db.Uuid
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
+  confidentiality            EvidenceConfidentiality @default(INTERNAL)
+  status                     EvidenceWorkflowStatus  @default(ACTIVE)
+  notes                      String?
+  archivedAt                 DateTime?
+  uploadedById               String                  @db.Uuid
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
 
-  organisation    Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  location        ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  owner           User                            @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  uploadedBy      User                            @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-  currentVersion  EvidenceVersion?                @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
-  versions        EvidenceVersion[]               @relation("EvidenceVersions")
-  auditResponses  AuditResponse[]
-  registerLinks   RegisterEntryEvidence[]
-  riskLinks       RiskEvidence[]
-  actionLinks     ActionEvidence[]
-  meetingLinks    MeetingEvidence[]
-  kpiLinks        KpiEvidence[]
-  inspectionLinks ComplianceRequirementEvidence[]
+  organisation           Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location               ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner                  User                            @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  uploadedBy             User                            @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  currentVersion         EvidenceVersion?                @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions               EvidenceVersion[]               @relation("EvidenceVersions")
+  auditResponses         AuditResponse[]
+  registerLinks          RegisterEntryEvidence[]
+  riskLinks              RiskEvidence[]
+  actionLinks            ActionEvidence[]
+  meetingLinks           MeetingEvidence[]
+  kpiLinks               KpiEvidence[]
+  inspectionLinks        ComplianceRequirementEvidence[]
   staffComplianceRecords StaffComplianceRecord[]
   actionUpdates          ActionUpdate[]
+  actionOccurrences      ActionOccurrence[]
   generatedPolicy        Policy?                         @relation("GeneratedPolicyEvidence", fields: [generatedPolicyId], references: [id], onDelete: Cascade)
 
+  @@unique([organisationId, generatedPolicyTemplateKey])
   @@index([organisationId, status])
   @@index([organisationId, category])
   @@index([organisationId, reviewExpiryDate])
   @@index([locationId])
-  @@unique([organisationId, generatedPolicyTemplateKey])
 }
 
 model AuditTemplate {
@@ -875,48 +920,74 @@ model RiskReview {
 }
 
 model Action {
-  id                        String           @id @default(uuid()) @db.Uuid
-  organisationId            String           @db.Uuid
-  locationId                String?          @db.Uuid
+  id                        String                   @id @default(uuid()) @db.Uuid
+  organisationId            String                   @db.Uuid
+  locationId                String?                  @db.Uuid
   reference                 String
   title                     String
   description               String
-  category                  String           @default("Quality improvement")
+  category                  String                   @default("Quality improvement")
   rootCause                 String?
   expectedOutcome           String?
   successMeasure            String?
   sourceType                ActionSourceType
-  sourceRecordId            String?          @db.Uuid
+  sourceRecordId            String?                  @db.Uuid
   sourceReference           String?
   sourceUrl                 String?
-  ownerId                   String           @db.Uuid
-  priority                  ActionPriority   @default(MEDIUM)
+  clientId                  String?                  @db.Uuid
+  staffMemberId             String?                  @db.Uuid
+  lifecycleStatus           AssuranceLifecycleStatus @default(ACTION_REQUIRED)
+  issueKey                  String?
+  medicationIssueType       MedicationIssueType?
+  firstSeenAt               DateTime                 @default(now())
+  lastSeenAt                DateTime                 @default(now())
+  recurrenceCount           Int                      @default(0)
+  monitoringUntil           DateTime?
+  managementResponse        String?
+  managementResponseById    String?                  @db.Uuid
+  managementResponseAt      DateTime?
+  ownerId                   String                   @db.Uuid
+  priority                  ActionPriority           @default(MEDIUM)
   dueDate                   DateTime
   reviewDate                DateTime?
-  status                    ActionStatus     @default(OPEN)
+  status                    ActionStatus             @default(OPEN)
   progressNote              String?
-  progressPercent           Int              @default(0)
-  escalationRequired        Boolean          @default(false)
+  progressPercent           Int                      @default(0)
+  escalationRequired        Boolean                  @default(false)
   escalationReason          String?
-  evidenceRequired          Boolean          @default(true)
+  evidenceRequired          Boolean                  @default(true)
   evidenceWaiverExplanation String?
   completionDate            DateTime?
-  verifiedById              String?          @db.Uuid
+  verifiedById              String?                  @db.Uuid
   verificationDate          DateTime?
   closureNote               String?
+  completedActionSummary    String?
+  evidenceReviewedSummary   String?
+  immediateRiskControlled   Boolean?
+  underlyingRecordCorrected Boolean?
+  staffSupportCompleted     Boolean?
+  widerRecordsChecked       Boolean?
+  recurrenceChecked         Boolean?
+  verificationRationale     String?
+  nextRecurrenceReviewDate  DateTime?
+  sustainedImprovementAt    DateTime?
   archivedAt                DateTime?
-  createdById               String           @db.Uuid
-  createdAt                 DateTime         @default(now())
-  updatedAt                 DateTime         @updatedAt
+  createdById               String                   @db.Uuid
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
 
-  organisation    Organisation                  @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  location        ServiceLocation?              @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  owner           User                          @relation("ActionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  createdBy       User                          @relation("ActionCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  verifiedBy      User?                         @relation("ActionVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
-  updates         ActionUpdate[]
-  evidenceLinks   ActionEvidence[]
-  inspectionLinks ComplianceRequirementAction[]
+  organisation         Organisation                  @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location             ServiceLocation?              @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner                User                          @relation("ActionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy            User                          @relation("ActionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  verifiedBy           User?                         @relation("ActionVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  managementResponseBy User?                         @relation("ActionManagementResponder", fields: [managementResponseById], references: [id], onDelete: SetNull)
+  client               Client?                       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  staffMember          StaffMember?                  @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  updates              ActionUpdate[]
+  evidenceLinks        ActionEvidence[]
+  occurrences          ActionOccurrence[]
+  inspectionLinks      ComplianceRequirementAction[]
 
   @@unique([organisationId, reference])
   @@index([organisationId, status, priority])
@@ -924,6 +995,50 @@ model Action {
   @@index([ownerId, status])
   @@index([locationId])
   @@index([sourceType, sourceRecordId])
+  @@index([organisationId, lifecycleStatus, lastSeenAt])
+  @@index([clientId, category, lifecycleStatus])
+  @@index([staffMemberId, category, lifecycleStatus])
+}
+
+model ActionOccurrence {
+  id                  String               @id @default(uuid()) @db.Uuid
+  organisationId      String               @db.Uuid
+  actionId            String               @db.Uuid
+  locationId          String?              @db.Uuid
+  clientId            String?              @db.Uuid
+  staffMemberId       String?              @db.Uuid
+  sourceType          ActionSourceType
+  sourceRecordId      String?              @db.Uuid
+  sourceReference     String?
+  sourceUrl           String?
+  occurredAt          DateTime
+  category            String
+  issueKey            String?
+  medicationIssueType MedicationIssueType?
+  narrative           String
+  evidenceId          String?              @db.Uuid
+  decision            OccurrenceDecision   @default(ORIGINAL)
+  matchScore          Int?
+  matchRationale      String?
+  decidedById         String?              @db.Uuid
+  decidedAt           DateTime?
+  createdById         String               @db.Uuid
+  createdAt           DateTime             @default(now())
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  action       Action           @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  client       Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  staffMember  StaffMember?     @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  evidence     Evidence?        @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  createdBy    User             @relation("ActionOccurrenceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  decidedBy    User?            @relation("ActionOccurrenceDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@unique([actionId, sourceType, sourceRecordId])
+  @@index([organisationId, occurredAt])
+  @@index([clientId, category, occurredAt])
+  @@index([staffMemberId, category, occurredAt])
+  @@index([actionId, decision, occurredAt])
 }
 
 model ActionUpdate {
@@ -938,8 +1053,8 @@ model ActionUpdate {
   evidenceId      String?       @db.Uuid
   createdAt       DateTime      @default(now())
 
-  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  action   Action    @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   evidence Evidence? @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
 
   @@index([actionId, createdAt])
@@ -1180,37 +1295,37 @@ model KpiEvidence {
 }
 
 model ComplianceRequirement {
-  id               String                   @id @default(uuid()) @db.Uuid
-  organisationId   String                   @db.Uuid
-  locationId       String?                  @db.Uuid
-  keyQuestion      CqcKeyQuestion
-  catalogueKey     String?
-  qualityStatement String?
-  title            String
-  explanation      String
-  evidenceExamples String[]                 @default([])
-  ownerId          String?                  @db.Uuid
-  reviewDate       DateTime?
-  evidenceStatus   InspectionEvidenceStatus @default(NO_EVIDENCE)
-  confidenceNote   String?
-  frameworkVersion String                   @default("CQC provider framework transition 2026")
-  frameworkSourceUrl String?
-  reviewFrequency  String?
-  regulations      String[]                 @default([])
-  expectedEvidenceCategories String[]       @default([])
-  coveredEvidenceCategories  String[]       @default([])
-  serviceSpecific  Boolean                  @default(false)
-  strengths        String?
-  areasForImprovement String?
-  impactOnPeople   String?
-  managementDecision InspectionManagementDecision @default(NOT_REVIEWED)
-  reviewedById     String?                  @db.Uuid
-  reviewedAt       DateTime?
-  signedOffById    String?                  @db.Uuid
-  signedOffAt      DateTime?
-  createdById      String                   @db.Uuid
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
+  id                         String                       @id @default(uuid()) @db.Uuid
+  organisationId             String                       @db.Uuid
+  locationId                 String?                      @db.Uuid
+  keyQuestion                CqcKeyQuestion
+  catalogueKey               String?
+  qualityStatement           String?
+  title                      String
+  explanation                String
+  evidenceExamples           String[]                     @default([])
+  ownerId                    String?                      @db.Uuid
+  reviewDate                 DateTime?
+  evidenceStatus             InspectionEvidenceStatus     @default(NO_EVIDENCE)
+  confidenceNote             String?
+  frameworkVersion           String                       @default("CQC provider framework transition 2026")
+  frameworkSourceUrl         String?
+  reviewFrequency            String?
+  regulations                String[]                     @default([])
+  expectedEvidenceCategories String[]                     @default([])
+  coveredEvidenceCategories  String[]                     @default([])
+  serviceSpecific            Boolean                      @default(false)
+  strengths                  String?
+  areasForImprovement        String?
+  impactOnPeople             String?
+  managementDecision         InspectionManagementDecision @default(NOT_REVIEWED)
+  reviewedById               String?                      @db.Uuid
+  reviewedAt                 DateTime?
+  signedOffById              String?                      @db.Uuid
+  signedOffAt                DateTime?
+  createdById                String                       @db.Uuid
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
 
   organisation  Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   location      ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
@@ -1223,13 +1338,13 @@ model ComplianceRequirement {
   registerLinks ComplianceRequirementRegister[]
   actionLinks   ComplianceRequirementAction[]
 
+  @@unique([organisationId, catalogueKey])
   @@index([organisationId, keyQuestion, evidenceStatus])
   @@index([organisationId, reviewDate])
   @@index([locationId])
   @@index([ownerId])
   @@index([reviewedById])
   @@index([signedOffById])
-  @@unique([organisationId, catalogueKey])
 }
 
 model ComplianceRequirementEvidence {
@@ -1304,41 +1419,43 @@ model Template {
 }
 
 model StaffMember {
-  id                String                @id @default(uuid()) @db.Uuid
-  organisationId    String                @db.Uuid
-  locationId        String?               @db.Uuid
-  employeeReference String
-  staffNumber       Int
-  firstName         String
-  lastName          String
-  preferredName     String?
-  workEmail         String?
-  workPhone         String?
-  jobTitle          String
-  department        String?
-  employmentType    String?
-  startDate         DateTime?
-  endDate           DateTime?
-  employmentStatus  StaffEmploymentStatus @default(ACTIVE)
-  lineManager       String?
-  profilePhotoKey   String?               @unique
-  profilePhotoType  String?
-  contractedDaysPerWeek Decimal           @default(5) @db.Decimal(4, 2)
-  annualLeaveEntitlementDays Decimal       @default(28) @db.Decimal(6, 2)
-  annualLeaveCarryOverDays Decimal         @default(0) @db.Decimal(6, 2)
-  leaveYearStartMonth Int                  @default(1)
-  leaveYearStartDay   Int                  @default(1)
-  notes             String?
-  archivedAt        DateTime?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id                         String                @id @default(uuid()) @db.Uuid
+  organisationId             String                @db.Uuid
+  locationId                 String?               @db.Uuid
+  employeeReference          String
+  staffNumber                Int
+  firstName                  String
+  lastName                   String
+  preferredName              String?
+  workEmail                  String?
+  workPhone                  String?
+  jobTitle                   String
+  department                 String?
+  employmentType             String?
+  startDate                  DateTime?
+  endDate                    DateTime?
+  employmentStatus           StaffEmploymentStatus @default(ACTIVE)
+  lineManager                String?
+  profilePhotoKey            String?               @unique
+  profilePhotoType           String?
+  contractedDaysPerWeek      Decimal               @default(5) @db.Decimal(4, 2)
+  annualLeaveEntitlementDays Decimal               @default(28) @db.Decimal(6, 2)
+  annualLeaveCarryOverDays   Decimal               @default(0) @db.Decimal(6, 2)
+  leaveYearStartMonth        Int                   @default(1)
+  leaveYearStartDay          Int                   @default(1)
+  notes                      String?
+  archivedAt                 DateTime?
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
 
-  organisation Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  location     ServiceLocation?        @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  records      StaffComplianceRecord[]
+  organisation         Organisation               @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location             ServiceLocation?           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  records              StaffComplianceRecord[]
   trainingRequirements StaffTrainingRequirement[]
-  leaveRequests StaffLeaveRequest[]
-  registerEntries RegisterEntry[]
+  leaveRequests        StaffLeaveRequest[]
+  registerEntries      RegisterEntry[]
+  actionOccurrences    ActionOccurrence[]
+  actions              Action[]
 
   @@unique([organisationId, employeeReference])
   @@unique([organisationId, staffNumber])
@@ -1347,43 +1464,45 @@ model StaffMember {
 }
 
 model Client {
-  id                    String       @id @default(uuid()) @db.Uuid
-  organisationId        String       @db.Uuid
-  locationId            String?      @db.Uuid
-  clientReference       String
-  clientNumber          Int
-  firstName             String
-  lastName              String
-  preferredName         String?
-  dateOfBirth           DateTime?
-  pronouns              String?
-  phone                 String?
-  email                 String?
-  addressLine           String?
-  town                  String?
-  postcode              String?
-  commissionerReference String?
-  serviceStartDate      DateTime?
-  serviceEndDate        DateTime?
-  status                ClientStatus @default(ACTIVE)
-  communicationSummary  String?
-  emergencyContact      String?
-  nextOfKinName         String?
-  nextOfKinRelationship String?
-  nextOfKinPhone        String?
-  nextOfKinEmail        String?
-  nextOfKinAddress      String?
-  nextOfKinContactAllowed Boolean @default(false)
-  nextOfKinHasAuthority Boolean    @default(false)
+  id                        String       @id @default(uuid()) @db.Uuid
+  organisationId            String       @db.Uuid
+  locationId                String?      @db.Uuid
+  clientReference           String
+  clientNumber              Int
+  firstName                 String
+  lastName                  String
+  preferredName             String?
+  dateOfBirth               DateTime?
+  pronouns                  String?
+  phone                     String?
+  email                     String?
+  addressLine               String?
+  town                      String?
+  postcode                  String?
+  commissionerReference     String?
+  serviceStartDate          DateTime?
+  serviceEndDate            DateTime?
+  status                    ClientStatus @default(ACTIVE)
+  communicationSummary      String?
+  emergencyContact          String?
+  nextOfKinName             String?
+  nextOfKinRelationship     String?
+  nextOfKinPhone            String?
+  nextOfKinEmail            String?
+  nextOfKinAddress          String?
+  nextOfKinContactAllowed   Boolean      @default(false)
+  nextOfKinHasAuthority     Boolean      @default(false)
   nextOfKinAuthorityDetails String?
-  notes                 String?
-  archivedAt            DateTime?
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  notes                     String?
+  archivedAt                DateTime?
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
 
-  organisation    Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  location        ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  registerEntries RegisterEntry[]
+  organisation      Organisation       @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location          ServiceLocation?   @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  registerEntries   RegisterEntry[]
+  actionOccurrences ActionOccurrence[]
+  actions           Action[]
 
   @@unique([organisationId, clientReference])
   @@unique([organisationId, clientNumber])
@@ -1393,11 +1512,11 @@ model Client {
 }
 
 model ReferenceCounter {
-  id             String       @id @default(uuid()) @db.Uuid
-  organisationId String       @db.Uuid
+  id             String   @id @default(uuid()) @db.Uuid
+  organisationId String   @db.Uuid
   key            String
-  currentValue   Int          @default(0)
-  updatedAt      DateTime     @updatedAt
+  currentValue   Int      @default(0)
+  updatedAt      DateTime @updatedAt
 
   organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
 
@@ -1406,28 +1525,28 @@ model ReferenceCounter {
 }
 
 model StaffComplianceRecord {
-  id             String                 @id @default(uuid()) @db.Uuid
-  organisationId String                 @db.Uuid
-  staffMemberId  String                 @db.Uuid
-  type           StaffComplianceType
-  title          String
-  reference      String?
-  completedDate  DateTime?
-  expiryDate     DateTime?
-  nextDueDate    DateTime?
-  outcome        StaffComplianceOutcome @default(PENDING)
-  assessor       String?
-  verifiedById   String?                @db.Uuid
-  verifiedAt     DateTime?
-  notes          String?
+  id               String                 @id @default(uuid()) @db.Uuid
+  organisationId   String                 @db.Uuid
+  staffMemberId    String                 @db.Uuid
+  type             StaffComplianceType
+  title            String
+  reference        String?
+  completedDate    DateTime?
+  expiryDate       DateTime?
+  nextDueDate      DateTime?
+  outcome          StaffComplianceOutcome @default(PENDING)
+  assessor         String?
+  verifiedById     String?                @db.Uuid
+  verifiedAt       DateTime?
+  notes            String?
   trainingCourseId String?                @db.Uuid
-  evidenceId     String?                  @db.Uuid
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
+  evidenceId       String?                @db.Uuid
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
-  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  staffMember  StaffMember  @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
-  verifiedBy   User?        @relation("StaffComplianceVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  organisation   Organisation    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  staffMember    StaffMember     @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  verifiedBy     User?           @relation("StaffComplianceVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
   trainingCourse TrainingCourse? @relation(fields: [trainingCourseId], references: [id], onDelete: SetNull)
   evidence       Evidence?       @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
 
@@ -1439,24 +1558,24 @@ model StaffComplianceRecord {
 }
 
 model TrainingCourse {
-  id                    String   @id @default(uuid()) @db.Uuid
-  organisationId        String?  @db.Uuid
-  key                   String
-  title                 String
-  category              String
-  description           String
-  sourceName            String
-  sourceUrl             String
+  id                     String    @id @default(uuid()) @db.Uuid
+  organisationId         String?   @db.Uuid
+  key                    String
+  title                  String
+  category               String
+  description            String
+  sourceName             String
+  sourceUrl              String
   suggestedRenewalMonths Int?
-  serviceSpecific       Boolean  @default(false)
-  tags                   String[] @default([])
+  serviceSpecific        Boolean   @default(false)
+  tags                   String[]  @default([])
   archivedAt             DateTime?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
-  organisation Organisation? @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisation Organisation?              @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   requirements StaffTrainingRequirement[]
-  records StaffComplianceRecord[]
+  records      StaffComplianceRecord[]
 
   @@unique([organisationId, key])
   @@index([organisationId, category])
@@ -1464,20 +1583,20 @@ model TrainingCourse {
 }
 
 model StaffTrainingRequirement {
-  id             String   @id @default(uuid()) @db.Uuid
-  organisationId String   @db.Uuid
-  staffMemberId  String   @db.Uuid
-  trainingCourseId String @db.Uuid
-  requiredBy     DateTime?
-  exempt         Boolean  @default(false)
-  exemptionReason String?
-  assignedAt     DateTime @default(now())
-  archivedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String    @id @default(uuid()) @db.Uuid
+  organisationId   String    @db.Uuid
+  staffMemberId    String    @db.Uuid
+  trainingCourseId String    @db.Uuid
+  requiredBy       DateTime?
+  exempt           Boolean   @default(false)
+  exemptionReason  String?
+  assignedAt       DateTime  @default(now())
+  archivedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  staffMember StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  organisation   Organisation   @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  staffMember    StaffMember    @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
   trainingCourse TrainingCourse @relation(fields: [trainingCourseId], references: [id], onDelete: Restrict)
 
   @@unique([staffMemberId, trainingCourseId])
@@ -1486,29 +1605,29 @@ model StaffTrainingRequirement {
 }
 
 model StaffLeaveRequest {
-  id             String           @id @default(uuid()) @db.Uuid
-  organisationId String           @db.Uuid
-  staffMemberId  String           @db.Uuid
-  type           StaffLeaveType
-  status         StaffLeaveStatus @default(PENDING)
-  startDate      DateTime
-  endDate        DateTime
-  requestedDays  Decimal          @db.Decimal(6, 2)
-  reason         String?
-  managerNote    String?
-  fitNoteReceived Boolean         @default(false)
-  returnToWorkCompleted Boolean   @default(false)
-  requestedById  String           @db.Uuid
-  decidedById    String?          @db.Uuid
-  decidedAt      DateTime?
-  archivedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                    String           @id @default(uuid()) @db.Uuid
+  organisationId        String           @db.Uuid
+  staffMemberId         String           @db.Uuid
+  type                  StaffLeaveType
+  status                StaffLeaveStatus @default(PENDING)
+  startDate             DateTime
+  endDate               DateTime
+  requestedDays         Decimal          @db.Decimal(6, 2)
+  reason                String?
+  managerNote           String?
+  fitNoteReceived       Boolean          @default(false)
+  returnToWorkCompleted Boolean          @default(false)
+  requestedById         String           @db.Uuid
+  decidedById           String?          @db.Uuid
+  decidedAt             DateTime?
+  archivedAt            DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  staffMember StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
-  requestedBy User @relation("StaffLeaveRequester", fields: [requestedById], references: [id], onDelete: Restrict)
-  decidedBy User? @relation("StaffLeaveDecision", fields: [decidedById], references: [id], onDelete: SetNull)
+  staffMember  StaffMember  @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  requestedBy  User         @relation("StaffLeaveRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  decidedBy    User?        @relation("StaffLeaveDecision", fields: [decidedById], references: [id], onDelete: SetNull)
 
   @@index([organisationId, status, startDate])
   @@index([staffMemberId, startDate])

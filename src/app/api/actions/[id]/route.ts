@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
 import { resolveActionSource } from "@/lib/action-sources";
 import { syncActionEvidence } from "@/lib/action-evidence";
-import { ACTION_CATEGORIES, ACTION_PRIORITIES, ACTION_SOURCE_TYPES, ACTION_STATUSES, actionScopeWhere, validateActionClosure } from "@/lib/actions";
+import { ACTION_CATEGORIES, ACTION_PRIORITIES, ACTION_SOURCE_TYPES, ACTION_STATUSES, actionScopeWhere } from "@/lib/actions";
+import { lifecycleForAction, MEDICATION_ISSUE_TYPES, normaliseIssueKey, validateVerifiedClosure } from "@/lib/closure-loop";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -45,15 +46,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const evidenceCount = evidenceIds.length ? await db.evidence.count({ where: { id: { in: evidenceIds }, ...evidenceScopeWhere(context) } }) : 0;
     if (evidenceCount !== evidenceIds.length) throw new Error("One or more linked evidence records could not be found.");
     const verifiedById = text(form, "verifiedById") || null, verificationDate = parseOptionalDate(form.get("verificationDate"));
-    const closureNote = text(form, "closureNote") || null, evidenceWaiverExplanation = text(form, "evidenceWaiverExplanation") || null;
+    const closureNote = text(form, "closureNote") || null;
+    const managementResponse = text(form, "managementResponse") || null, completedActionSummary = text(form, "completedActionSummary") || null;
+    const evidenceReviewedSummary = text(form, "evidenceReviewedSummary") || null, verificationRationale = text(form, "verificationRationale") || null;
+    const checks = closureChecks(form), monitoringUntil = parseOptionalDate(form.get("monitoringUntil")), nextRecurrenceReviewDate = parseOptionalDate(form.get("nextRecurrenceReviewDate"));
+    const medicationIssueType = text(form, "medicationIssueType") || null;
+    if (medicationIssueType && !MEDICATION_ISSUE_TYPES.includes(medicationIssueType as never)) throw new Error("Choose a valid medication issue type.");
+    const issueKey = text(form, "issueKey") || normaliseIssueKey(`${category} ${title}`) || null;
     const escalationRequired = form.get("escalationRequired") === "true", escalationReason = text(form, "escalationReason") || null;
     if (escalationRequired && !escalationReason) throw new Error("Explain why this action needs escalation.");
-    validateActionClosure({ status, evidenceCount, waiver: evidenceWaiverExplanation ?? undefined, closureNote: closureNote ?? undefined, verifiedById: verifiedById ?? undefined, verificationDate });
+    validateVerifiedClosure({ status, evidenceCount, managementResponse, completedActionSummary, evidenceReviewedSummary, ...checks, verificationRationale, closureNote, verifiedById, ownerId, priority, verificationDate });
+    const lifecycleStatus = lifecycleForAction({ actionStatus: status, managementResponse, evidenceCount, verified: Boolean(verifiedById && verificationDate), monitoringUntil });
     await db.$transaction(async (tx) => {
-      await tx.action.update({ where: { id }, data: { locationId, title, description, category, rootCause: text(form, "rootCause") || null, expectedOutcome, successMeasure, sourceType: sourceType as never, sourceRecordId: rawId || null, sourceReference: source.reference, sourceUrl: source.url, ownerId, priority: priority as never, dueDate, reviewDate, status: status as never, progressPercent, progressNote: text(form, "progressNote") || null, escalationRequired, escalationReason, evidenceRequired: form.get("evidenceRequired") !== "false", evidenceWaiverExplanation, completionDate: parseOptionalDate(form.get("completionDate")), verifiedById, verificationDate, closureNote, evidenceLinks: { deleteMany: {}, create: evidenceIds.map((evidenceId) => ({ evidenceId })) } } });
+      await tx.action.update({ where: { id }, data: { locationId, clientId: source.clientId, staffMemberId: source.staffMemberId, title, description, category, rootCause: text(form, "rootCause") || null, expectedOutcome, successMeasure, sourceType: sourceType as never, sourceRecordId: rawId || null, sourceReference: source.reference, sourceUrl: source.url, lifecycleStatus: lifecycleStatus as never, issueKey, medicationIssueType: medicationIssueType as never, monitoringUntil, managementResponse, managementResponseById: managementResponse ? context.user.id : null, managementResponseAt: managementResponse ? new Date() : null, ownerId, priority: priority as never, dueDate, reviewDate, status: status as never, progressPercent, progressNote: text(form, "progressNote") || null, escalationRequired, escalationReason, evidenceRequired: true, evidenceWaiverExplanation: null, completionDate: parseOptionalDate(form.get("completionDate")), verifiedById, verificationDate, closureNote, completedActionSummary, evidenceReviewedSummary, ...checks, verificationRationale, nextRecurrenceReviewDate, evidenceLinks: { deleteMany: {}, create: evidenceIds.map((evidenceId) => ({ evidenceId })) } } });
       if (status !== action.status || progressPercent !== action.progressPercent) await tx.actionUpdate.create({ data: { actionId: id, userId: context.user.id, note: `Action updated: ${action.status} to ${status}; progress ${progressPercent}%.`, status: status as never, progressPercent } });
       await syncActionEvidence(tx, { actionId: id, organisationId: action.organisationId, locationId, reference: action.reference, title, description, category, sourceType, sourceReference: source.reference, ownerId, actorId: context.user.id, dueDate, reviewDate, status, priority, progressPercent, expectedOutcome, successMeasure, archived: false });
-      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "Action", recordId: id, summary: `Updated action: ${action.reference}`, beforeValue: { status: action.status, ownerId: action.ownerId, progressPercent: action.progressPercent }, afterValue: { status, ownerId, priority, dueDate, progressPercent } } });
+      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "Action", recordId: id, summary: `Updated action: ${action.reference}`, beforeValue: { status: action.status, lifecycleStatus: action.lifecycleStatus, ownerId: action.ownerId, progressPercent: action.progressPercent }, afterValue: { status, lifecycleStatus, ownerId, priority, dueDate, progressPercent, verifiedById, verificationDate } } });
     });
     return NextResponse.json({ ok: true });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not update action." }, { status: 400 }); }
@@ -61,3 +69,5 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 function text(form: FormData, key: string) { return String(form.get(key) ?? "").trim(); }
+function closureChecks(form: FormData) { return { immediateRiskControlled: optionalBoolean(form, "immediateRiskControlled"), underlyingRecordCorrected: optionalBoolean(form, "underlyingRecordCorrected"), staffSupportCompleted: optionalBoolean(form, "staffSupportCompleted"), widerRecordsChecked: optionalBoolean(form, "widerRecordsChecked"), recurrenceChecked: optionalBoolean(form, "recurrenceChecked") }; }
+function optionalBoolean(form: FormData, key: string) { const value = form.get(key); return value === "true" ? true : value === "false" ? false : null; }
