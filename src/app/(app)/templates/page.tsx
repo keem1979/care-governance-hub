@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAnyPermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { ensurePremiumTemplates } from "@/lib/premium-templates";
 import {
   TEMPLATE_CATEGORIES,
   TEMPLATE_STATUSES,
@@ -28,6 +29,7 @@ export default async function TemplatesPage({
   const db = createDb();
 
   try {
+    await ensurePremiumTemplates(db);
     const templates = await db.template.findMany({
       where: {
         AND: [
@@ -69,8 +71,8 @@ export default async function TemplatesPage({
             </p>
             <h1 className="text-3xl font-bold">Template Library</h1>
             <p className="mt-1 text-slate-600">
-              Preview, download and copy controlled templates into your evidence
-              workspace.
+              Premium registered-manager documents with automatic organisation
+              branding, evidence prompts, accountable actions and sign-off.
             </p>
           </div>
           {canEdit ? (
@@ -84,8 +86,9 @@ export default async function TemplatesPage({
           ) : null}
         </header>
 
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Stat label="Available templates" value={templates.length} />
+          <Stat label="RM-grade templates" value={templates.filter((item) => item.tags.includes("rm-grade")).length} />
           <Stat
             label="Starter templates"
             value={templates.filter((item) => !item.organisationId).length}
@@ -179,6 +182,7 @@ export default async function TemplatesPage({
                       : "Starter template"}
                   </span>
                 </div>
+                {item.tags.includes("rm-grade") ? <p className="mt-3 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-900">Premium RM grade</p> : null}
               </Link>
             ))}
           </section>
