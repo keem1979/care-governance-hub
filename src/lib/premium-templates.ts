@@ -49,7 +49,7 @@ function template(title: string, category: string, description: string, purpose:
   return { title, category, description, tags: ["premium", "rm-grade", "controlled-document", ...tags], body: document(title, purpose, sections) };
 }
 
-export const PREMIUM_TEMPLATES: Definition[] = [
+const NEW_PREMIUM_TEMPLATES: Definition[] = [
   template("Registered Manager annual audit programme", "Audit forms", "Risk-based annual audit schedule with ownership, frequency, standards and governance oversight.", "Plan a proportionate audit programme covering regulatory, clinical, operational and workforce assurance.", [["Programme scope", ["Year:", "Regulated activities and locations in scope:", "Regulatory and contractual priorities:", "Known risks, incidents and previous weak assurance:"]], ["Audit schedule", ["Audit area / standard:", "Frequency and rationale:", "Lead auditor and reviewer:", "Planned sample and evidence sources:", "Reporting forum and due date:"]], ["Programme review", ["Audits completed / overdue:", "Themes and repeat findings:", "Changes required to the programme:"]], action], ["audit", "programme"]),
   template("Audit evidence and sampling record", "Audit forms", "Defensible sampling and evidence trail for any internal audit.", "Show how the audit sample was chosen, what was tested and the limitations of the assurance conclusion.", [["Audit definition", ["Audit title and objective:", "Standard, policy or regulation tested:", "Population and reporting period:", "Sampling method: random / targeted / stratified / full population:", "Sample size and reason:"]], ["Evidence schedule", ["Evidence reference:", "Record date and owner:", "Test performed:", "Result: compliant / partial / non-compliant / not applicable:", "Auditor note:"]], ["Limitations", ["Unavailable records or exclusions:", "Potential bias or uncertainty:", "Effect on assurance conclusion:"]], control, action], ["audit", "sampling", "evidence"]),
   template("Audit finding, action and effectiveness review", "Audit forms", "End-to-end record from finding through verified sustainable closure.", "Ensure audit findings are risk-rated, corrected, independently verified and closed only when impact is demonstrated.", [["Finding", ["Audit and finding reference:", "Requirement not met:", "Objective evidence:", "Actual or potential impact on people:", "Severity and immediate containment:"]], ["Cause and improvement", ["Root and contributory causes:", "Corrective action:", "Preventive or system action:", "Owner and deadline:"]], ["Verification", ["Evidence submitted:", "Verifier and date:", "Repeat sample or measure:", "Effectiveness result:", "Closure / reopen decision:"]], action], ["audit", "finding", "effectiveness"]),
@@ -82,6 +82,36 @@ export const PREMIUM_TEMPLATES: Definition[] = [
   template("Policy implementation and staff assurance record", "Policies", "Evidence that an approved policy is communicated, understood and operating in practice.", "Move beyond policy publication to tested implementation and sustained compliance.", [["Policy control", ["Policy title, reference and version:", "Owner and approval date:", "Affected roles and locations:", "Material change from previous version:"]], ["Implementation", ["Communication method and date:", "Training or briefing required:", "Acknowledgement completion:", "Systems, forms or workflows changed:", "Accessible versions or adjustments:"]], ["Assurance", ["Practice sample or observation:", "Staff knowledge check:", "Exceptions and incidents:", "Implementation judgement:"]], action], ["policy", "implementation"]),
   template("Document control and approval record", "Checklists", "Version, approval, distribution, review and withdrawal control for governance documents.", "Keep only current, authorised documents in use and retain a traceable history.", [["Document", ["Title, owner and category:", "Reference and version:", "Author and reviewers:", "Changes and reason:", "Legal, regulatory or evidence sources checked:"]], ["Approval and issue", ["Approver and approval date:", "Effective and review dates:", "Locations and roles affected:", "Communication and training:", "Published locations:"]], ["Withdrawal", ["Superseded version removed:", "Archived copy retained:", "Printed or local copies controlled:", "Early-review triggers:"]], action], ["document-control", "approval"]),
 ];
+
+function legacy(title: string, category: string, description: string): Definition {
+  return template(title, category, description, `Provide a complete, controlled and evidence-led ${title.toLowerCase()} suitable for registered-manager review.`, [
+    ["Scope and accountability", ["Purpose and scope:", "Service, location or people covered:", "Responsible owner:", "Relevant regulation, policy or standard:", "Review period and completion deadline:"]],
+    ["Assessment and evidence", ["Current position:", "Evidence reviewed:", "People's experience or outcome evidence:", "Strengths and good practice:", "Gaps, risks or required escalation:"]],
+    action,
+  ], ["legacy-upgraded"]);
+}
+
+const LEGACY_PREMIUM_TEMPLATES: Definition[] = [
+  legacy("Safeguarding Policy Template", "Policies", "Controlled safeguarding policy implementation and assurance record."),
+  legacy("Quality Audit Form", "Audit forms", "Comprehensive quality audit with sample, evidence, findings and RM sign-off."),
+  legacy("Operational Risk Assessment", "Risk assessments", "Five-by-five operational risk assessment with control effectiveness review."),
+  legacy("Governance Meeting Agenda", "Governance meetings", "Structured governance agenda with challenge, decisions and accountable actions."),
+  legacy("Quality Improvement Action Plan", "Action plans", "Outcome-led improvement plan with ownership and effectiveness verification."),
+  legacy("Incident Investigation Form", "Investigation forms", "Proportionate incident investigation, causation, learning and follow-up."),
+  legacy("Complaint Acknowledgement and Investigation", "Complaints", "Complete complaint acknowledgement, investigation, remedy and learning record."),
+  legacy("Incident Management Checklist", "Incident management", "Immediate safety, escalation, notification and learning checklist."),
+  legacy("Safeguarding Referral Checklist", "Safeguarding", "Immediate protection, referral, notification and outcome checklist."),
+  legacy("Safer Recruitment Checklist", "Recruitment", "Schedule 3 safer-recruitment control and deployment authorisation checklist."),
+  legacy("Supervision Record", "Supervision", "Reflective supervision, wellbeing, performance and development record."),
+  legacy("Competency Assessment", "Competency assessments", "Knowledge, direct observation, authorisation and reassessment record."),
+  legacy("Quality Improvement Plan", "Quality improvement", "Plan-do-study-act improvement record with measurable outcomes."),
+  legacy("Business Continuity Test Record", "Business continuity", "Scenario exercise, critical-service assurance and learning record."),
+  legacy("Monthly Governance Report", "Reports", "Registered-manager monthly assurance, performance and improvement report."),
+  legacy("Duty of Candour Letter", "Letters", "Controlled duty-of-candour communication with factual explanation, apology and follow-up."),
+  legacy("Inspection Readiness Checklist", "Checklists", "Evidence-led registered-manager inspection readiness and gap review."),
+];
+
+export const PREMIUM_TEMPLATES: Definition[] = [...NEW_PREMIUM_TEMPLATES, ...LEGACY_PREMIUM_TEMPLATES];
 
 function uuidFor(title: string): string {
   const hex = createHash("md5").update(`qcgms-premium-template-v2:${title}`).digest("hex");

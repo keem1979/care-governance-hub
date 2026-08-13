@@ -20,7 +20,8 @@ function escape(value: string): string {
 }
 
 function bodyMarkup(body: string): string {
-  return body.split(/\r?\n/).map((raw) => {
+  const normalised = body.replaceAll("\\r\\n", "\n").replaceAll("\\n", "\n");
+  return normalised.split(/\r?\n/).map((raw) => {
     const line = raw.trim();
     if (!line) return '<div class="space"></div>';
     if (/^[A-Z0-9 /&(),'-]{4,}$/.test(line)) return `<h2>${escape(line)}</h2>`;
