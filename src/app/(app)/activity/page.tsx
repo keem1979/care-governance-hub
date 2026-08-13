@@ -1,120 +1,68 @@
+import { Fragment } from "react";
 import Link from "next/link";
-import {
-  ACTIVITY_ACTIONS,
-  ACTIVITY_PAGE_SIZE,
-  activityLabel,
-  activityRecordHref,
-  parseActivityFilters,
-  safeActivityValue,
-} from "@/lib/activity";
+import { OrganisationDocumentBrand } from "@/components/organisation-document-brand";
+import { ACTIVITY_ACTIONS, ACTIVITY_FOCUS, ACTIVITY_PAGE_SIZE, activityChanges, activityFocusActions, activityLabel, activityRecordHref, parseActivityFilters } from "@/lib/activity";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
-export default async function ActivityPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function ActivityPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_VIEW);
   const filters = parseActivityFilters(await searchParams, context.locations.map((item) => item.id));
   const db = createDb();
-  const locationScope = filters.locationId
-    ? { locationId: filters.locationId }
-    : context.allLocations
-      ? {}
-      : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item) => item.id) } }] };
+  const locationScope = filters.locationId ? { locationId: filters.locationId } : context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item) => item.id) } }] };
+  const focusActions = activityFocusActions(filters.focus);
   const where = {
     organisationId: context.organisation.id,
-    ...locationScope,
-    ...(filters.action ? { action: filters.action as never } : {}),
+    AND: [locationScope, ...(filters.q ? [{ OR: [{ summary: { contains: filters.q, mode: "insensitive" as const } }, { recordType: { contains: filters.q, mode: "insensitive" as const } }, { recordId: { contains: filters.q, mode: "insensitive" as const } }, { user: { name: { contains: filters.q, mode: "insensitive" as const } } }] }] : [])],
+    ...(filters.action ? { action: filters.action as never } : focusActions ? { action: { in: [...focusActions] as never[] } } : {}),
     ...(filters.recordType ? { recordType: filters.recordType } : {}),
     ...(filters.userId ? { userId: filters.userId } : {}),
     ...(filters.from || filters.to ? { createdAt: { ...(filters.from ? { gte: filters.from } : {}), ...(filters.to ? { lte: filters.to } : {}) } } : {}),
-    ...(filters.q ? { OR: [
-      { summary: { contains: filters.q, mode: "insensitive" as const } },
-      { recordType: { contains: filters.q, mode: "insensitive" as const } },
-      { recordId: { contains: filters.q, mode: "insensitive" as const } },
-      { user: { name: { contains: filters.q, mode: "insensitive" as const } } },
-    ] } : {}),
   };
 
   try {
-    const [entries, total, users, types] = await Promise.all([
-      db.activityLog.findMany({
-        where,
-        include: { user: { select: { name: true, email: true } }, location: { select: { name: true } } },
-        orderBy: { createdAt: "desc" },
-        skip: (filters.page - 1) * ACTIVITY_PAGE_SIZE,
-        take: ACTIVITY_PAGE_SIZE,
-      }),
-      db.activityLog.count({ where }),
-      db.activityLog.findMany({
-        where: { organisationId: context.organisation.id, userId: { not: null } },
-        distinct: ["userId"],
-        select: { userId: true, user: { select: { name: true } } },
-        orderBy: { userId: "asc" },
-      }),
-      db.activityLog.findMany({
-        where: { organisationId: context.organisation.id },
-        distinct: ["recordType"],
-        select: { recordType: true },
-        orderBy: { recordType: "asc" },
-      }),
-    ]);
+    const total = await db.activityLog.count({ where });
     const pages = Math.max(1, Math.ceil(total / ACTIVITY_PAGE_SIZE));
+    const currentPage = Math.min(filters.page, pages);
+    const [entries, users, types, groupedActions, actors] = await Promise.all([
+      db.activityLog.findMany({ where, include: { user: { select: { name: true, email: true } }, location: { select: { name: true } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: (currentPage - 1) * ACTIVITY_PAGE_SIZE, take: ACTIVITY_PAGE_SIZE }),
+      db.activityLog.findMany({ where: { organisationId: context.organisation.id, userId: { not: null } }, distinct: ["userId"], select: { userId: true, user: { select: { name: true } } }, orderBy: { userId: "asc" } }),
+      db.activityLog.findMany({ where: { organisationId: context.organisation.id }, distinct: ["recordType"], select: { recordType: true }, orderBy: { recordType: "asc" } }),
+      db.activityLog.groupBy({ by: ["action"], where, _count: { _all: true } }),
+      db.activityLog.findMany({ where: { ...where, userId: { not: null } }, distinct: ["userId"], select: { userId: true } }),
+    ]);
+    const actionCount = (actions: readonly string[]) => groupedActions.filter((item) => actions.includes(item.action)).reduce((sum, item) => sum + item._count._all, 0);
+    const securityEvents = actionCount(ACTIVITY_FOCUS.security);
+    const recordChanges = actionCount(ACTIVITY_FOCUS.changes);
+    const downloads = actionCount(ACTIVITY_FOCUS.exports);
     const canExport = hasPermission(context.permissions, PERMISSIONS.REPORTS_EXPORT);
-    const query = makeQuery(filters);
+    const query = makeQuery({ ...filters, page: currentPage });
+
     return <main className="space-y-7">
-      <header>
-        <h1 className="text-3xl font-bold">Activity Log</h1>
-        <p className="mt-1 text-slate-600">See who changed a record, what changed and when. Entries on this page cannot be edited.</p>
-      </header>
-      <section className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Matching events" value={total}/>
-        <Stat label="Page" value={`${filters.page} of ${pages}`}/>
-        <Stat label="Retention" value="Full history"/>
-      </section>
-      <form className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-2 xl:grid-cols-4">
-        <input name="q" defaultValue={filters.q} placeholder="Search activity or record ID" className={field}/>
-        <select name="action" defaultValue={filters.action ?? ""} className={field}><option value="">All actions</option>{ACTIVITY_ACTIONS.map((item) => <option key={item} value={item}>{activityLabel(item)}</option>)}</select>
-        <select name="recordType" defaultValue={filters.recordType ?? ""} className={field}><option value="">All record types</option>{types.map(({ recordType }) => <option key={recordType}>{recordType}</option>)}</select>
-        <select name="user" defaultValue={filters.userId ?? ""} className={field}><option value="">All users</option>{users.filter((item) => item.user).map((item) => <option key={item.userId!} value={item.userId!}>{item.user!.name}</option>)}</select>
-        <select name="location" defaultValue={filters.locationId ?? ""} className={field}><option value="">All authorised locations</option>{context.locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-        <input name="from" type="date" defaultValue={filters.from?.toISOString().slice(0, 10)} aria-label="From date" className={field}/>
-        <input name="to" type="date" defaultValue={filters.to?.toISOString().slice(0, 10)} aria-label="To date" className={field}/>
-        <button className="rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white">Apply filters</button>
-      </form>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-600">Newest activity first</p>
-        {canExport ? <a href={`/api/activity/export${query ? `?${query}` : ""}`} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Export CSV</a> : null}
-      </div>
-      {entries.length ? <section className="space-y-3">{entries.map((entry) => {
-        const sourceHref = activityRecordHref(entry.recordType, entry.recordId);
-        return <article key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><div className="flex flex-wrap items-center gap-2"><span className={badge(entry.action)}>{activityLabel(entry.action)}</span><span className="text-xs font-semibold text-slate-500">{entry.recordType}{entry.recordId ? ` · ${entry.recordId}` : ""}</span></div><h2 className="mt-2 font-bold">{entry.summary}</h2></div>
-          <time className="text-xs text-slate-500" dateTime={entry.createdAt.toISOString()}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(entry.createdAt)}</time>
-        </div>
-        <p className="mt-3 text-sm text-slate-600">{entry.user?.name ?? "System"} · {entry.location?.name ?? "Organisation-wide"}{entry.sessionInfo ? " · Session information recorded" : ""}</p>
-        {sourceHref ? <Link href={sourceHref} className="mt-3 inline-flex text-sm font-bold text-emerald-800 underline decoration-emerald-300 underline-offset-2">Open source record</Link> : null}
-        {entry.beforeValue || entry.afterValue ? <details className="mt-4 rounded-xl bg-slate-50 p-3 text-sm"><summary className="cursor-pointer font-semibold">Inspect recorded changes</summary><div className="mt-3 grid gap-3 lg:grid-cols-2">{entry.beforeValue ? <Value title="Before" value={entry.beforeValue}/> : null}{entry.afterValue ? <Value title="After" value={entry.afterValue}/> : null}</div></details> : null}
-      </article>;
-      })}</section> : <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="font-bold">No activity found</h2><p className="mt-1 text-sm text-slate-600">Adjust the filters to view other recorded events.</p></section>}
-      <nav className="flex items-center justify-between" aria-label="Activity pages">
-        {filters.page > 1 ? <Link href={`?${makeQuery({ ...filters, page: filters.page - 1 })}`} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold">Previous</Link> : <span/>}
-        {filters.page < pages ? <Link href={`?${makeQuery({ ...filters, page: filters.page + 1 })}`} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold">Next</Link> : <span/>}
-      </nav>
+      <header className="rounded-3xl bg-slate-900 p-7 text-white shadow-sm"><OrganisationDocumentBrand name={context.organisation.name} hasLogo={Boolean(context.organisation.policyLogoStorageKey)}/><p className="mt-6 text-xs font-bold uppercase tracking-[.2em] text-emerald-300">Compliance monitoring</p><h1 className="mt-2 text-3xl font-bold">Audit trail</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Investigate who did what, when and where. Events are read-only in the application, sensitive values are redacted, and recorded changes can be traced back to source records.</p></header>
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Stat label="Matching events" value={total}/><Stat label="Record changes" value={recordChanges}/><Stat label="Security and access" value={securityEvents} alert={securityEvents > 0}/><Stat label="Downloads and reports" value={downloads}/><Stat label="Actors" value={actors.length}/></section>
+
+      <nav className="flex flex-wrap gap-2" aria-label="Investigation views"><Focus href="/activity" active={!filters.focus} label="All activity"/><Focus href="/activity?focus=security" active={filters.focus === "security"} label="Security and access"/><Focus href="/activity?focus=changes" active={filters.focus === "changes"} label="Record changes"/><Focus href="/activity?focus=exports" active={filters.focus === "exports"} label="Downloads and reports"/></nav>
+
+      <form className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><input type="hidden" name="focus" value={filters.focus ?? ""}/><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"><label className={labelClass}>Search<input name="q" defaultValue={filters.q} placeholder="Summary, person or record ID" className={field}/></label><label className={labelClass}>Action<select name="action" defaultValue={filters.action ?? ""} className={field}><option value="">All actions</option>{ACTIVITY_ACTIONS.map((item) => <option key={item} value={item}>{activityLabel(item)}</option>)}</select></label><label className={labelClass}>Record type<select name="recordType" defaultValue={filters.recordType ?? ""} className={field}><option value="">All record types</option>{types.map(({ recordType }) => <option key={recordType}>{recordType}</option>)}</select></label><label className={labelClass}>User<select name="user" defaultValue={filters.userId ?? ""} className={field}><option value="">All users</option>{users.filter((item) => item.user).map((item) => <option key={item.userId!} value={item.userId!}>{item.user!.name}</option>)}</select></label><label className={labelClass}>Location<select name="location" defaultValue={filters.locationId ?? ""} className={field}><option value="">All authorised locations</option>{context.locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className={labelClass}>From<input name="from" type="date" defaultValue={filters.from?.toISOString().slice(0, 10)} className={field}/></label><label className={labelClass}>To<input name="to" type="date" defaultValue={filters.to?.toISOString().slice(0, 10)} className={field}/></label><div className="flex items-end gap-2"><Link href="/activity" className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold">Clear</Link><button className="flex-1 rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white">Apply filters</button></div></div></form>
+
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold">Showing {entries.length ? (currentPage - 1) * ACTIVITY_PAGE_SIZE + 1 : 0}–{Math.min(currentPage * ACTIVITY_PAGE_SIZE, total)} of {total}</p><p className="text-xs text-slate-500">Newest event first · Page {currentPage} of {pages}</p></div>{canExport ? <a href={`/api/activity/export${query ? `?${query}` : ""}`} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Export investigation CSV</a> : null}</div>
+
+      {entries.length ? <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead className="bg-slate-100 uppercase tracking-wide text-slate-600"><tr><th className={cell}>Date and time</th><th className={cell}>Event</th><th className={cell}>Actor and scope</th><th className={cell}>Source record</th><th className={cell}>Recorded activity</th><th className={cell}>Evidence</th></tr></thead><tbody>{entries.map((entry) => { const sourceHref = activityRecordHref(entry.recordType, entry.recordId); const changes = activityChanges(entry.beforeValue, entry.afterValue); return <Fragment key={entry.id}><tr className={`border-t border-slate-200 align-top ${reviewEvent(entry.action) ? "bg-amber-50/50" : ""}`}><td className={`${cell} whitespace-nowrap`}><time dateTime={entry.createdAt.toISOString()} className="font-semibold">{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(entry.createdAt)}</time><br/><span className="text-slate-500">{new Intl.DateTimeFormat("en-GB", { timeStyle: "medium", hour12: false }).format(entry.createdAt)}</span></td><td className={cell}><span className={badge(entry.action)}>{activityLabel(entry.action)}</span><p className="mt-2 font-mono text-[10px] text-slate-500">{entry.id}</p></td><td className={cell}><strong>{entry.user?.name ?? "System"}</strong><p className="mt-1 text-slate-500">{entry.location?.name ?? "Organisation-wide"}</p></td><td className={cell}><p className="font-semibold">{entry.recordType}</p>{entry.recordId ? <p className="mt-1 break-all font-mono text-[10px] text-slate-500">{entry.recordId}</p> : null}{sourceHref ? <Link href={sourceHref} className="mt-2 inline-flex font-bold text-emerald-800 underline">Open record</Link> : null}</td><td className={`${cell} min-w-64`}><p className="font-semibold leading-5">{entry.summary}</p></td><td className={cell}>{changes.length ? <span className="font-bold text-emerald-800">{changes.length} field{changes.length === 1 ? "" : "s"}</span> : <span className="text-slate-500">Event record</span>}{entry.sessionInfo ? <p className="mt-1 text-slate-500">Session context held</p> : null}</td></tr>{changes.length ? <tr className="border-t border-slate-100 bg-slate-50/70"><td colSpan={6} className="p-3"><details><summary className="cursor-pointer font-bold text-emerald-900">Inspect field-level evidence</summary><table className="mt-3 w-full border-collapse bg-white"><thead><tr className="bg-slate-100"><th className={cell}>Field</th><th className={cell}>Before</th><th className={cell}>After</th></tr></thead><tbody>{changes.map((change) => <tr key={change.field}><th className={`${cell} w-1/4 text-left`}>{change.field}</th><td className={`${cell} break-all`}>{change.before}</td><td className={`${cell} break-all`}>{change.after}</td></tr>)}</tbody></table></details></td></tr> : null}</Fragment>; })}</tbody></table></div></section> : <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="font-bold">No activity found</h2><p className="mt-1 text-sm text-slate-600">Adjust or clear the investigation filters.</p></section>}
+
+      <nav className="flex items-center justify-between" aria-label="Audit trail pages">{currentPage > 1 ? <Link href={`?${makeQuery({ ...filters, page: currentPage - 1 })}`} className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">← Previous</Link> : <span/>}{currentPage < pages ? <Link href={`?${makeQuery({ ...filters, page: currentPage + 1 })}`} className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold">Next →</Link> : <span/>}</nav>
+      <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"><strong>Audit-trail assurance:</strong> Entries cannot be edited or deleted through this application. Exported results are limited to the signed-in user’s authorised organisation and locations. Database-level retention and independent backups remain an organisational hosting control.</section>
     </main>;
-  } finally {
-    await db.$disconnect();
-  }
+  } finally { await db.$disconnect(); }
 }
 
-function Value({ title, value }: { title: string; value: unknown }) {
-  return <div><h3 className="text-xs font-bold uppercase text-slate-500">{title}</h3><pre className="mt-1 overflow-auto whitespace-pre-wrap break-all rounded-lg border bg-white p-3 text-xs">{JSON.stringify(safeActivityValue(value), null, 2)}</pre></div>;
-}
-function Stat({ label, value }: { label: string; value: string | number }) { return <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-sm text-slate-600">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></div>; }
-function badge(action: string) { return `rounded-full px-2.5 py-1 text-xs font-bold ${["ARCHIVE","LOGIN_FAILED"].includes(action) ? "bg-red-100 text-red-800" : ["CREATE","RESTORE","APPROVAL"].includes(action) ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"}`; }
-function makeQuery(filters: ReturnType<typeof parseActivityFilters>) { const params = new URLSearchParams(); if (filters.q) params.set("q", filters.q); if (filters.action) params.set("action", filters.action); if (filters.recordType) params.set("recordType", filters.recordType); if (filters.userId) params.set("user", filters.userId); if (filters.locationId) params.set("location", filters.locationId); if (filters.from) params.set("from", filters.from.toISOString().slice(0,10)); if (filters.to) params.set("to", filters.to.toISOString().slice(0,10)); if (filters.page > 1) params.set("page", String(filters.page)); return params.toString(); }
-const field = "rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm";
+function Stat({ label, value, alert = false }: { label: string; value: string | number; alert?: boolean }) { return <div className={`rounded-2xl border p-4 ${alert ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}><p className="text-xs font-semibold text-slate-600">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></div>; }
+function Focus({ href, active, label }: { href: string; active: boolean; label: string }) { return <Link href={href} className={`rounded-full px-4 py-2 text-sm font-bold ${active ? "bg-emerald-800 text-white" : "border border-slate-300 bg-white text-slate-700"}`}>{label}</Link>; }
+function badge(action: string) { return `inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${reviewEvent(action) ? "bg-red-100 text-red-800" : ["CREATE", "RESTORE", "APPROVAL"].includes(action) ? "bg-emerald-100 text-emerald-800" : ["DOWNLOAD", "REPORT_GENERATION"].includes(action) ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-700"}`; }
+function reviewEvent(action: string) { return ["ARCHIVE", "LOGIN_FAILED", "PERMISSION_CHANGE"].includes(action); }
+function makeQuery(filters: ReturnType<typeof parseActivityFilters>) { const params = new URLSearchParams(); if (filters.q) params.set("q", filters.q); if (filters.action) params.set("action", filters.action); if (filters.recordType) params.set("recordType", filters.recordType); if (filters.userId) params.set("user", filters.userId); if (filters.locationId) params.set("location", filters.locationId); if (filters.from) params.set("from", filters.from.toISOString().slice(0, 10)); if (filters.to) params.set("to", filters.to.toISOString().slice(0, 10)); if (filters.focus) params.set("focus", filters.focus); if (filters.page > 1) params.set("page", String(filters.page)); return params.toString(); }
+const labelClass = "text-xs font-bold uppercase tracking-wide text-slate-600";
+const field = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-slate-900";
+const cell = "border-r border-slate-200 p-3 align-top last:border-r-0";
