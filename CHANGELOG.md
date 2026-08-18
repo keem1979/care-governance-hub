@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-18 — Phase 1 trust foundation
+
+- Added mandatory TOTP MFA for every account, encrypted MFA secrets, one-time
+  recovery codes and self-service revocation of other sessions.
+- Replaced worker-memory login throttling with database-backed HMAC-keyed limits.
+- Added application-wide browser security headers, private caching and cross-site
+  mutation protection.
+- Added security-event audit entries and MFA-aware session claims.
+- Added controlled DPIA, retention/deletion, incident response, recovery,
+  data-processing and clinical-safety documents with explicit live-release gates.
+- Added a Phase 1 assurance record distinguishing built controls from independent
+  penetration testing, customer acceptance and operational evidence.
+
 ## 2026-08-18 — Phase 0 product alignment
 
 - Repositioned QCGMS around continuous assurance and evidence-backed action closure.

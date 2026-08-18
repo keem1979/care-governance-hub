@@ -7,7 +7,7 @@ describe("signed sessions", () => {
   it("verifies an active signed session", async () => {
     const expiresAt = Date.now() + 60_000;
     const token = await signSession(
-      { userId: "user-1", sessionId: "session-1", expiresAt },
+      { userId: "user-1", sessionId: "session-1", expiresAt, mfaVerified: true, mfaSetupRequired: false },
       secret,
     );
     await expect(verifySessionToken(token, secret)).resolves.toMatchObject({
@@ -19,7 +19,7 @@ describe("signed sessions", () => {
   it("rejects an expired session", async () => {
     const now = Date.now();
     const token = await signSession(
-      { userId: "user-1", sessionId: "session-1", expiresAt: now + 1_000 },
+      { userId: "user-1", sessionId: "session-1", expiresAt: now + 1_000, mfaVerified: false, mfaSetupRequired: true },
       secret,
     );
     await expect(
@@ -33,6 +33,8 @@ describe("signed sessions", () => {
         userId: "user-1",
         sessionId: "session-1",
         expiresAt: Date.now() + 60_000,
+        mfaVerified: true,
+        mfaSetupRequired: false,
       },
       secret,
     );

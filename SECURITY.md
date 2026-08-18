@@ -1,40 +1,61 @@
-# Security
+# QCGMS security position
 
-## Implemented in Milestone 1
+This document distinguishes implemented controls from operational assurance that
+still requires evidence. QCGMS must not be described as certified, penetration
+tested or suitable for live care data until the release gates below are signed.
 
-- Passwords are hashed with bcrypt (cost 12 in seed data).
-- Login input is validated and normalised with Zod.
-- Login attempts are rate-limited by email and forwarded client address.
-- Sessions are database-backed, revocable, expire by default after eight hours,
-  and are represented by an HTTP-only, `SameSite=Lax`, signed cookie.
-- Production cookies require HTTPS.
-- Proxy provides an optimistic route check; the server data-access layer performs
-  the authoritative database check.
-- Disabled users, inactive memberships, revoked sessions, and expired sessions are
-  rejected.
-- Role permissions are centralised. Organisation and location access helpers reject
-  cross-tenant identifiers.
-- Successful login and logout events are appended to the activity log.
-- Environment secrets and data files are excluded from version control.
+## Implemented application controls
 
-## Production requirements
+- Passwords use bcrypt; login inputs are normalised and validated.
+- Every account must enrol standards-based TOTP multi-factor authentication.
+  Until enrolment is complete, the account can access only its security setup
+  and sign-out routes.
+- MFA secrets are encrypted with AES-256-GCM. Recovery codes are one-time,
+  keyed hashes and are displayed only when generated.
+- Successful sign-ins create database-backed, revocable, eight-hour sessions in
+  an HTTP-only, `SameSite=Lax`, secure production cookie. Enabling MFA revokes
+  other sessions; a user can revoke other active sessions at any time.
+- Login abuse limits are stored in PostgreSQL and keyed with a non-reversible
+  HMAC of the email/address fingerprint, so limits survive worker restarts and
+  do not store the raw identifier.
+- Cross-site state-changing requests are rejected. Application responses set
+  CSP, frame, MIME, referrer, permissions and opener protections; authenticated
+  pages are private, non-indexable and not cached.
+- The server data-access layer revalidates the database session, active user,
+  active membership, permission set, organisation and location scope. The proxy
+  is an early check, not the authority.
+- Security-relevant sign-in, failed-sign-in, MFA and session-revocation events
+  are appended to the activity log.
+- Evidence and policy files use private application-controlled storage routes.
 
-- Generate a unique 32+ byte `SESSION_SECRET`; never reuse the example.
-- Place the application behind TLS and a trusted reverse proxy. Configure forwarded
-  client IP headers only from that proxy.
-- Replace the in-memory login limiter with a shared Redis or database-backed limiter
-  before horizontal scaling.
-- Apply least-privilege PostgreSQL credentials, encrypted storage, daily automated
-  backups, point-in-time recovery where available, and quarterly restore tests.
-- Retain logs and personal data only under an approved retention schedule.
-- Add monitoring for repeated authentication failures and elevated error rates.
-- Add MFA or an approved identity provider before handling live sensitive records.
-- Run dependency, secret, SAST, and container scans in CI.
+## Required production configuration
 
-## Incident and vulnerability reporting
+- Set unique `SESSION_SECRET` and `MFA_ENCRYPTION_KEY` values of at least 32
+  random characters. Keep both only in the managed secret store. A missing MFA
+  key falls back to a domain-separated key derived from the session secret for
+  compatibility, but this is not the preferred production configuration.
+- Use TLS, least-privilege PostgreSQL credentials, encrypted storage, supported
+  runtimes, dependency scanning, error monitoring and alerting.
+- Trust forwarded client-address headers only from the approved hosting proxy.
+- Run migrations from a controlled release job and never seed a live tenant.
+- Keep daily encrypted backups with point-in-time recovery where available and
+  complete evidenced restore exercises under the recovery plan.
 
-Do not include live personal data, credentials, tokens, or evidence files in issues.
-Report vulnerabilities privately to the repository owner with reproduction steps and
-impact. Revoke affected sessions and secrets before discussing an incident publicly.
+## Release-blocking assurance
 
-This software does not itself make an organisation GDPR-compliant or CQC-compliant.
+Before processing live personal or special-category data, the accountable owner
+must retain evidence of:
+
+1. independent penetration testing and closure of critical/high findings;
+2. dependency, secret and static-analysis scans in CI;
+3. a signed DPIA, controller/processor terms and approved subprocessor list;
+4. tested incident response, access recovery, backup restoration and supplier
+   outage procedures;
+5. a named Clinical Safety Officer and accepted clinical-safety case where the
+   deployed use brings DCB0129 into scope;
+6. customer configuration, access review, retention schedule and staff training.
+
+Report vulnerabilities privately to the repository owner. Never place live
+personal data, credentials, tokens or evidence files in tickets. QCGMS controls
+support assurance but do not themselves make a provider GDPR, DSPT, CQC or cyber
+certified.

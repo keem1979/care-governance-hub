@@ -27,6 +27,7 @@ export default defineConfig({
       SESSION_SECRET:
         process.env.SESSION_SECRET ??
         "e2e-only-secret-with-at-least-thirty-two-characters",
+      E2E_MFA_SECRET: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
     },
   },
   projects: [

@@ -7,6 +7,7 @@ export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
   const hydrated = useSyncExternalStore(
     () => () => undefined,
     () => true,
@@ -25,14 +26,20 @@ export function LoginForm() {
         body: JSON.stringify({
           email: form.get("email"),
           password: form.get("password"),
+          mfaCode: mfaRequired ? form.get("mfaCode") : undefined,
         }),
       });
-      const body = (await response.json()) as { error?: string };
+      const body = (await response.json()) as {
+        error?: string;
+        code?: string;
+        mfaSetupRequired?: boolean;
+      };
       if (!response.ok) {
+        if (body.code === "MFA_REQUIRED") setMfaRequired(true);
         setError(body.error ?? "Sign in was unsuccessful.");
         return;
       }
-      router.replace("/dashboard");
+      router.replace(body.mfaSetupRequired ? "/security" : "/dashboard");
       router.refresh();
     } catch {
       setError("The service is temporarily unavailable. Please try again.");
@@ -56,6 +63,28 @@ export function LoginForm() {
           required
         />
       </div>
+      {mfaRequired ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <label className="mb-2 block text-sm font-semibold" htmlFor="mfaCode">
+            Authenticator or recovery code
+          </label>
+          <input
+            className="w-full rounded-xl border border-emerald-300 bg-white px-4 py-3 text-base tracking-widest shadow-sm"
+            id="mfaCode"
+            name="mfaCode"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            minLength={6}
+            maxLength={32}
+            required
+            autoFocus
+          />
+          <p className="mt-2 text-xs leading-5 text-emerald-900">
+            Use the current six-digit code from your authenticator app. A saved
+            recovery code can be used once if your device is unavailable.
+          </p>
+        </div>
+      ) : null}
       <div>
         <label className="mb-2 block text-sm font-semibold" htmlFor="password">
           Password

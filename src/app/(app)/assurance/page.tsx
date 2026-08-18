@@ -9,9 +9,12 @@ const securityControls = [
   ["Read-only access and licence controls", "Active in QCGMS", "/settings"],
   ["Application Audit Trail", "Active in QCGMS", "/activity"],
   ["Private evidence-file storage", "Active in QCGMS", "/evidence"],
-  ["Multi-factor authentication", "Hosting decision required", "/settings"],
-  ["Backup restoration testing", "Organisation evidence required", "/registers/business-continuity"],
-  ["DSPT and cyber assurance", "Organisation evidence required", "/inspection"],
+  ["Mandatory account MFA and recovery codes", "Active in QCGMS", "/security"],
+  ["Durable login abuse protection", "Active in QCGMS", "/security"],
+  ["Browser and cross-site request protection", "Active in QCGMS", "/security"],
+  ["Backup restoration exercise", "Release evidence required", "/registers/business-continuity"],
+  ["Independent penetration test", "Release evidence required", "/inspection"],
+  ["DPIA, DSPT and clinical-safety acceptance", "Release evidence required", "/inspection"],
 ] as const;
 
 export default async function AssurancePage() {
@@ -22,7 +25,7 @@ export default async function AssurancePage() {
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Stat label="Active native flows" value={NATIVE_DATA_FLOWS.length} tone="green"/><Stat label="Active external feeds" value={0}/><Stat label="External candidates" value={EXTERNAL_INTEGRATION_CANDIDATES.length}/><Stat label="High-risk candidates" value={highRisk} tone="amber"/></section>
 
-    <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950"><strong>Audit conclusion:</strong> QCGMS currently has internal data flows and controlled file exchange, but no live third-party supplier API feed is evidenced in this application. Candidate names below are not approval, compatibility confirmation or connection status. Supplier and organisational due diligence must be completed before implementation.</section>
+    <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950"><strong>Phase 1 assurance conclusion:</strong> application MFA, durable sign-in protection, session control and browser protections are active in this build. Independent penetration testing, approved supplier terms, customer DPIA, restore evidence and clinical-safety acceptance remain live-release gates. QCGMS has no evidenced live third-party supplier API feed; candidate names below are not approval or connection status.</section>
 
     <section className="space-y-3"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Operating now</p><h2 className="mt-1 text-2xl font-bold">Native QCGMS data flows</h2><p className="mt-1 text-sm text-slate-600">These flows happen within the authorised organisation workspace; they are not external supplier integrations.</p></div><div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className={cell}>Data flow</th><th className={cell}>Direction</th><th className={cell}>Information</th><th className={cell}>Control</th><th className={cell}>Status</th></tr></thead><tbody className="divide-y divide-slate-100">{NATIVE_DATA_FLOWS.map((item) => <tr key={item.name} className="align-top"><td className={cell}><Link href={item.href} className="font-bold text-emerald-800 underline">{item.name}</Link></td><td className={cell}>{item.direction}</td><td className={cell}>{item.data}</td><td className={cell}>{item.control}</td><td className={cell}><Badge tone="green">ACTIVE</Badge></td></tr>)}</tbody></table></div></section>
 
@@ -30,7 +33,7 @@ export default async function AssurancePage() {
 
     <section className="grid gap-5 xl:grid-cols-[1.25fr_.75fr]"><div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-xl font-bold">Mandatory connection approval gates</h2><p className="mt-1 text-sm text-slate-600">Use this as the minimum go-live checklist. Retain completed evidence in the Evidence Library and decisions in governance minutes.</p><table className="mt-4 w-full border-collapse text-sm"><thead><tr className="bg-slate-100"><th className={borderCell}>Complete</th><th className={`${borderCell} text-left`}>Gate</th><th className={`${borderCell} text-left`}>Evidence required</th></tr></thead><tbody>{INTEGRATION_APPROVAL_GATES.map(([gate, evidence]) => <tr key={gate}><td className={`${borderCell} w-20 text-center text-lg`}>☐</td><th className={`${borderCell} w-44 text-left`}>{gate}</th><td className={borderCell}>{evidence}</td></tr>)}</tbody></table></div><div className="space-y-5"><section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-xl font-bold">Security control position</h2><div className="mt-3 divide-y divide-slate-100">{securityControls.map(([name, state, href]) => <Link href={href} key={name} className="flex items-center justify-between gap-4 py-3 text-sm"><span className="font-medium">{name}</span><span className={state.startsWith("Active") ? "text-xs font-bold text-emerald-700" : "text-right text-xs font-bold text-amber-800"}>{state}</span></Link>)}</div></section><section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5"><h2 className="font-bold text-emerald-950">Safe implementation sequence</h2><ol className="mt-3 space-y-2 text-sm text-emerald-950"><li>1. Approve the need and minimum dataset</li><li>2. Complete information-governance and supplier review</li><li>3. Design authentication, mapping and failure handling</li><li>4. Test with synthetic or minimised data</li><li>5. Approve, monitor, reconcile and review</li></ol></section></div></section>
 
-    <p className="text-xs leading-5 text-slate-500">This is an internal readiness and assurance view. It is not supplier certification, confirmation of API availability, a DPIA, legal advice, DSPT status or Cyber Essentials certification.</p>
+    <p className="text-xs leading-5 text-slate-500">This is an internal readiness and assurance view. It is not independent security certification, penetration-test evidence, supplier approval, a signed customer DPIA, legal advice, DSPT status, DCB0129 acceptance or Cyber Essentials certification.</p>
   </main>;
 }
 

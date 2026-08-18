@@ -6,6 +6,8 @@ export type SessionClaims = {
   userId: string;
   sessionId: string;
   expiresAt: number;
+  mfaVerified: boolean;
+  mfaSetupRequired: boolean;
 };
 
 function sessionKey(secret: string): Uint8Array {
@@ -19,7 +21,12 @@ export async function signSession(
   claims: SessionClaims,
   secret: string,
 ): Promise<string> {
-  return new SignJWT({ userId: claims.userId, sessionId: claims.sessionId })
+  return new SignJWT({
+    userId: claims.userId,
+    sessionId: claims.sessionId,
+    mfaVerified: claims.mfaVerified,
+    mfaSetupRequired: claims.mfaSetupRequired,
+  })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setIssuedAt()
     .setExpirationTime(Math.floor(claims.expiresAt / 1000))
@@ -48,6 +55,8 @@ export async function verifySessionToken(
       userId: payload.userId,
       sessionId: payload.sessionId,
       expiresAt: payload.exp * 1000,
+      mfaVerified: payload.mfaVerified === true,
+      mfaSetupRequired: payload.mfaSetupRequired === true,
     };
   } catch {
     return null;

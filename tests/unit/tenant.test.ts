@@ -39,4 +39,18 @@ describe("tenant isolation", () => {
       assertLocationAccess(allLocations, "org-b", "location-z"),
     ).toThrow(TenantAccessError);
   });
+
+  it("does not widen an empty location assignment", () => {
+    expect(tenantWhere({ ...scoped, locationIds: [] })).toEqual({
+      organisationId: "org-a",
+      locationId: { in: [] },
+    });
+  });
+
+  it("permits an organisation-wide record only after checking its tenant", () => {
+    expect(() => assertLocationAccess(scoped, "org-a", null)).not.toThrow();
+    expect(() => assertLocationAccess(scoped, "org-b", null)).toThrow(
+      TenantAccessError,
+    );
+  });
 });

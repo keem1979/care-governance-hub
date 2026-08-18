@@ -2,15 +2,17 @@
 
 ## Target
 
-Deploy the Next.js application to Vercel or an equivalent Node.js host and use a
-managed PostgreSQL service. Milestone 2 will add S3-compatible private object
-storage.
+Deploy the application through the configured Sites managed runtime and use the
+approved PostgreSQL service and private object-storage configuration. Record the
+actual legal suppliers, data regions and recovery terms in the production supplier
+register; repository documentation is not evidence of a supplier contract.
 
 ## Environment variables
 
-Set every value in `.env.example`. Production requires a unique random
-`SESSION_SECRET` of at least 32 characters and a TLS-protected PostgreSQL
-`DATABASE_URL`. Do not expose server variables with a `NEXT_PUBLIC_` prefix.
+Set every value in `.env.example`. Production requires separate random
+`SESSION_SECRET` and `MFA_ENCRYPTION_KEY` values of at least 32 characters and a
+TLS-protected PostgreSQL `DATABASE_URL`. Do not expose server secrets with a
+`NEXT_PUBLIC_` prefix.
 
 ## Release process
 
@@ -40,4 +42,6 @@ restore into an isolated environment at least quarterly:
 5. Destroy the isolated copy under the approved retention process.
 
 Deployment is not complete until health checks, error monitoring, TLS, database
-backup alerts, and a rollback decision are assigned to named owners.
+and file backup alerts, MFA enrolment, migration verification and a rollback
+decision are assigned to named owners. Live-data launch additionally requires the
+open evidence in `ASSURANCE_PHASE_1.md`.
