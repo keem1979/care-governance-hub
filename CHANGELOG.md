@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-18 — Phase 5 care and workforce assurance
+
+- Prevented draft and approval-stage care instructions from appearing in the staff quick view.
+- Added version-specific staff assignments and due-dated acknowledgement requirements.
+- Added signed-in-worker acknowledgement with one-to-one workforce account linking.
+- Added critical-change understanding responses and independent manager decisions.
+- Added care-linked competency requirements matched only against current verified workforce records.
+- Added a responsive Care Assurance workspace for overdue work, reviews and deployment gaps.
+
 ## 2026-08-18 — Phase 4 management intelligence
 
 - Added role-aware owner, registered-manager, location and personal command views.

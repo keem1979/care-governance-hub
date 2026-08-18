@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { StaffComplianceForm, StaffDocumentForm, StaffLeaveForm, StaffPhotoForm } from "@/components/workforce-forms";
+import { StaffAccountLinkForm } from "@/components/care-assurance-controls";
 import { requireAnyPermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
@@ -36,14 +37,15 @@ export default async function StaffMemberPage({
       },
     });
     if (!staff) notFound();
-    const [documents, courses] = await Promise.all([
-      db.evidence.findMany({ where: { organisationId: context.organisation.id, relatedModule: "StaffMember", relatedRecordId: id, archivedAt: null }, include: { currentVersion: { select: { id: true, fileName: true } } }, orderBy: { createdAt: "desc" } }),
-      db.trainingCourse.findMany({ where: { archivedAt: null, OR: [{ organisationId: null }, { organisationId: context.organisation.id }] }, select: { id: true, title: true, suggestedRenewalMonths: true }, orderBy: { title: "asc" } }),
-    ]);
     const canManage = hasPermission(
       context.permissions,
       PERMISSIONS.WORKFORCE_MANAGE,
     );
+    const [documents, courses, organisationUsers] = await Promise.all([
+      db.evidence.findMany({ where: { organisationId: context.organisation.id, relatedModule: "StaffMember", relatedRecordId: id, archivedAt: null }, include: { currentVersion: { select: { id: true, fileName: true } } }, orderBy: { createdAt: "desc" } }),
+      db.trainingCourse.findMany({ where: { archivedAt: null, OR: [{ organisationId: null }, { organisationId: context.organisation.id }] }, select: { id: true, title: true, suggestedRenewalMonths: true }, orderBy: { title: "asc" } }),
+      canManage ? db.organisationMembership.findMany({ where: { organisationId: context.organisation.id, status: "ACTIVE", user: { status: "ACTIVE" } }, select: { user: { select: { id: true, name: true, email: true } } }, orderBy: { user: { name: "asc" } } }) : Promise.resolve([]),
+    ]);
     const now = new Date();
     const leaveYear = leaveYearRange(staff.leaveYearStartMonth, staff.leaveYearStartDay, now);
     const annualInYear = staff.leaveRequests.filter((leave) => leave.type === "ANNUAL" && leave.status === "APPROVED" && leave.startDate >= leaveYear.start && leave.startDate < leaveYear.end).reduce((sum, leave) => sum + Number(leave.requestedDays), 0);
@@ -84,6 +86,8 @@ export default async function StaffMemberPage({
           <div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-bold">Staff profile picture</h2><p className="mt-1 mb-4 text-sm text-slate-600">Helps managers identify the correct profile. It is never shown publicly.</p>{canManage ? <StaffPhotoForm staffId={staff.id} /> : <p className="text-sm text-slate-500">Only workforce managers can update this picture.</p>}</div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 lg:col-span-2"><h2 className="font-bold">Annual leave balance</h2><div className="mt-4 grid gap-3 sm:grid-cols-4"><Info label="Allowance" value={`${allowance} days`} /><Info label="Approved" value={`${annualInYear} days`} /><Info label="Pending" value={`${pendingAnnual} days`} /><Info label="Available" value={`${Math.max(0, allowance - annualInYear)} days`} /></div><p className="mt-3 text-xs text-slate-500">Leave year {date(leaveYear.start)} to {date(new Date(leaveYear.end.getTime() - 86_400_000))}. Balance uses recorded entitlement and approved annual leave.</p></div>
         </section>
+
+        {canManage ? <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><h2 className="text-lg font-bold text-blue-950">Staff login link</h2><p className="mt-1 mb-4 text-sm text-blue-950">Link exactly one active organisation login to this workforce profile. This controls whose assigned care instructions and understanding checks the worker can access.</p><StaffAccountLinkForm staffId={staff.id} users={organisationUsers.map(({ user }) => user)} currentUserId={staff.userId ?? ""}/></section> : null}
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold">Private staff documents</h2><p className="mt-1 text-sm text-slate-600">Recruitment, training and competency documents linked to this worker and the Evidence Library.</p></div><Link href={`/evidence?relatedModule=StaffMember&relatedRecordId=${staff.id}`} className="text-sm font-semibold text-emerald-700">Open in Evidence Library →</Link></div>{documents.length ? <div className="mt-4 grid gap-3 md:grid-cols-2">{documents.map((item) => <article key={item.id} className="rounded-xl border border-slate-200 p-4"><p className="text-xs font-bold uppercase text-emerald-700">{item.category} · {item.confidentiality.toLowerCase()}</p><h3 className="mt-1 font-bold">{item.title}</h3><p className="mt-1 text-xs text-slate-500">{item.currentVersion?.fileName ?? "System record"}{item.reviewExpiryDate ? ` · review ${date(item.reviewExpiryDate)}` : ""}</p><Link href={`/evidence/${item.id}`} className="mt-3 inline-block text-sm font-semibold text-emerald-700">View controlled record</Link></article>)}</div> : <p className="mt-4 text-sm text-slate-500">No staff documents have been uploaded yet.</p>}{canManage ? <div className="mt-5 border-t border-slate-100 pt-5"><StaffDocumentForm staffId={staff.id} /></div> : null}</section>
 

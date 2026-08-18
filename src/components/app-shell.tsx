@@ -27,6 +27,7 @@ import {
   ContactRound,
   UserRoundCheck,
   HeartPulse,
+  ShieldCheck,
   KeyRound,
   PlugZap,
   ScanSearch,
@@ -43,6 +44,7 @@ const navigation = [
   { href: "/management", label: "Management Command", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
   { href: "/clients", label: "Client Directory", icon: ContactRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
   { href: "/care-plans", label: "Care Plans", icon: HeartPulse, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+  { href: "/care-assurance", label: "Care Assurance", icon: ShieldCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
   { href: "/policies", label: "Policies", icon: BookOpenCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
   { href: "/evidence", label: "Evidence Library", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
   { href: "/audits", label: "Audit Centre", icon: ClipboardCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE] },
@@ -72,6 +74,7 @@ const moduleConnections: Record<string, {
 }> = {
   clients: { source: "Controlled client profiles linked to assessments, reviews, incidents and evidence", links: [{ href: "/assessments", label: "Start assessment" }, { href: "/registers/care-plan-reviews", label: "Care-plan reviews" }, { href: "/evidence", label: "Linked evidence" }] },
   "care-plans": { source: "Live person-centred care instructions, controlled versions, review proposals, evidence, actions and staff acknowledgement", links: [{ href: "/registers/care-plan-reviews", label: "Care-plan reviews" }, { href: "/actions", label: "Follow-up actions" }, { href: "/evidence", label: "Linked evidence" }] },
+  "care-assurance": { source: "Approved current care instructions, assigned staff, acknowledgements, understanding checks and verified workforce records", links: [{ href: "/care-plans", label: "Controlled care plans" }, { href: "/workforce", label: "Workforce evidence" }, { href: "/activity?recordType=CarePlan", label: "Care-plan history" }] },
   policies: { source: "Controlled policy records, approvals, review dates and document versions", links: [{ href: "/reports/policy-compliance", label: "Policy report" }, { href: "/inspection", label: "Inspection evidence" }, { href: "/activity?recordType=Policy", label: "Policy activity" }] },
   evidence: { source: "Uploaded evidence, template copies and linked module records", links: [{ href: "/reports/evidence-index", label: "Evidence report" }, { href: "/inspection", label: "Inspection links" }, { href: "/audits", label: "Audit evidence" }] },
   audits: { source: "Completed audit forms, responses, findings and scores", links: [{ href: "/reports/audit", label: "Audit report" }, { href: "/actions", label: "Improvement actions" }, { href: "/inspection", label: "Inspection evidence" }] },

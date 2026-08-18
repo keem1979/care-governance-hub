@@ -14,7 +14,7 @@ export default async function CarePlansPage({ searchParams }: { searchParams: Pr
       where: carePlanScopeWhere(context),
       include: {
         versions: { select: { id: true, status: true }, orderBy: { versionNumber: "desc" }, take: 2 },
-        assignments: { where: { isActive: true }, select: { id: true } },
+        assignments: { where: { isActive: true }, select: { id: true, versionId: true } },
         acknowledgements: { select: { versionId: true } },
       },
       orderBy: [{ nextReviewDate: "asc" }, { updatedAt: "desc" }],
@@ -33,6 +33,7 @@ export default async function CarePlansPage({ searchParams }: { searchParams: Pr
     const userById = new Map(users.map((user) => [user.id, user.name]));
     const openActionIds = new Set(openActions.map((action) => action.id));
     const acknowledgedForCurrentVersion = (plan: (typeof plans)[number]) => plan.acknowledgements.filter((acknowledgement) => acknowledgement.versionId === plan.currentVersionId).length;
+    const currentAssignments = (plan: (typeof plans)[number]) => plan.assignments.filter((assignment) => assignment.versionId === plan.currentVersionId || assignment.versionId === null);
     const now = new Date();
     const soon = new Date(now);
     soon.setDate(soon.getDate() + 30);
@@ -43,7 +44,7 @@ export default async function CarePlansPage({ searchParams }: { searchParams: Pr
       ["Awaiting publication", plans.filter((plan) => plan.status === "AWAITING_APPROVAL").length],
       ["High risks", plans.filter((plan) => plan.overallRisk === "HIGH").length],
       ["Critical risks", plans.filter((plan) => plan.overallRisk === "CRITICAL").length],
-      ["Acknowledgements due", plans.reduce((total, plan) => total + Math.max(0, plan.assignments.length - acknowledgedForCurrentVersion(plan)), 0)],
+      ["Acknowledgements due", plans.reduce((total, plan) => total + Math.max(0, currentAssignments(plan).length - acknowledgedForCurrentVersion(plan)), 0)],
       ["Plans with actions", plans.filter((plan) => plan.linkedActionIds.some((id) => openActionIds.has(id))).length],
     ] as const;
     const q = String(query.q ?? "").toLowerCase();
@@ -98,7 +99,8 @@ export default async function CarePlansPage({ searchParams }: { searchParams: Pr
         const person = clientById.get(plan.clientId);
         const openCount = plan.linkedActionIds.filter((id) => openActionIds.has(id)).length;
         const acknowledged = acknowledgedForCurrentVersion(plan);
-        const acknowledgementRate = plan.assignments.length ? Math.round(Math.min(plan.assignments.length, acknowledged) / plan.assignments.length * 100) : 100;
+        const assigned = currentAssignments(plan).length;
+        const acknowledgementRate = assigned ? Math.round(Math.min(assigned, acknowledged) / assigned * 100) : 100;
         return <tr key={plan.id} className="border-t hover:bg-emerald-50/40"><td className="p-3 font-bold">{person ? clientName(person) : "Person record unavailable"}</td><td className="p-3"><Link href={`/care-plans/${plan.id}`} className="font-mono font-bold text-emerald-800">{plan.reference}</Link></td><td className="p-3">{plan.locationId ? locationById.get(plan.locationId) : "Organisation"}</td><td className="p-3">v{plan.currentVersionNumber}</td><td className="p-3">{date(plan.effectiveDate)}</td><td className="p-3">{date(plan.nextReviewDate)}</td><td className="p-3"><Chip value={plan.overallRisk}/></td><td className="p-3">{openCount}</td><td className="p-3">{acknowledgementRate}%</td><td className="p-3"><Chip value={carePlanStatusLabel(plan.status)}/></td></tr>;
       })}</tbody></table></div> : <section className="rounded-2xl border border-dashed bg-white p-10 text-center"><h2 className="font-bold">No care plans match this view</h2><p className="mt-1 text-sm text-slate-500">Adjust the filters or create the person&apos;s first controlled care plan.</p></section>}
     </main>;

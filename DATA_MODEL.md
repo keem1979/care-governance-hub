@@ -104,4 +104,8 @@ action, evidence and reporting models. Phase 2 implements `ExternalParty`,
 `ExternalDependency`. Remaining conceptual models are not live until their
 later roadmap phases pass their release gates. Phase 4 implements
 `ManagementSavedView` and `ManagementDelegation`, with owner, registered-manager,
-location and personal projections over canonical governance records.
+location and personal projections over canonical governance records. Phase 5
+implements version-scoped `CarePlanStaffAssignment`,
+`AcknowledgementRequirement`, `UnderstandingCheck` and
+`CareCompetencyRequirement`, plus an explicit one-to-one link between a login
+and its tenant workforce profile.

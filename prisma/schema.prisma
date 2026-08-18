@@ -140,6 +140,29 @@ enum CarePlanChangeApproval {
   REJECTED
 }
 
+enum AcknowledgementRequirementStatus {
+  REQUIRED
+  ACKNOWLEDGED
+  UNDERSTANDING_SUBMITTED
+  COMPLETE
+  SUPPORT_REQUIRED
+  EXEMPT
+}
+
+enum UnderstandingCheckMethod {
+  KNOWLEDGE_QUESTION
+  MANAGER_OBSERVATION
+  DISCUSSION
+}
+
+enum UnderstandingCheckOutcome {
+  PENDING
+  AWAITING_REVIEW
+  SATISFACTORY
+  SUPPORT_REQUIRED
+  OBSERVATION_REQUIRED
+}
+
 enum CanonicalEntityType {
   CLIENT
   STAFF_MEMBER
@@ -566,6 +589,9 @@ model Organisation {
   referenceCounters      ReferenceCounter[]
   managementDelegations  ManagementDelegation[]
   managementSavedViews   ManagementSavedView[]
+  acknowledgementRequirements AcknowledgementRequirement[]
+  understandingChecks    UnderstandingCheck[]
+  careCompetencyRequirements CareCompetencyRequirement[]
 }
 
 model ServiceLocation {
@@ -599,6 +625,9 @@ model ServiceLocation {
   clients                Client[]
   managementDelegations  ManagementDelegation[]
   managementSavedViews   ManagementSavedView[]
+  acknowledgementRequirements AcknowledgementRequirement[]
+  understandingChecks    UnderstandingCheck[]
+  careCompetencyRequirements CareCompetencyRequirement[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -663,6 +692,10 @@ model User {
   staffLeaveDecided       StaffLeaveRequest[]      @relation("StaffLeaveDecision")
   managementSavedViews    ManagementSavedView[]
   managementDelegationsCreated ManagementDelegation[] @relation("ManagementDelegationCreator")
+  staffProfile            StaffMember?             @relation("StaffMemberUser")
+  understandingCompleted UnderstandingCheck[]      @relation("UnderstandingCheckCompleter")
+  understandingAssessed  UnderstandingCheck[]      @relation("UnderstandingCheckAssessor")
+  competencyRequirementsCreated CareCompetencyRequirement[] @relation("CareCompetencyRequirementCreator")
 }
 
 model Policy {
@@ -1829,6 +1862,7 @@ model StaffMember {
   id                         String                @id @default(uuid()) @db.Uuid
   organisationId             String                @db.Uuid
   locationId                 String?               @db.Uuid
+  userId                     String?               @unique @db.Uuid
   employeeReference          String
   staffNumber                Int
   firstName                  String
@@ -1857,12 +1891,15 @@ model StaffMember {
 
   organisation         Organisation               @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   location             ServiceLocation?           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  user                 User?                      @relation("StaffMemberUser", fields: [userId], references: [id], onDelete: SetNull)
   records              StaffComplianceRecord[]
   trainingRequirements StaffTrainingRequirement[]
   leaveRequests        StaffLeaveRequest[]
   registerEntries      RegisterEntry[]
   actionOccurrences    ActionOccurrence[]
   actions              Action[]
+  carePlanAssignments  CarePlanStaffAssignment[]
+  acknowledgementRequirements AcknowledgementRequirement[]
 
   @@unique([organisationId, employeeReference])
   @@unique([organisationId, staffNumber])
@@ -1995,6 +2032,7 @@ model TrainingCourse {
   organisation Organisation?              @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   requirements StaffTrainingRequirement[]
   records      StaffComplianceRecord[]
+  careCompetencyRequirements CareCompetencyRequirement[]
 
   @@unique([organisationId, key])
   @@index([organisationId, category])
@@ -2282,9 +2320,12 @@ model CarePlan {
   createdAt                    DateTime         @default(now())
   updatedAt                    DateTime         @updatedAt
 
-  versions         CarePlanVersion[]
+  currentVersion   CarePlanVersion?  @relation("CurrentCarePlanVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions         CarePlanVersion[] @relation("CarePlanVersions")
   assignments      CarePlanStaffAssignment[]
   acknowledgements CarePlanAcknowledgement[]
+  acknowledgementRequirements AcknowledgementRequirement[]
+  competencyRequirements CareCompetencyRequirement[]
 
   @@unique([organisationId, reference])
   @@index([organisationId, status, nextReviewDate])
@@ -2315,10 +2356,14 @@ model CarePlanVersion {
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 
-  carePlan        CarePlan                  @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  carePlan        CarePlan                  @relation("CarePlanVersions", fields: [carePlanId], references: [id], onDelete: Cascade)
+  currentFor      CarePlan?                 @relation("CurrentCarePlanVersion")
   changes         CarePlanChange[]
   evidenceLinks   CarePlanVersionEvidence[]
   acknowledgements CarePlanAcknowledgement[]
+  assignments     CarePlanStaffAssignment[]
+  acknowledgementRequirements AcknowledgementRequirement[]
+  competencyRequirements CareCompetencyRequirement[]
 
   @@unique([carePlanId, versionNumber])
   @@index([carePlanId, status])
@@ -2362,14 +2407,18 @@ model CarePlanVersionEvidence {
 model CarePlanStaffAssignment {
   id                   String   @id @default(uuid()) @db.Uuid
   carePlanId           String   @db.Uuid
+  versionId            String?  @db.Uuid
   staffMemberId        String   @db.Uuid
   requiredCompetencies String[] @default([])
   isActive             Boolean  @default(true)
   assignedAt           DateTime @default(now())
 
-  carePlan CarePlan @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  carePlan    CarePlan         @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  version     CarePlanVersion? @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  staffMember StaffMember      @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
 
-  @@unique([carePlanId, staffMemberId])
+  @@unique([versionId, staffMemberId])
+  @@index([carePlanId, staffMemberId])
   @@index([staffMemberId, isActive])
 }
 
@@ -2379,15 +2428,104 @@ model CarePlanAcknowledgement {
   versionId      String   @db.Uuid
   userId         String   @db.Uuid
   staffMemberId  String?  @db.Uuid
+  requirementId  String?  @unique @db.Uuid
   acknowledgedAt DateTime @default(now())
   declaration    String
 
   carePlan CarePlan        @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
   version  CarePlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  requirement AcknowledgementRequirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
 
   @@unique([versionId, userId])
   @@index([carePlanId, versionId])
   @@index([staffMemberId])
+}
+
+model AcknowledgementRequirement {
+  id                         String                           @id @default(uuid()) @db.Uuid
+  organisationId             String                           @db.Uuid
+  locationId                 String?                          @db.Uuid
+  carePlanId                 String                           @db.Uuid
+  versionId                  String                           @db.Uuid
+  staffMemberId              String                           @db.Uuid
+  reason                     String
+  materialSections           String[]                         @default([])
+  criticalChange             Boolean                          @default(false)
+  requiresUnderstandingCheck Boolean                          @default(false)
+  dueAt                      DateTime
+  status                     AcknowledgementRequirementStatus @default(REQUIRED)
+  completedAt                DateTime?
+  exemptedAt                 DateTime?
+  exemptionReason            String?
+  createdAt                  DateTime                         @default(now())
+  updatedAt                  DateTime                         @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation?  @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  carePlan     CarePlan          @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  version      CarePlanVersion   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  staffMember  StaffMember       @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  acknowledgement CarePlanAcknowledgement?
+  understandingCheck UnderstandingCheck?
+
+  @@unique([versionId, staffMemberId])
+  @@index([organisationId, status, dueAt])
+  @@index([staffMemberId, status])
+  @@index([locationId, status])
+}
+
+model UnderstandingCheck {
+  id                String                    @id @default(uuid()) @db.Uuid
+  organisationId    String                    @db.Uuid
+  locationId        String?                   @db.Uuid
+  requirementId     String                    @unique @db.Uuid
+  method            UnderstandingCheckMethod  @default(KNOWLEDGE_QUESTION)
+  prompt            String
+  staffResponse     String?
+  submittedAt       DateTime?
+  outcome           UnderstandingCheckOutcome @default(PENDING)
+  assessorNotes     String?
+  completedById     String?                   @db.Uuid
+  assessedById      String?                   @db.Uuid
+  assessedAt        DateTime?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  organisation Organisation              @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation?           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  requirement  AcknowledgementRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  completedBy  User?                      @relation("UnderstandingCheckCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+  assessedBy   User?                      @relation("UnderstandingCheckAssessor", fields: [assessedById], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, outcome, submittedAt])
+  @@index([locationId, outcome])
+}
+
+model CareCompetencyRequirement {
+  id               String   @id @default(uuid()) @db.Uuid
+  organisationId   String   @db.Uuid
+  locationId       String?  @db.Uuid
+  carePlanId       String   @db.Uuid
+  versionId        String   @db.Uuid
+  trainingCourseId String   @db.Uuid
+  label            String
+  instructions     String
+  critical         Boolean  @default(false)
+  createdById      String   @db.Uuid
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation?  @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  carePlan     CarePlan          @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  version      CarePlanVersion   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  trainingCourse TrainingCourse  @relation(fields: [trainingCourseId], references: [id], onDelete: Restrict)
+  createdBy    User              @relation("CareCompetencyRequirementCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([versionId, trainingCourseId])
+  @@index([organisationId, critical])
+  @@index([carePlanId, versionId])
+  @@index([locationId])
 }
 
 model ExternalParty {
