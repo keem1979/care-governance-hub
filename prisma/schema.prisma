@@ -250,6 +250,7 @@ enum AssuranceLifecycleStatus {
   MONITORING_RECURRENCE
   REOPENED_REPEAT_FINDING
   NO_ACTION_REQUIRED
+  SUSTAINED_IMPROVEMENT
 }
 
 enum MedicationIssueType {
@@ -297,6 +298,56 @@ enum ActionSourceType {
   WORKFORCE
   EVIDENCE
   MANUAL
+}
+
+enum FindingStatus {
+  OPEN
+  ACTION_LINKED
+  NO_ACTION_REQUIRED
+  RESOLVED
+  ARCHIVED
+}
+
+enum RootCauseReviewStatus {
+  DRAFT
+  COMPLETED
+  APPROVED
+}
+
+enum VerificationOutcome {
+  VERIFIED
+  PARTIALLY_VERIFIED
+  FAILED
+}
+
+enum EffectivenessOutcome {
+  EFFECTIVE
+  PARTIALLY_EFFECTIVE
+  INEFFECTIVE
+  TOO_EARLY
+}
+
+enum RecurrenceCaseStatus {
+  OPEN
+  INVESTIGATING
+  CONTROLLED
+  CLOSED
+}
+
+enum ImprovementPlanStatus {
+  DRAFT
+  ACTIVE
+  AT_RISK
+  COMPLETED
+  ARCHIVED
+}
+
+enum ExternalDependencyStatus {
+  AWAITING_RESPONSE
+  CHASING
+  OVERDUE
+  RESOLVED
+  CANCELLED
 }
 
 enum MeetingStatus {
@@ -1097,6 +1148,13 @@ model Action {
   evidenceLinks        ActionEvidence[]
   occurrences          ActionOccurrence[]
   inspectionLinks      ComplianceRequirementAction[]
+  finding              Finding?
+  rootCauseReview      RootCauseReview?
+  verifications        Verification[]
+  effectivenessReviews EffectivenessReview[]
+  recurrenceCases      RecurrenceCase[]
+  externalDependencies ExternalDependency[]
+  improvementPlanLinks ImprovementPlanAction[]
 
   @@unique([organisationId, reference])
   @@index([organisationId, status, priority])
@@ -1179,6 +1237,219 @@ model ActionEvidence {
 
   @@id([actionId, evidenceId])
   @@index([evidenceId])
+}
+
+model Finding {
+  id                  String         @id @default(uuid()) @db.Uuid
+  organisationId      String         @db.Uuid
+  locationId          String?        @db.Uuid
+  reference           String
+  actionId             String         @unique @db.Uuid
+  sourceType           ActionSourceType
+  sourceRecordId       String?        @db.Uuid
+  sourceReference      String?
+  sourceUrl            String?
+  title                String
+  description          String
+  category             String
+  severity             FindingSeverity
+  clientId             String?        @db.Uuid
+  staffMemberId        String?        @db.Uuid
+  identifiedAt         DateTime
+  status               FindingStatus  @default(ACTION_LINKED)
+  disposition          String?
+  immediateControl     String?
+  createdById          String         @db.Uuid
+  resolvedAt           DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@unique([organisationId, reference])
+  @@index([organisationId, status, severity])
+  @@index([locationId, status])
+  @@index([clientId, identifiedAt])
+}
+
+model RootCauseReview {
+  id                  String                @id @default(uuid()) @db.Uuid
+  organisationId      String                @db.Uuid
+  locationId          String?               @db.Uuid
+  actionId             String                @unique @db.Uuid
+  method               String
+  problemStatement     String
+  immediateCauses      String[]              @default([])
+  contributingFactors String[]              @default([])
+  systemCauses         String[]              @default([])
+  fiveWhys             Json?
+  lessons              String
+  preventiveControls   String
+  status               RootCauseReviewStatus @default(DRAFT)
+  reviewedById         String                @db.Uuid
+  approvedById         String?               @db.Uuid
+  approvedAt           DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([organisationId, status, updatedAt])
+  @@index([locationId, status])
+}
+
+model Verification {
+  id                  String              @id @default(uuid()) @db.Uuid
+  organisationId      String              @db.Uuid
+  locationId          String?             @db.Uuid
+  actionId             String              @db.Uuid
+  verificationType    String              @default("CLOSURE")
+  outcome              VerificationOutcome
+  completedWork        String
+  evidenceSummary      String
+  evidenceIds          String[]            @default([])
+  successMeasureResult String
+  independenceConfirmed Boolean            @default(false)
+  rationale            String
+  verifierId           String              @db.Uuid
+  verifiedAt           DateTime
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  effectivenessReviews EffectivenessReview[]
+
+  @@unique([actionId, verificationType])
+  @@index([organisationId, outcome, verifiedAt])
+  @@index([locationId, outcome])
+}
+
+model EffectivenessReview {
+  id               String               @id @default(uuid()) @db.Uuid
+  organisationId   String               @db.Uuid
+  locationId       String?              @db.Uuid
+  actionId          String               @db.Uuid
+  verificationId   String?              @db.Uuid
+  reviewDate        DateTime
+  outcome           EffectivenessOutcome
+  successMeasure    String
+  baseline          String?
+  target            String?
+  observedResult    String
+  recurrenceFound  Boolean              @default(false)
+  evidenceIds       String[]             @default([])
+  decision          String
+  nextReviewDate    DateTime?
+  reviewerId        String               @db.Uuid
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  action       Action        @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  verification Verification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, outcome, reviewDate])
+  @@index([actionId, reviewDate])
+  @@index([locationId, reviewDate])
+}
+
+model RecurrenceCase {
+  id                       String               @id @default(uuid()) @db.Uuid
+  organisationId           String               @db.Uuid
+  locationId               String?              @db.Uuid
+  reference                String
+  actionId                  String               @db.Uuid
+  occurrenceId              String?              @db.Uuid
+  detectedAt                DateTime
+  relatedFindingReference   String?
+  narrative                 String
+  previousControlFailure    String?
+  immediateControl          String
+  managementEscalation      String
+  status                    RecurrenceCaseStatus @default(OPEN)
+  ownerId                   String               @db.Uuid
+  closedAt                  DateTime?
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@unique([organisationId, reference])
+  @@unique([occurrenceId])
+  @@index([organisationId, status, detectedAt])
+  @@index([actionId, status])
+  @@index([locationId, status])
+}
+
+model ImprovementPlan {
+  id              String                @id @default(uuid()) @db.Uuid
+  organisationId  String                @db.Uuid
+  locationId      String?               @db.Uuid
+  reference       String
+  title           String
+  objective       String
+  rationale       String
+  ownerId         String                @db.Uuid
+  successMeasures String[]              @default([])
+  baseline        String?
+  target          String?
+  targetDate      DateTime
+  status          ImprovementPlanStatus @default(DRAFT)
+  progressSummary String?
+  outcome         String?
+  completedAt     DateTime?
+  archivedAt      DateTime?
+  createdById     String                @db.Uuid
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  actions ImprovementPlanAction[]
+
+  @@unique([organisationId, reference])
+  @@index([organisationId, status, targetDate])
+  @@index([locationId, status])
+}
+
+model ImprovementPlanAction {
+  planId   String @db.Uuid
+  actionId String @db.Uuid
+
+  plan   ImprovementPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  action Action          @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@id([planId, actionId])
+  @@index([actionId])
+}
+
+model ExternalDependency {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  organisationId     String                   @db.Uuid
+  locationId         String?                  @db.Uuid
+  actionId           String                   @db.Uuid
+  externalPartyId    String?                  @db.Uuid
+  partyName          String
+  contactName        String?
+  contactEmail       String?
+  contactPhone       String?
+  request            String
+  externalReference  String?
+  requestedAt        DateTime
+  dueDate             DateTime
+  lastChasedAt        DateTime?
+  chaseCount          Int                      @default(0)
+  responseSummary     String?
+  interimControl      String
+  escalationRoute     String
+  status              ExternalDependencyStatus @default(AWAITING_RESPONSE)
+  ownerId             String                   @db.Uuid
+  resolvedAt          DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([organisationId, status, dueDate])
+  @@index([actionId, status])
+  @@index([locationId, status])
 }
 
 model GovernanceMeeting {

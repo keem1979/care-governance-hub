@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
 import { resolveActionSource } from "@/lib/action-sources";
 import { syncActionEvidence } from "@/lib/action-evidence";
+import { syncFindingFromAction, syncStructuredClosure } from "@/lib/assurance-improvement";
 import { ACTION_CATEGORIES, ACTION_PRIORITIES, ACTION_SOURCE_TYPES, ACTION_STATUSES, actionScopeWhere, makeActionReference } from "@/lib/actions";
 import { lifecycleForAction, MEDICATION_ISSUE_TYPES, normaliseIssueKey, suggestActionMatches, validateVerifiedClosure } from "@/lib/closure-loop";
 import { createDb } from "@/lib/db";
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     if (evidenceCount !== evidenceIds.length) throw new Error("One or more linked evidence records could not be found.");
     const verifiedById = text(form, "verifiedById") || null;
     if (verifiedById && !(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: verifiedById, status: "ACTIVE" } }))) throw new Error("Choose an active verifier.");
+    if (verifiedById && verifiedById !== context.user.id) throw new Error("A verifier must sign in and record their own decision.");
     const verificationDate = parseOptionalDate(form.get("verificationDate")), closureNote = text(form, "closureNote") || null;
     const managementResponse = text(form, "managementResponse") || null, completedActionSummary = text(form, "completedActionSummary") || null;
     const evidenceReviewedSummary = text(form, "evidenceReviewedSummary") || null, verificationRationale = text(form, "verificationRationale") || null;
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
 
     const candidates = await db.action.findMany({
       where: { ...actionScopeWhere(context), archivedAt: null },
-      select: { id: true, reference: true, title: true, description: true, locationId: true, clientId: true, staffMemberId: true, category: true, issueKey: true, medicationIssueType: true, sourceType: true, sourceRecordId: true, status: true, lifecycleStatus: true, lastSeenAt: true, managementResponse: true },
+      select: { id: true, reference: true, title: true, description: true, locationId: true, clientId: true, staffMemberId: true, category: true, issueKey: true, medicationIssueType: true, sourceType: true, sourceRecordId: true, status: true, lifecycleStatus: true, lastSeenAt: true, managementResponse: true, ownerId: true, priority: true, sourceReference: true, sourceUrl: true, firstSeenAt: true, createdById: true, completionDate: true },
       orderBy: { lastSeenAt: "desc" }, take: 250,
     });
     const suggestions = suggestActionMatches({ locationId, clientId, staffMemberId, category, issueKey, medicationIssueType, sourceType, sourceRecordId: rawId || null, title, description, occurredAt: source.occurredAt }, candidates);
@@ -66,7 +68,9 @@ export async function POST(request: Request) {
         else await tx.actionOccurrence.create({ data: { ...occurrence, actionId } });
         for (const evidenceId of evidenceIds) await tx.actionEvidence.upsert({ where: { actionId_evidenceId: { actionId, evidenceId } }, update: {}, create: { actionId, evidenceId } });
         const updatedStatus = recurrence ? "IN_PROGRESS" : existing.status, lifecycleStatus = recurrence ? "REOPENED_REPEAT_FINDING" : "LINKED_TO_EXISTING_ACTION";
-        await tx.action.update({ where: { id: actionId }, data: { lastSeenAt: source.occurredAt, recurrenceCount: recurrence ? { increment: 1 } : undefined, status: updatedStatus as never, lifecycleStatus: lifecycleStatus as never } });
+        const updated = await tx.action.update({ where: { id: actionId }, data: { lastSeenAt: source.occurredAt, recurrenceCount: recurrence ? { increment: 1 } : undefined, status: updatedStatus as never, lifecycleStatus: lifecycleStatus as never } });
+        await syncFindingFromAction(tx, updated);
+        if (recurrence) await tx.recurrenceCase.create({ data: { organisationId: context.organisation.id, locationId, reference: `REC-${existing.reference}-${updated.recurrenceCount}`, actionId, detectedAt: source.occurredAt, relatedFindingReference: `FND-${existing.reference}`, narrative: description, immediateControl: "The existing action has been reopened for immediate management review.", managementEscalation: "The action owner must review why the previous controls did not prevent recurrence.", ownerId: existing.ownerId } });
         await tx.actionUpdate.create({ data: { actionId, userId: context.user.id, note: `${recurrence ? "Repeat finding confirmed" : "Additional occurrence linked"}: ${source.reference ?? title}.`, status: updatedStatus as never } });
         await syncActionEvidence(tx, { actionId, organisationId: context.organisation.id, locationId: existing.locationId, reference: existing.reference, title: existing.title, description: existing.description, category: existing.category, sourceType: existing.sourceType, sourceReference: source.reference, ownerId, actorId: context.user.id, dueDate, reviewDate, status: updatedStatus, priority, progressPercent, expectedOutcome, successMeasure, archived: false });
         await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "ActionOccurrence", recordId: actionId, summary: `${recurrence ? "Confirmed recurrence against" : "Linked occurrence to"} action ${existing.reference}`, afterValue: { sourceType, sourceRecordId: rawId || null, matchScore: match.score, rationale: match.rationale } } });
@@ -81,6 +85,8 @@ export async function POST(request: Request) {
     const reference = text(form, "reference") || makeActionReference();
     const action = await db.$transaction(async (tx) => {
       const created = await tx.action.create({ data: { organisationId: context.organisation.id, locationId, clientId, staffMemberId, reference, title, description, category, rootCause: text(form, "rootCause") || null, expectedOutcome, successMeasure, sourceType: sourceType as never, sourceRecordId: rawId || null, sourceReference: source.reference, sourceUrl: source.url, lifecycleStatus: lifecycleStatus as never, issueKey, medicationIssueType: medicationIssueType as never, firstSeenAt: source.occurredAt, lastSeenAt: source.occurredAt, monitoringUntil, managementResponse, managementResponseById: managementResponse ? context.user.id : null, managementResponseAt: managementResponse ? new Date() : null, ownerId, priority: priority as never, dueDate, reviewDate, status: status as never, progressPercent, progressNote: text(form, "progressNote") || null, escalationRequired, escalationReason, evidenceRequired: true, evidenceWaiverExplanation: null, completionDate: parseOptionalDate(form.get("completionDate")), verifiedById, verificationDate, closureNote, completedActionSummary, evidenceReviewedSummary, ...checks, verificationRationale, nextRecurrenceReviewDate, createdById: context.user.id, evidenceLinks: { create: evidenceIds.map((evidenceId) => ({ evidenceId })) }, occurrences: { create: occurrenceData({ organisationId: context.organisation.id, sourceType, rawId, source, locationId, clientId, staffMemberId, category, issueKey, medicationIssueType, description, actorId: context.user.id, decision: rejectedMatch ? "MATCH_REJECTED" : "ORIGINAL", score: rejectedMatch?.score, rationale: rejectedMatch?.rationale.join("; ") }) } } });
+      await syncFindingFromAction(tx, created);
+      await syncStructuredClosure(tx, { actionId: created.id, organisationId: created.organisationId, locationId, ownerId, priority, status, rootCause: created.rootCause, completedWork: completedActionSummary, evidenceSummary: evidenceReviewedSummary, evidenceIds, successMeasureResult: closureNote, rationale: verificationRationale, verifierId: verifiedById, verifiedAt: verificationDate });
       await tx.actionUpdate.create({ data: { actionId: created.id, userId: context.user.id, note: "Action created and connected to the improvement record.", status: created.status, progressPercent } });
       await syncActionEvidence(tx, { actionId: created.id, organisationId: created.organisationId, locationId, reference, title, description, category, sourceType, sourceReference: source.reference, ownerId, actorId: context.user.id, dueDate, reviewDate, status, priority, progressPercent, expectedOutcome, successMeasure, archived: false });
       await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE", recordType: "Action", recordId: created.id, summary: `Created action: ${reference} — ${title}`, afterValue: { status, lifecycleStatus, priority, dueDate, sourceType, progressPercent, rejectedMatch: rejectedId } } });

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-18 — Phase 3 assurance and sustained improvement
+
+- Added one canonical finding chronology for every improvement action.
+- Added structured root-cause reviews with management approval controls.
+- Added signed-in-user verification, evidence checks and high-risk separation of duties.
+- Added effectiveness reviews that reopen ineffective or recurring actions.
+- Added sustained-improvement status only after effective, recurrence-free review.
+- Added external dependency contacts, chasing, interim controls and escalation.
+- Added measurable improvement plans and a management assurance workbench.
+
 ## 2026-08-18 — Phase 2 canonical data and safe synchronisation
 
 - Added tenant-scoped canonical external identifiers and external-party records.

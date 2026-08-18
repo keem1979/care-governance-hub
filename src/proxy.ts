@@ -12,6 +12,7 @@ const protectedRoutes = [
   "/registers",
   "/risks",
   "/actions",
+  "/improvement",
   "/workforce",
   "/quality",
   "/data-quality",

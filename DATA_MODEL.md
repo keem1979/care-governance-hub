@@ -95,7 +95,9 @@ authorised retention decision while preserving legally required audit evidence.
 ## Implementation status
 
 The repository implements foundation, workforce, care-plan, register, risk,
-action, evidence and reporting models. Phase 2 now implements `ExternalParty`,
+action, evidence and reporting models. Phase 2 implements `ExternalParty`,
 `ExternalIdentifier`, `ReconciliationCase`, `MaterialChange` and
-`DependencyReview`. The remaining conceptual models in this document are not
-live until their later roadmap phases pass their release gates.
+`DependencyReview`. Phase 3 implements `Finding`, `RootCauseReview`,
+`Verification`, `EffectivenessReview`, `RecurrenceCase`, `ImprovementPlan` and
+`ExternalDependency`. Remaining conceptual models are not live until their
+later roadmap phases pass their release gates.
