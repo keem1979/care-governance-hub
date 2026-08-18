@@ -51,13 +51,14 @@ function storedArray(data: Record<string, unknown>, key: string) { return Array.
 function slug(value: string) { return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 
 export function CarePlanReviewForm({
-  organisationName, locations, owners, clients, evidence, initial, defaultClientId = "",
+  organisationName, locations, owners, clients, evidence, initial, defaultClientId = "", sourceCarePlan,
 }: {
   organisationName: string; locations: Option[]; owners: Option[]; clients: Option[];
   evidence: { id: string; title: string }[]; initial?: Initial; defaultClientId?: string;
+  sourceCarePlan?: { id:string; versionId:string; reference:string; versionNumber:number; snapshot:Record<string,unknown>; reviewDefaults:Record<string,unknown> };
 }) {
   const router = useRouter();
-  const data = initial?.data ?? {};
+  const data = initial?.data ?? sourceCarePlan?.reviewDefaults ?? {};
   const [step, setStep] = useState(0);
   const [live, setLive] = useState<Record<string,string>>(() => ({
     ...Object.fromEntries(Object.entries(data).filter((item): item is [string,string] => typeof item[1] === "string")),
@@ -86,7 +87,7 @@ export function CarePlanReviewForm({
     event.preventDefault();
     setBusy(true); setError("");
     const form = new FormData(event.currentTarget);
-    const payload: Record<string, unknown> = { schemaVersion: 2, domains, reviewActions: actions };
+    const payload: Record<string, unknown> = { schemaVersion: 2, domains, reviewActions: actions, ...(sourceCarePlan ? { carePlanId: sourceCarePlan.id, carePlanVersionId: sourceCarePlan.versionId, carePlanSnapshot: sourceCarePlan.snapshot } : {}) };
     const multi = new Set<string>();
     for (const [rawKey] of form.entries()) if (rawKey.startsWith("reviewData.") && rawKey.endsWith("[]")) multi.add(rawKey);
     for (const key of multi) payload[key.slice(11, -2)] = form.getAll(key).map(String);
@@ -113,6 +114,7 @@ export function CarePlanReviewForm({
   }
 
   return <form onSubmit={submit} onInput={capture} onChange={capture} className="space-y-5">
+    {sourceCarePlan ? <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-950"><strong>Live Care Plan {sourceCarePlan.reference} v{sourceCarePlan.versionNumber} loaded.</strong><p className="mt-1">This review uses a controlled snapshot. Only changed sections will become proposed amendments; the live plan remains unchanged until authorised publication.</p></div> : null}
     <div className="sticky top-0 z-20 rounded-2xl border border-slate-300 bg-slate-950 p-4 text-white shadow-xl print:hidden">
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <HeaderFact label="Reference" value={initial?.reference || "Generated on save"}/>

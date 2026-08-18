@@ -46,6 +46,22 @@ export function ClientForm({ locations }: { locations: Option[] }) {
         <Label title="Emergency contact summary" wide><textarea className={`${field} min-h-20`} name="emergencyContact" maxLength={1000}/></Label>
       </div>
     </Section>
+    <Section title="Health, commissioner and reasonable adjustments" description="These person master-data items are reused by Care Plans and Reviews instead of being retyped.">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Label title="NHS number (only where authorised)"><input className={field} name="nhsNumber" maxLength={30}/></Label>
+        <Label title="Funding arrangement"><select className={field} name="fundingArrangement" defaultValue=""><option value="">Choose</option>{["Self-funded","Local Authority","NHS / ICB","Joint funded","Other"].map((value)=><option key={value}>{value}</option>)}</select></Label>
+        <Label title="Responsible Local Authority"><input className={field} name="localAuthorityName" maxLength={160}/></Label>
+        <Label title="Authority GSS code"><input className={field} name="localAuthorityCode" maxLength={20}/></Label>
+        <Label title="GP / practice"><input className={field} name="gpName" maxLength={200}/></Label>
+        <Label title="GP telephone"><input className={field} name="gpPhone" type="tel" maxLength={40}/></Label>
+        <Label title="Pharmacy"><input className={field} name="pharmacyName" maxLength={200}/></Label>
+        <Label title="Pharmacy telephone"><input className={field} name="pharmacyPhone" type="tel" maxLength={40}/></Label>
+        <Label title="Primary diagnoses" wide><textarea className={`${field} min-h-20`} name="primaryDiagnoses" maxLength={2000}/></Label>
+        <Label title="Known allergies and intolerances" wide><textarea className={`${field} min-h-20`} name="knownAllergies" maxLength={1500}/></Label>
+        <Label title="Communication requirements" wide><textarea className={`${field} min-h-20`} name="communicationRequirements" maxLength={1500}/></Label>
+        <Label title="Protected-characteristic needs and reasonable adjustments" wide><textarea className={`${field} min-h-20`} name="reasonableAdjustments" maxLength={1500}/></Label>
+      </div>
+    </Section>
     <Section title="Next of kin or representative" description="Record who may be contacted and whether they have any documented legal authority. Being next of kin does not automatically give decision-making authority.">
       <div className="grid gap-4 md:grid-cols-2">
         <Label title="Full name"><input className={field} name="nextOfKinName" maxLength={160}/></Label>

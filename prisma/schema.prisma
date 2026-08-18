@@ -102,6 +102,44 @@ enum RegisterRiskLevel {
   CRITICAL
 }
 
+enum CarePlanStatus {
+  DRAFT
+  AWAITING_PERSON_AGREEMENT
+  AWAITING_CLINICAL_INFORMATION
+  AWAITING_APPROVAL
+  ACTIVE
+  ACTIVE_WITH_ACTIONS
+  REVIEW_DUE
+  REVIEW_OVERDUE
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum CarePlanVersionStatus {
+  DRAFT
+  AWAITING_APPROVAL
+  APPROVED
+  PUBLISHED
+  SUPERSEDED
+  RETURNED_FOR_AMENDMENT
+}
+
+enum CarePlanChangeType {
+  UNCHANGED
+  ADDED
+  AMENDED
+  REMOVED
+  NEW_RISK
+  RISK_REDUCED
+  RISK_INCREASED
+}
+
+enum CarePlanChangeApproval {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum RiskStatus {
   OPEN
   MONITORING
@@ -1480,6 +1518,18 @@ model Client {
   town                      String?
   postcode                  String?
   commissionerReference     String?
+  nhsNumber                 String?
+  localAuthorityCode        String?
+  localAuthorityName        String?
+  fundingArrangement        String?
+  gpName                    String?
+  gpPhone                   String?
+  pharmacyName              String?
+  pharmacyPhone             String?
+  primaryDiagnoses          String?
+  knownAllergies            String?
+  reasonableAdjustments     String?
+  communicationRequirements String?
   serviceStartDate          DateTime?
   serviceEndDate            DateTime?
   status                    ClientStatus @default(ACTIVE)
@@ -1772,4 +1822,136 @@ model ActivityLog {
 
   @@index([organisationId, createdAt])
   @@index([recordType, recordId])
+}
+
+model CarePlan {
+  id                           String           @id @default(uuid()) @db.Uuid
+  organisationId               String           @db.Uuid
+  locationId                   String?          @db.Uuid
+  clientId                     String           @db.Uuid
+  reference                    String
+  currentVersionId             String?          @unique @db.Uuid
+  currentVersionNumber         Int              @default(0)
+  status                       CarePlanStatus   @default(DRAFT)
+  overallRisk                  RegisterRiskLevel @default(LOW)
+  effectiveDate                DateTime?
+  nextReviewDate               DateTime?
+  careCoordinatorId            String?          @db.Uuid
+  registeredManagerId          String?          @db.Uuid
+  serviceType                  String?
+  fundingType                  String?
+  localAuthorityCode           String?
+  localAuthorityName           String?
+  commissioner                 String?
+  staffAcknowledgementRequired Boolean          @default(false)
+  linkedActionIds              String[]         @default([])
+  archivedAt                   DateTime?
+  createdAt                    DateTime         @default(now())
+  updatedAt                    DateTime         @updatedAt
+
+  versions         CarePlanVersion[]
+  assignments      CarePlanStaffAssignment[]
+  acknowledgements CarePlanAcknowledgement[]
+
+  @@unique([organisationId, reference])
+  @@index([organisationId, status, nextReviewDate])
+  @@index([clientId, status])
+  @@index([locationId, status])
+}
+
+model CarePlanVersion {
+  id                      String                @id @default(uuid()) @db.Uuid
+  carePlanId              String                @db.Uuid
+  versionNumber           Int
+  status                  CarePlanVersionStatus @default(DRAFT)
+  schemaVersion           Int                   @default(1)
+  snapshot                Json
+  changeSummary           Json?
+  assurance               Json?
+  reason                  String
+  sourceReviewEntryId     String?               @db.Uuid
+  basedOnVersionId        String?               @db.Uuid
+  effectiveDate           DateTime?
+  nextReviewDate          DateTime?
+  materialSections        String[]              @default([])
+  acknowledgementRequired Boolean               @default(false)
+  createdById             String                @db.Uuid
+  approvedById            String?               @db.Uuid
+  approvedAt              DateTime?
+  publishedAt             DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  carePlan        CarePlan                  @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  changes         CarePlanChange[]
+  evidenceLinks   CarePlanVersionEvidence[]
+  acknowledgements CarePlanAcknowledgement[]
+
+  @@unique([carePlanId, versionNumber])
+  @@index([carePlanId, status])
+  @@index([sourceReviewEntryId])
+}
+
+model CarePlanChange {
+  id               String                 @id @default(uuid()) @db.Uuid
+  versionId        String                 @db.Uuid
+  sectionKey       String
+  fieldPath        String
+  changeType       CarePlanChangeType
+  previousValue    Json?
+  proposedValue    Json?
+  reason           String
+  riskImpact       RegisterRiskLevel
+  source           String
+  reviewerId       String                 @db.Uuid
+  approvalRequired Boolean                @default(true)
+  approvalStatus   CarePlanChangeApproval @default(PENDING)
+  approvedById     String?                @db.Uuid
+  approvedAt       DateTime?
+  createdAt        DateTime               @default(now())
+
+  version CarePlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([versionId, approvalStatus])
+}
+
+model CarePlanVersionEvidence {
+  versionId  String @db.Uuid
+  evidenceId String @db.Uuid
+
+  version CarePlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@id([versionId, evidenceId])
+  @@index([evidenceId])
+}
+
+model CarePlanStaffAssignment {
+  id                   String   @id @default(uuid()) @db.Uuid
+  carePlanId           String   @db.Uuid
+  staffMemberId        String   @db.Uuid
+  requiredCompetencies String[] @default([])
+  isActive             Boolean  @default(true)
+  assignedAt           DateTime @default(now())
+
+  carePlan CarePlan @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+
+  @@unique([carePlanId, staffMemberId])
+  @@index([staffMemberId, isActive])
+}
+
+model CarePlanAcknowledgement {
+  id             String   @id @default(uuid()) @db.Uuid
+  carePlanId     String   @db.Uuid
+  versionId      String   @db.Uuid
+  userId         String   @db.Uuid
+  staffMemberId  String?  @db.Uuid
+  acknowledgedAt DateTime @default(now())
+  declaration    String
+
+  carePlan CarePlan        @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  version  CarePlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, userId])
+  @@index([carePlanId, versionId])
+  @@index([staffMemberId])
 }

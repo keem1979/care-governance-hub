@@ -102,6 +102,10 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Open Audit Centre", "/audits", ["view", "list", "templates"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE]),
     link("Start an audit", "/audits/new", ["start", "add", "create", "new"], [PERMISSIONS.AUDITS_COMPLETE]),
   ]),
+  topic("Care Plans", "/care-plans", ["care plan", "care plans", "person centred plan", "staff quick guide", "plan version", "read and understood"], "Care Plans is the controlled operational source of truth for person-centred care instructions, risks, outcomes, escalation and staff implementation.", "Open the person's current plan, use Quick Update for an urgent controlled amendment, or Start Review to take a version snapshot and propose only what changed. Published versions remain read-only and material changes require acknowledgement.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT], [
+    link("Open Care Plans", "/care-plans", ["open", "view", "list"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT]),
+    link("Create a care plan", "/care-plans/new", ["create", "new", "add"], [PERMISSIONS.GOVERNANCE_EDIT]),
+  ]),
   topic("Care Plan Reviews", "/registers/care-plan-reviews", ["care plan review", "care-plan review", "rm assurance", "person involvement", "care package sufficiency", "review due"], "Care Plan Reviews provides a person-centred review and Registered Manager assurance workflow for changing needs, risks, outcomes and care arrangements.", "Select the person and current plan, record the review trigger and evidence, involve the person, assess applicable domains, reconcile medicines where relevant, control actions through the central Action Tracker and complete the Registered Manager assurance test before sign-off.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT], [
     link("Open Care Plan Reviews", "/registers/care-plan-reviews", ["open", "view", "list"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT]),
     link("Start a care-plan review", "/registers/care-plan-reviews/new", ["start", "add", "create", "new"], [PERMISSIONS.GOVERNANCE_EDIT]),
@@ -266,6 +270,10 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/registers/care-plan-reviews": {
     hsc: "care-plan reviews show how changing needs, risks, preferences and outcomes lead to safe, person-centred adjustments with accountable follow-up.",
     cqc: "clear involvement, consent, evidence, risk controls, staff implementation and management assurance may support safe, effective, responsive and well-led evidence; the review remains an internal professional record.",
+  },
+  "/care-plans": {
+    hsc: "a controlled care plan turns assessed needs, preferences, risks, outcomes and clinical escalation into clear current instructions for the people providing support.",
+    cqc: "person involvement, lawful consent, current risk controls, competent implementation, evidence, review and version history may support safe, effective, caring, responsive and well-led evidence; the plan itself does not prove that care was delivered as intended.",
   },
   "/activity": {
     hsc: "an activity log provides accountability by showing who changed important records and when.",

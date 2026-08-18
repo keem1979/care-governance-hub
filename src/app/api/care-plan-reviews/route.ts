@@ -12,6 +12,7 @@ import { createDb } from "@/lib/db";
 import { PERMISSIONS, ROLE_KEYS } from "@/lib/permissions";
 import { syncRegisterEvidence } from "@/lib/register-evidence";
 import { makeRegisterReference } from "@/lib/registers";
+import { syncCarePlanReviewProposal } from "@/lib/care-plan-review-sync";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -50,11 +51,12 @@ export async function POST(request: Request) {
         organisationId: context.organisation.id, locationId, clientId,
         entryId: created.id, reviewReference: reference, actorId: context.user.id,
       });
+      const carePlanProposal = await syncCarePlanReviewProposal(tx, { organisationId: context.organisation.id, actorId: context.user.id, reviewEntryId: created.id, reviewReference: reference, payload });
       const completedPayload = { ...payload, schemaVersion: CARE_PLAN_REVIEW_VERSION, reviewActions: actions };
       await tx.registerEntry.update({ where: { id: created.id }, data: { data: { carePlanReview: completedPayload } as Prisma.InputJsonValue, linkedActionIds } });
       await syncRegisterEvidence(tx, { entryId: created.id, organisationId: context.organisation.id, locationId, definitionKey: CARE_PLAN_REVIEW_KEY, definitionName: definition.name, reference, title: created.title, summary: created.summary, eventDate, ownerId, actorId: context.user.id, archived: false });
       await tx.registerEntryHistory.create({ data: { entryId: created.id, userId: context.user.id, action: "CREATED", snapshot: { status, riskLevel, carePlanReview: completedPayload } as Prisma.InputJsonValue } });
-      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE", recordType: "CarePlanReview", recordId: created.id, summary: `Created care-plan review ${reference}`, afterValue: { status, riskLevel, workflowStatus: payload.workflowStatus, linkedActionIds } } });
+      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE", recordType: "CarePlanReview", recordId: created.id, summary: `Created care-plan review ${reference}`, afterValue: { status, riskLevel, workflowStatus: payload.workflowStatus, linkedActionIds, carePlanProposal } } });
       return created;
     });
     return NextResponse.json({ id: entry.id }, { status: 201 });

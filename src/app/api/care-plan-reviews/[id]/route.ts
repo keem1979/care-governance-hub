@@ -7,6 +7,7 @@ import { createDb } from "@/lib/db";
 import { PERMISSIONS, ROLE_KEYS } from "@/lib/permissions";
 import { syncRegisterEvidence } from "@/lib/register-evidence";
 import { registerScopeWhere } from "@/lib/registers";
+import { syncCarePlanReviewProposal } from "@/lib/care-plan-review-sync";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -43,11 +44,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const eventDate = eventValue && !Number.isNaN(new Date(eventValue).getTime()) ? new Date(eventValue) : entry.eventDate;
     await db.$transaction(async (tx) => {
       const { actions, linkedActionIds } = await createCarePlanReviewActions(tx, parseReviewActions(payload.reviewActions), { organisationId: context.organisation.id, locationId, clientId, entryId: id, reviewReference: entry.reference, actorId: context.user.id });
+      const carePlanProposal = await syncCarePlanReviewProposal(tx, { organisationId: context.organisation.id, actorId: context.user.id, reviewEntryId: id, reviewReference: entry.reference, payload });
       const completedPayload = { ...payload, schemaVersion: 2, reviewActions: actions };
       await tx.registerEntry.update({ where: { id }, data: { locationId, clientId, ownerId, eventDate, title: `Care plan ${String(payload.carePlanReference)}`, summary: String(payload.reasonForReview), riskLevel: riskLevel as never, status: status as never, closureDate: status === "CLOSED" ? eventDate : null, data: { carePlanReview: completedPayload } as Prisma.InputJsonValue, linkedActionIds, evidenceLinks: { deleteMany: {}, create: evidenceIds.map((evidenceId) => ({ evidenceId })) } } });
       await syncRegisterEvidence(tx, { entryId: id, organisationId: context.organisation.id, locationId, definitionKey: "care-plan-reviews", definitionName: entry.definition.name, reference: entry.reference, title: `Care plan ${String(payload.carePlanReference)}`, summary: String(payload.reasonForReview), eventDate, ownerId, actorId: context.user.id, archived: status === "ARCHIVED" });
       await tx.registerEntryHistory.create({ data: { entryId: id, userId: context.user.id, action: wasSigned ? "REOPENED_AND_UPDATED" : "UPDATED", snapshot: { before: previous, after: completedPayload, reopenReason: payload.reopenReason || null } as Prisma.InputJsonValue } });
-      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "CarePlanReview", recordId: id, summary: `Updated care-plan review ${entry.reference}`, beforeValue: { status: entry.status, riskLevel: entry.riskLevel }, afterValue: { status, riskLevel, workflowStatus: payload.workflowStatus, linkedActionIds } } });
+      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "CarePlanReview", recordId: id, summary: `Updated care-plan review ${entry.reference}`, beforeValue: { status: entry.status, riskLevel: entry.riskLevel }, afterValue: { status, riskLevel, workflowStatus: payload.workflowStatus, linkedActionIds, carePlanProposal } } });
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
