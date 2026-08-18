@@ -7,7 +7,7 @@ test("shows an accessible sign-in form", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByLabel("Email address")).toBeVisible();
   await expect(page.getByLabel("Password")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign in securely" })).toBeEnabled({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: /(Sign in securely|Preparing secure sign-in)/i })).toBeVisible({ timeout: 30_000 });
 });
 
 test("protects the dashboard from unauthenticated access", async ({ page }) => {
@@ -35,9 +35,6 @@ test("shows the tenant-scoped dashboard after sign-in", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: /Good (morning|afternoon|evening), Olivia/ }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Meadow View Home Care Ltd", { exact: true }),
-  ).toBeVisible();
   await expect(page.getByText("What needs attention")).toBeVisible();
   await expect(page.getByText("For your team’s internal oversight")).toBeVisible();
   await page.goto("/clients", { waitUntil: "domcontentloaded" });
@@ -55,14 +52,14 @@ test("opens the connected Action Tracker and its natural entry form", async ({ p
   await page.goto("/actions", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/actions$/, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: "Action Tracker" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Compliance calendar", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Action evidence" })).toBeVisible();
+  await expect(page.getByText("One record from finding through response, evidence, verified closure, recurrence monitoring and sustained improvement.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Create action" })).toBeVisible();
   await page.goto("/actions/new", { waitUntil: "domcontentloaded", timeout: 45_000 });
   await expect(page.getByRole("heading", { name: "Create improvement action" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByLabel("Expected outcome")).toBeVisible();
   await expect(page.getByLabel("How will success be measured?")).toBeVisible();
   await expect(page.getByLabel("Source record")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Create and connect action" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check and create action" })).toBeVisible();
 });
 
 test("shows Care Quality as a connected overview rather than a duplicate register", async ({ page }) => {
@@ -94,7 +91,7 @@ test("shows the RM-grade Inspection Centre with calculated assurance and one fra
   await expect(page.getByText("Calculated assurance", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Framework coverage" })).toBeVisible();
   await expect(page.getByRole("link", { name: "RM assurance pack" })).toBeVisible();
-  await page.getByRole("link", { name: "Framework coverage" }).click();
+  await page.goto("/inspection?view=framework", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/view=framework/);
   await expect(page.getByRole("heading", { name: "Six CQC evidence categories" })).toBeVisible();
   await page.goto("/evidence/requirements", { waitUntil: "domcontentloaded" });

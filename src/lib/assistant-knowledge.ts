@@ -102,6 +102,10 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Open Audit Centre", "/audits", ["view", "list", "templates"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE]),
     link("Start an audit", "/audits/new", ["start", "add", "create", "new"], [PERMISSIONS.AUDITS_COMPLETE]),
   ]),
+  topic("Care Plan Reviews", "/registers/care-plan-reviews", ["care plan review", "care-plan review", "rm assurance", "person involvement", "care package sufficiency", "review due"], "Care Plan Reviews provides a person-centred review and Registered Manager assurance workflow for changing needs, risks, outcomes and care arrangements.", "Select the person and current plan, record the review trigger and evidence, involve the person, assess applicable domains, reconcile medicines where relevant, control actions through the central Action Tracker and complete the Registered Manager assurance test before sign-off.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT], [
+    link("Open Care Plan Reviews", "/registers/care-plan-reviews", ["open", "view", "list"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT]),
+    link("Start a care-plan review", "/registers/care-plan-reviews/new", ["start", "add", "create", "new"], [PERMISSIONS.GOVERNANCE_EDIT]),
+  ]),
   topic("Registers", "/registers", ["register", "registers", "complaint", "incident", "safeguarding", "accident", "breach", "feedback"], "Registers provides consistent records for complaints, incidents, safeguarding and other governance events.", "Choose a register, add an entry, assign its owner and risk level, link evidence, update status and export or print a register report.", view, [
     link("Open Registers", "/registers", ["view", "list", "choose"], view),
   ]),
@@ -258,6 +262,10 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/reports": {
     hsc: "reports bring records together so leaders can identify themes, provide assurance and make decisions using current information.",
     cqc: "clear reports may support provider information, process and outcome evidence. Hub reports are internal governance documents, not official CQC inspection reports.",
+  },
+  "/registers/care-plan-reviews": {
+    hsc: "care-plan reviews show how changing needs, risks, preferences and outcomes lead to safe, person-centred adjustments with accountable follow-up.",
+    cqc: "clear involvement, consent, evidence, risk controls, staff implementation and management assurance may support safe, effective, responsive and well-led evidence; the review remains an internal professional record.",
   },
   "/activity": {
     hsc: "an activity log provides accountability by showing who changed important records and when.",

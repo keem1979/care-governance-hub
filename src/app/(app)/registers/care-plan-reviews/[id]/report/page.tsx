@@ -1,0 +1,8 @@
+import { notFound } from "next/navigation";
+import { CarePlanReviewView } from "@/components/care-plan-review-view";
+import { requirePermission } from "@/lib/auth/dal";
+import { createDb } from "@/lib/db";
+import { PERMISSIONS } from "@/lib/permissions";
+import { registerScopeWhere } from "@/lib/registers";
+
+export default async function CarePlanReviewReport({params}:{params:Promise<{id:string}>}){const context=await requirePermission(PERMISSIONS.REPORTS_EXPORT);const{id}=await params;const db=createDb();try{const entry=await db.registerEntry.findFirst({where:{id,...registerScopeWhere(context),definition:{key:"care-plan-reviews"}},include:{client:true,location:{select:{name:true}},owner:{select:{name:true}},createdBy:{select:{name:true}},evidenceLinks:{include:{evidence:{select:{id:true,title:true}}}},history:{include:{user:{select:{name:true}}},orderBy:{createdAt:"desc"}}}});if(!entry)notFound();const actions=entry.linkedActionIds.length?await db.action.findMany({where:{id:{in:entry.linkedActionIds},organisationId:context.organisation.id},select:{id:true,reference:true,title:true,priority:true,status:true,dueDate:true,owner:{select:{name:true}}}}):[];return <main className="bg-white p-8 print:p-0"><p className="mb-4 rounded-lg bg-emerald-700 px-4 py-2 text-center text-sm font-semibold text-white print:hidden">Use your browser Print command to save this organisation-branded report as PDF.</p><CarePlanReviewView entry={entry} organisation={{name:context.organisation.name,hasLogo:Boolean(context.organisation.policyLogoStorageKey)}} actions={actions} print/></main>}finally{await db.$disconnect();}}
