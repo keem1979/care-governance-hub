@@ -37,7 +37,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -64,4 +65,149 @@ select {
   border-radius: 0.5rem;
   background: #fff;
   content: url("/api/settings/policy-branding/logo");
+}
+
+/* Premium data-table system shared by every authenticated QCGMS module. */
+.qcgms-app main table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid #d8e3df;
+  border-radius: 0.875rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 77 67 / 0.04);
+}
+
+.qcgms-app main table thead {
+  background: linear-gradient(135deg, #f1f7f5 0%, #e7f3ef 100%);
+  color: #173f37;
+}
+
+.qcgms-app main table thead th {
+  border-bottom: 1px solid #c8d8d3;
+  padding: 0.8rem 0.9rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: uppercase;
+  vertical-align: bottom;
+  white-space: normal;
+}
+
+.qcgms-app main table tbody td,
+.qcgms-app main table tbody th {
+  border-bottom: 1px solid #e5ecea;
+  padding: 0.8rem 0.9rem;
+  line-height: 1.45;
+  vertical-align: top;
+}
+
+.qcgms-app main table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.qcgms-app main table tbody tr:nth-child(even) > * {
+  background-color: #f8fbfa;
+}
+
+.qcgms-app main table tbody tr {
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.qcgms-app main table tbody tr:hover > * {
+  background-color: #eef8f4;
+}
+
+.qcgms-app main table a {
+  text-underline-offset: 0.18em;
+}
+
+.qcgms-app main table input:not([type="checkbox"]),
+.qcgms-app main table select,
+.qcgms-app main table textarea {
+  min-height: 2.5rem;
+  border-color: #cbd8d4;
+  background: #fff;
+}
+
+.qcgms-app main table input:not([type="checkbox"]):hover,
+.qcgms-app main table select:hover,
+.qcgms-app main table textarea:hover {
+  border-color: #8eb5a9;
+}
+
+.qcgms-app main .qcgms-structured-table thead {
+  background: linear-gradient(135deg, #123f37 0%, #176b5b 100%);
+  color: #fff;
+}
+
+.qcgms-app main .qcgms-structured-table thead th {
+  border-bottom-color: #0f4d43;
+  color: #fff;
+}
+
+.qcgms-app main [role="region"][tabindex="0"] {
+  scrollbar-color: #7eaaa0 #e8f0ee;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 767px) {
+  .qcgms-app main table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .qcgms-app main table thead tr > :first-child,
+  .qcgms-app main table tbody tr > :first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    box-shadow: 1px 0 0 #d8e3df;
+  }
+
+  .qcgms-app main table thead tr > :first-child {
+    z-index: 3;
+    background: #184f45;
+  }
+
+  .qcgms-app main table:not(.qcgms-structured-table) thead tr > :first-child {
+    background: #e9f4f0;
+  }
+
+  .qcgms-app main table tbody tr:nth-child(odd) > :first-child {
+    background: #fff;
+  }
+
+  .qcgms-app main table tbody tr:nth-child(even) > :first-child {
+    background: #f8fbfa;
+  }
+}
+
+@media print {
+  .qcgms-app main table {
+    display: table;
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .qcgms-app main table thead {
+    display: table-header-group;
+  }
+
+  .qcgms-app main table tr {
+    break-inside: avoid;
+  }
+
+  .qcgms-app main table thead th,
+  .qcgms-app main table tbody td,
+  .qcgms-app main table tbody th {
+    padding: 0.4rem;
+  }
 }
