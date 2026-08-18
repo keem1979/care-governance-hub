@@ -15,22 +15,22 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s | QCGMS",
     },
     description:
-      "A secure governance and compliance evidence hub for UK adult social care providers.",
+      "Continuous governance, assurance and evidence-backed action closure for UK adult social care providers.",
     icons: {
       icon: "/atom-logo.png",
       apple: "/atom-logo.png",
     },
     openGraph: {
-      title: "ATOM — Your Outsourced Quality, Compliance & Governance Department",
-      description: "Technology, dedicated governance expertise and continuous quality assurance in one managed service.",
+      title: "ATOM QCGMS — Continuous assurance for adult social care",
+      description: "Know what is unsafe, overdue or unverified and demonstrate that improvement has been completed and sustained.",
       type: "website",
-      images: [{ url: "/og.png", width: 1536, height: 910 }],
+      images: [{ url: "/og-phase0.png", width: 1536, height: 910 }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "ATOM — Your Outsourced Quality, Compliance & Governance Department",
-      description: "Technology, governance expertise and continuous assurance for UK adult social care.",
-      images: ["/og.png"],
+      title: "ATOM QCGMS — Continuous assurance for adult social care",
+      description: "Evidence-backed governance, action closure and management oversight for UK adult social care.",
+      images: ["/og-phase0.png"],
     },
   };
 }

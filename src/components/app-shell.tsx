@@ -148,7 +148,7 @@ export function AppShell({
             <span className="min-w-0 leading-tight">
               <span className="block text-base">QCGMS</span>
               <span className="mt-1 block text-xs font-medium text-emerald-100/70">
-                Hub
+                Assurance Hub
               </span>
             </span>
           </Link>

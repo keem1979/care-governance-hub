@@ -42,8 +42,8 @@ export function SiteFooter() {
       <div className="footer-grid">
         <div>
           <Image src="/atom-wordmark.png" alt="ATOM" width={152} height={57} unoptimized />
-          <p>Governance, organised.</p>
-          <p className="footer-copy">Quality, compliance and governance support for UK adult social care providers.</p>
+          <p>Continuous assurance, clearly evidenced.</p>
+          <p className="footer-copy">Governance, action closure and management oversight for UK adult social care providers.</p>
         </div>
         <div><h2>Explore</h2><Link href="/services">Services</Link><Link href="/platform">Platform</Link><Link href="/how-it-works">How it works</Link><Link href="/catalogue">Catalogue</Link></div>
         <div><h2>Company</h2><Link href="/about">About ATOM</Link><Link href="/resources">Resources</Link><Link href="/contact">Contact</Link><Link href="/login">Client sign in</Link></div>

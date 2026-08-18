@@ -1,19 +1,32 @@
-# Quality, Compliance and Governance Management System — QCGMS
+# Quality, Compliance and Governance Management System - QCGMS
 
-QCGMS is a secure, multi-tenant quality, governance and compliance workspace
-for UK adult social care providers. It helps teams organise evidence and understand
-what is ready, missing, or urgent without claiming to predict an official CQC rating.
+QCGMS is a secure, multi-tenant continuous governance, assurance and
+action-closure platform for UK adult social care. It helps authorised leaders
+identify what is unsafe, overdue or unverified and retain evidence that
+improvement was completed and sustained.
 
-This repository contains the Milestone 1 foundation plus the first completed
-post-foundation item: a tenant-scoped governance dashboard. Domain modules that
-have not yet been built are represented with explicit no-data states.
+The product complements digital care records, eMAR, rostering, HR and finance
+systems. It does not predict regulator ratings or guarantee regulatory outcomes.
+
+## Product documentation
+
+- [Product charter](PRODUCT_SCOPE.md)
+- [Product roadmap](PRODUCT_ROADMAP.md)
+- [Canonical data model](DATA_MODEL.md)
+- [Module assurance map](MODULE_ASSURANCE_MAP.md)
+- [UK regulatory architecture](REGULATORY_FRAMEWORKS.md)
+- [Product success measures](PRODUCT_METRICS.md)
+- [Technical architecture](ARCHITECTURE.md)
+- [Security](SECURITY.md)
+- [Testing](TESTING.md)
+- [Deployment](DEPLOYMENT.md)
 
 ## Technology
 
-- Next.js 16, React 19, TypeScript, and Tailwind CSS
-- PostgreSQL with Prisma 7 and the PostgreSQL driver adapter
-- Zod validation, bcrypt password hashing, and JOSE-signed session cookies
-- Vitest for unit tests and Playwright for browser tests
+- Next.js 16, React 19, TypeScript and Tailwind CSS
+- PostgreSQL with Prisma 7
+- Zod, bcrypt password hashing and JOSE-signed sessions
+- Vitest and Playwright
 
 ## Local setup
 
@@ -30,10 +43,8 @@ npm run db:seed
 npm run dev
 ```
 
-Open `http://localhost:3000`. Seeded records are fictional demonstration data.
-All demo accounts use `DemoCare!2026`; for example,
-`owner@meadowview.demo`. Change or remove demo credentials outside local demo
-environments.
+Seeded records are fictional demonstration data and must not be used as
+operational evidence.
 
 ## Quality checks
 
@@ -43,11 +54,4 @@ npm run test:e2e
 npm run build
 ```
 
-See [TESTING.md](TESTING.md) for prerequisites and [DEPLOYMENT.md](DEPLOYMENT.md)
-for production requirements.
-
-## Product boundary
-
-The MVP is a governance hub, not a care-planning, eMAR, rostering, payroll, or
-clinical system. Read [PRODUCT_SCOPE.md](PRODUCT_SCOPE.md) before implementation.
-Complete one milestone at a time.
+Complete only the current user-approved product phase.

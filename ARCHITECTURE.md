@@ -1,58 +1,94 @@
 # Architecture
 
-## Overview
+## Product architecture
 
-Care Governance Hub is a modular Next.js application backed by PostgreSQL. The
-browser receives minimal display data. Authentication, membership resolution,
-permissions, and tenant filtering run on the server.
+QCGMS is a multi-tenant continuous assurance platform. Its business architecture
+is separated into four layers:
+
+```text
+Experience: RM, provider-owner, location, staff and auditor views
+Governance: findings, risks, actions, evidence, decisions and outcomes
+Canonical records: people, staff, organisations, locations and governed objects
+Platform trust: identity, permissions, tenancy, audit, storage and integration
+```
+
+Regulatory frameworks sit beside the governance layer as versioned
+configuration. They map requirements to evidence and assurance tests without
+changing the canonical records or hard-coding one regulator into the platform.
+
+## Request and authority flow
 
 ```text
 Browser
   -> Next.js proxy (optimistic signed-cookie check)
   -> Server Component or Route Handler
   -> Auth data-access layer (database session + active membership)
-  -> Permission guard
-  -> Tenant-scoped Prisma query
-  -> PostgreSQL
+  -> Permission and location guard
+  -> Tenant-scoped domain operation
+  -> PostgreSQL and private object storage
 ```
 
-The proxy improves navigation behaviour but is not the security boundary. The data
-access layer verifies that the session exists, is not revoked or expired, the user
-is active, and an active organisation membership exists.
+The proxy is not the security boundary. The server verifies the live session,
+membership, permissions, organisation and location scope for protected data.
 
-## Milestone 1 decisions
+## Architecture decisions
 
-- **Database-backed sessions with a signed cookie.** The cookie contains only user,
-  session, and expiry identifiers. Current roles and tenant scope are loaded from
-  PostgreSQL on each server render, so access changes take effect without waiting
-  for the cookie to expire.
-- **Global system roles, organisation-scoped memberships.** Default role definitions
-  are consistent across tenants. A membership binds one user and role to exactly one
-  organisation and either all or named locations.
-- **Central permission keys.** `src/lib/permissions.ts` is the source of truth.
-  Routes and later domain services call shared guards rather than comparing role
-  labels.
-- **Relational tenancy.** Organisation and location foreign keys are explicit.
-  `src/lib/tenant.ts` supplies reusable assertion and query-scope helpers.
-- **Prisma 7 driver adapter.** `@prisma/adapter-pg` makes the PostgreSQL runtime
-  explicit and supports managed PostgreSQL deployment.
-- **Module placeholders are honest.** Navigation reflects the intended MVP, while
-  later modules display a clear Milestone 1 empty state and do not simulate data.
-- **One active membership for the first shell.** The data model supports multiple
-  organisations per user. Organisation switching is deferred and documented as a
-  limitation.
+### ADR-001: QCGMS is a governance layer
 
-## Domain evolution
+The product complements operational care, eMAR, rostering, HR and finance
+systems. It owns governance relationships and assurance outcomes rather than
+reimplementing those operational platforms.
 
-Add each later domain under its own service/data-access module. Domain tables must
-carry `organisationId`; add `locationId` for service-specific records. Use
-specialised relational tables for structured reporting. File storage must be behind
-an interface and must never expose permanent public object URLs.
+### ADR-002: Canonical identity before synchronisation
 
-## Dashboard-first module decision
+Person, staff, organisation and location records have stable QCGMS identities
+and may carry multiple external identifiers. Imports create reconciliation work
+when identity is ambiguous; they do not silently create or merge governed people.
 
-The dashboard is being completed before the later domain modules at the user's
-request. It renders real tenant-scoped foundation activity and permissions. Counts,
-readiness language, completion percentages, deadlines, risks, audits and trends
-remain explicit no-data states until their source modules exist. This prevents the
-dashboard from inventing governance evidence or implying an official CQC rating.
+### ADR-003: One universal assurance chain
+
+Audits, registers, risks, care reviews, workforce controls and meetings may
+raise findings, but actions use one lifecycle for ownership, evidence,
+verification, effectiveness and recurrence.
+
+### ADR-004: Dependency review is advisory
+
+A material change creates an impact list. It may not silently alter a care plan,
+risk, competency or policy. An authorised person reviews, applies or dismisses
+each dependency with a reason.
+
+### ADR-005: Regulatory content is versioned configuration
+
+England, Scotland, Wales, Northern Ireland, commissioner and tenant frameworks
+use the structure in `REGULATORY_FRAMEWORKS.md`. Historical assessments retain
+the exact framework version used.
+
+### ADR-006: Evidence is a governed object
+
+Evidence has provenance, validity, version and verification. Files and links are
+supporting artefacts; their mere existence is not proof that a control worked.
+
+### ADR-007: Generated views are not new sources of truth
+
+Dashboards, quick guides, reports and inspection packs are projections of live
+authorised records. They retain source references and generation history but do
+not become duplicate operational records.
+
+### ADR-008: Planned controls are labelled honestly
+
+Documentation distinguishes current implementation from approved target design.
+Certification, service assurance and external integrations are not claimed until evidenced.
+
+## Domain boundaries
+
+- Identity and tenancy: users, memberships, locations, permissions and delegation.
+- People and care assurance: person, assessment, care plan, review and acknowledgement.
+- Workforce assurance: staff, checks, training, competency and supervision.
+- Operational governance: registers, findings, risk, action and external dependency.
+- Controlled content: policy, template, framework and assurance test.
+- Evidence and reporting: evidence, provenance, KPI, inspection and report projection.
+- Management control: meeting, decision, improvement plan, calendar and notification.
+- Integration: source identifiers, import batches, events and reconciliation cases.
+
+Each domain uses shared authority and tenant guards. Cross-domain changes occur
+through explicit services and relationships rather than hidden duplication.

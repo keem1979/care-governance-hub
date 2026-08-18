@@ -1,43 +1,99 @@
-# Data Model
+# Canonical Data Model
 
-## Workforce Suite
+This is the controlling conceptual model for new work. Existing Prisma models
+remain the implemented schema until a later approved phase introduces reviewed migrations.
 
-- `StaffMember` is the single workforce profile, with an automatic staff reference, role/location, private profile-photo storage key and configurable leave allowance.
-- `StaffComplianceRecord` stores dated recruitment checks, training, supervision, appraisal and observed competency outcomes. Training records can link to a catalogue course and controlled evidence.
-- `TrainingCourse` contains the shared Skills for Care/CQC-informed catalogue plus organisation-specific courses. `StaffTrainingRequirement` assigns only the applicable courses to each worker.
-- `StaffLeaveRequest` records annual leave, sickness and other leave, the requested working days, manager decision and return-to-work or fit-note follow-up.
-- Staff documents are restricted `Evidence` records linked with `relatedModule = StaffMember`; the live training matrix has one automatically refreshed restricted evidence record.
+## Universal governance fields
 
-Workforce access remains tenant- and location-scoped through `workforce:view` and `workforce:manage`. Profile photographs and uploaded documents remain in private object storage and are served only after an authorised request.
+Every governed business record carries, where applicable:
 
-## Foundation entities
+- UUID primary key, `organisationId` and `locationId`.
+- Human-readable reference that is unique within its intended scope.
+- Status, owner, created/updated timestamps and archive state.
+- Source system and external identifiers.
+- Version or immutable history for controlled content.
+- Relationships to evidence, activity and authorised people.
 
-| Entity | Purpose | Tenant rule |
+The browser never supplies trusted tenant authority. UTC is used for storage and
+dates are presented in the user's appropriate UK context.
+
+## Canonical identity
+
+| Entity | Owns | Must not be duplicated by |
 | --- | --- | --- |
-| `Organisation` | Top-level tenant | Root of every business record |
-| `ServiceLocation` | Registered or operating service | Belongs to one organisation |
-| `User` | Global sign-in identity | Access only through active memberships |
-| `OrganisationMembership` | User, organisation, role and status binding | Unique per user and organisation |
-| `MembershipLocation` | Explicit location assignment | Links only authorised membership locations |
-| `Role` / `Permission` | Central access definitions | System roles; authority comes through membership |
-| `RolePermission` | Role-to-permission mapping | Central source for server checks |
-| `Session` | Revocable authenticated session | Tied to one user; tenant resolved from membership |
-| `ActivityLog` | Append-only security/governance event | Organisation/location keys when known |
+| `Organisation` | Tenant identity, settings and selected frameworks | Reports, integration or location modules |
+| `ServiceLocation` | Registered or operating service identity | Registers, KPIs or workforce modules |
+| `Person` | Internal client reference, identity and relationships | Care plans, incidents or assessments |
+| `StaffMember` | Workforce identity and employment context | Training, findings or meeting records |
+| `ExternalParty` | Commissioner, authority, professional or supplier identity | Individual actions or free-text contact copies |
+| `User` | Sign-in identity | Staff profile; the two may be linked but remain distinct concepts |
 
-UUIDs are used for identifiers and timestamps are stored in UTC. Governance entities
-added in later milestones must include an organisation foreign key and, where
-relevant, a service-location foreign key. Important structured fields remain
-relational for filtering, reporting, and integrity.
+Potential duplicates create a `ReconciliationCase`. Automatic merging of
+ambiguous people or staff is prohibited.
 
-## Deletion
+## Authority and configuration
 
-Organisations and locations have archive timestamps. Memberships and sessions are
-deactivated or revoked. Activity records are never editable by ordinary users.
-Later governance records should use `archivedAt` rather than physical deletion.
+- `OrganisationMembership`, `Role`, `Permission` and location assignments control access.
+- `Delegation` grants time-limited authority with explicit limits and audit history.
+- `ConfigurationVersion` preserves approved risk matrices, deadlines, terminology and workflows.
+- `Framework`, `FrameworkVersion` and `FrameworkRequirement` hold jurisdiction-specific content.
 
-## Seed scope
+## Care and workforce governance
 
-Milestone 1 seeds the fictional Meadow View Home Care Ltd organisation,
-Basingstoke Branch, the seven default roles, permissions, and one demo user for each
-role. Policy, audit, risk, register, and KPI sample data belongs to the milestone
-that introduces each corresponding relational model.
+- `CarePlan` has controlled `CarePlanVersion` records and one published current version.
+- `CarePlanReview` proposes changes; it does not overwrite the current plan directly.
+- `MaterialChange` records classification, rationale, approval and affected relationships.
+- `DependencyReview` records each linked item that was applied, dismissed or remains open.
+- `AcknowledgementRequirement` and `UnderstandingCheck` record who must read or demonstrate understanding.
+- `StaffComplianceRecord` and `Competency` are the authoritative workforce assurance records.
+- `CareCompetencyRequirement` connects a care requirement to current verified competence without becoming a roster.
+
+## Continuous assurance
+
+- `Finding` is the normalised issue raised from any source module.
+- `Risk` records exposure, controls and review history.
+- `Action` records ownership, due date, priority, success measure and lifecycle.
+- `ActionEvidence` links governed evidence without duplicating it.
+- `Verification` records independent review and rationale.
+- `EffectivenessReview` compares the predefined success measure with observed outcome.
+- `RecurrenceCase` groups related repeat findings.
+- `RootCauseReview` records structured causes and optional Five Whys steps.
+- `ImprovementPlan` groups related findings, objectives, measures, milestones and outcomes.
+- `ExternalDependency` records the party, request, chasing, interim control and ageing.
+
+## Evidence and controlled content
+
+- `EvidenceItem` owns title, provenance, source, author, date, validity and confidentiality.
+- `EvidenceVersion` owns each file or controlled representation and checksum.
+- `EvidenceVerification` records relevance, currency and reviewer outcome.
+- `Policy` and `Template` own their versions, approvals and change history.
+- `PolicyWorkflowMapping` and `RequirementEvidenceMapping` are explicit relationships.
+
+## Management and reporting
+
+- `GovernanceMeeting` owns agenda, approved minutes and linked decisions.
+- `Decision` records rationale, evidence, accepted risk and review date.
+- `CalendarObligation` is the central due-date projection linked to its source record.
+- `KPIEntry` holds a defined measure, source, period and calculation version.
+- Dashboards, quick guides and reports are generated projections with source links.
+
+## Integration and audit
+
+- `ExternalIdentifier` connects a canonical record to an approved source system.
+- `ImportBatch` and `IntegrationEvent` retain source, counts, outcome and failures.
+- `ReconciliationCase` requires human resolution for conflicts or duplicate identity.
+- `ActivityLog` is append-only for ordinary users and records material actions.
+- `AIInteractionLog` is planned to record authorised sources, response class and feedback without unnecessary sensitive text.
+
+## Deletion and history
+
+Governed records use archive, merge, supersede or entered-in-error states rather
+than routine hard deletion. Permanent deletion or anonymisation requires an
+authorised retention decision while preserving legally required audit evidence.
+
+## Implementation status
+
+The repository already implements many foundation, workforce, care-plan,
+register, risk, action, evidence and reporting models. This Phase 0 document
+defines how those models will converge. No database migration is authorised by
+Phase 0 alone.

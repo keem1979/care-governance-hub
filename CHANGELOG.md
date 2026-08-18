@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-18 — Phase 0 product alignment
+
+- Repositioned QCGMS around continuous assurance and evidence-backed action closure.
+- Defined the canonical record model, source-of-truth rules and module assurance map.
+- Added a UK-wide versioned regulatory-framework architecture covering all four nations.
+- Reconciled the governed care-plan scope with exclusions for eMAR, rostering and daily recording.
+- Added measurable customer, adoption, safety and trust outcomes.
+- Recorded the approved phased release roadmap and release-blocking gates.
+- Updated public messaging to address management risk, verification and sustained improvement.
+- Added a matching Phase 0 social sharing card for the continuous-assurance proposition.
+- Updated future-build instructions so later work cannot reintroduce contradictory early-MVP scope.
+
 ## 2026-08-04 — ATOM digital service catalogue
 
 - Added a public, responsive ATOM service catalogue at `/catalogue`.
