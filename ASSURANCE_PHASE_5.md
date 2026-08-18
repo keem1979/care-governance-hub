@@ -20,7 +20,7 @@
 - [x] Workers cannot select or impersonate another staff profile when acknowledging instructions.
 - [x] A worker cannot approve their own critical understanding response.
 - [x] Tenant and location checks protect all new reads and mutations.
-- [ ] Production database migration applied successfully.
+- [x] Production database migration applied successfully.
 - [ ] Post-deployment manager and staff-role safety smoke checks.
 
 ## Safety boundary
