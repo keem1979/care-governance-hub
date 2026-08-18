@@ -32,6 +32,43 @@ describe("Abi governance assistant", () => {
     expect(reply.navigate).toBe(false);
   });
 
+  it("escalates unsupported action questions instead of repeating a module overview", () => {
+    const reply = answerAssistant(
+      "Can I delete a client's profile?",
+      all,
+      "/clients",
+    );
+    expect(reply.answer).toContain("verified QCGMS guidance");
+    expect(reply.answer).toContain("will not guess or invent");
+    expect(reply.answer).toContain("management team");
+    expect(reply.answer).not.toContain("Client Directory keeps");
+    expect(reply.links).toEqual([]);
+  });
+
+  it("escalates specific unverified module questions without repeating the overview", () => {
+    const reply = answerAssistant(
+      "Does the Client Directory automatically contact a person's relatives?",
+      all,
+      "/clients",
+    );
+    expect(reply.answer).toContain("management team");
+    expect(reply.answer).not.toContain("Client Directory keeps");
+    expect(reply.links).toEqual([]);
+  });
+
+  it("answers action questions only when the capability is documented", () => {
+    const addClient = answerAssistant("Can I add a client?", all, "/clients");
+    expect(addClient.answer).toContain("Client Directory");
+    expect(addClient.links).toContainEqual({
+      label: "Add a client",
+      href: "/clients/new",
+    });
+
+    const removePolicy = answerAssistant("Can I remove a policy?", all);
+    expect(removePolicy.answer).toContain("Removing a policy hides it");
+    expect(removePolicy.answer).not.toContain("management team");
+  });
+
   it("answers workflow questions with the correct destination", () => {
     const reply = answerAssistant("How do I add evidence?", all);
     expect(reply.answer).toContain("Evidence Library");

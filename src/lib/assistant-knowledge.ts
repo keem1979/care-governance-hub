@@ -24,7 +24,43 @@ export type AssistantReply = {
 };
 
 const MANAGEMENT_ESCALATION =
-  "I’m not confident that I have a reliable answer to that question, so I will not guess. Please escalate it to your management team for review and guidance.";
+  "I cannot confirm a reliable answer to that question from the verified QCGMS guidance, so I will not guess or invent one. Please escalate it to your management team for review and guidance.";
+
+const CAPABILITY_ACTIONS = [
+  "access",
+  "add",
+  "approve",
+  "archive",
+  "assign",
+  "change",
+  "close",
+  "create",
+  "delete",
+  "disable",
+  "download",
+  "edit",
+  "enable",
+  "export",
+  "invite",
+  "link",
+  "merge",
+  "notify",
+  "print",
+  "record",
+  "remove",
+  "reopen",
+  "restore",
+  "schedule",
+  "search",
+  "send",
+  "start",
+  "submit",
+  "transfer",
+  "unlink",
+  "update",
+  "upload",
+  "view",
+] as const;
 
 type ModuleContext = {
   hsc: string;
@@ -269,6 +305,14 @@ export function answerAssistant(query: string, permissions: readonly string[], c
     };
   }
 
+  if (!hasVerifiedTopicAnswer(clean, topic, wantsNavigation)) {
+    return {
+      answer: MANAGEMENT_ESCALATION,
+      links: [],
+      navigate: false,
+    };
+  }
+
   if (!allowed(topic.requiredAny, permissions)) {
     return {
       answer: `${topic.name} sounds like the right place, but your account does not currently have access to it. Please ask an organisation administrator to check your role or location access in Settings.`,
@@ -291,6 +335,49 @@ export function answerAssistant(query: string, permissions: readonly string[], c
     links,
     navigate: false,
   };
+}
+
+function hasVerifiedTopicAnswer(
+  query: string,
+  topic: AssistantTopic,
+  wantsNavigation: boolean,
+): boolean {
+  if (wantsNavigation) return true;
+
+  const requestedActions = CAPABILITY_ACTIONS.filter((action) =>
+    new RegExp(`\\b${action}\\b`).test(query),
+  );
+  if (requestedActions.length) {
+    const verifiedTopicGuidance = normalise(
+      [
+        topic.summary,
+        topic.guidance,
+        ...topic.keywords,
+        ...topic.links.flatMap((item) => [item.label, ...item.keywords]),
+      ].join(" "),
+    );
+
+    return requestedActions.every((action) =>
+      new RegExp(`\\b${action}\\b`).test(verifiedTopicGuidance),
+    );
+  }
+
+  if (/\b(this page|current page|here)\b/.test(query)) return true;
+  if (
+    /\b(how does|how do)\b.*\b(work|help|matter)\b/.test(query) ||
+    /^(what is|what are|explain|tell me about|give me an overview of)\b/.test(
+      query,
+    ) ||
+    /\b(why does|why do|why is|why are)\b.*\b(matter|important|cqc|care)\b/.test(
+      query,
+    )
+  ) {
+    return true;
+  }
+
+  const topicTokens = new Set(tokens(`${topic.name} ${topic.keywords.join(" ")}`));
+  const queryTokens = tokens(query);
+  return queryTokens.length > 0 && queryTokens.every((token) => topicTokens.has(token));
 }
 
 function professionalModuleAnswer(
