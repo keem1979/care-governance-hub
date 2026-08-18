@@ -140,6 +140,74 @@ enum CarePlanChangeApproval {
   REJECTED
 }
 
+enum CanonicalEntityType {
+  CLIENT
+  STAFF_MEMBER
+  SERVICE_LOCATION
+  EXTERNAL_PARTY
+}
+
+enum ReconciliationReason {
+  DUPLICATE_IDENTITY
+  EXTERNAL_ID_CONFLICT
+  DATA_CONFLICT
+  MISSING_IDENTITY
+}
+
+enum ReconciliationStatus {
+  OPEN
+  UNDER_REVIEW
+  DISTINCT_CONFIRMED
+  MERGE_ESCALATED
+  RESOLVED
+}
+
+enum MaterialChangeCategory {
+  IDENTITY
+  CARE_NEED
+  RISK
+  MEDICATION_INFORMATION
+  COMMUNICATION
+  CONSENT_CAPACITY
+  SAFEGUARDING
+  WORKFORCE
+  CONTACT
+  OTHER
+}
+
+enum MaterialChangeSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MaterialChangeStatus {
+  PROPOSED
+  APPROVED
+  REJECTED
+  APPLIED
+  SUPERSEDED
+}
+
+enum DependencyReviewType {
+  CARE_PLAN_SECTION
+  RISK_REGISTER
+  ACTION_TRACKER
+  EVIDENCE
+  STAFF_COMPETENCY
+  ASSESSMENT
+  CONTACT_RECORD
+  OTHER
+}
+
+enum DependencyReviewStatus {
+  OPEN
+  APPLIED
+  DISMISSED
+  NOT_APPLICABLE
+}
+
 enum RiskStatus {
   OPEN
   MONITORING
@@ -1925,6 +1993,7 @@ model CarePlanChange {
   createdAt        DateTime               @default(now())
 
   version CarePlanVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  materialChange MaterialChange?
 
   @@index([versionId, approvalStatus])
 }
@@ -1968,4 +2037,122 @@ model CarePlanAcknowledgement {
   @@unique([versionId, userId])
   @@index([carePlanId, versionId])
   @@index([staffMemberId])
+}
+
+model ExternalParty {
+  id             String    @id @default(uuid()) @db.Uuid
+  organisationId String    @db.Uuid
+  locationId     String?   @db.Uuid
+  partyType      String
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  notes          String?
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organisationId, name])
+  @@index([locationId, archivedAt])
+}
+
+model ExternalIdentifier {
+  id             String              @id @default(uuid()) @db.Uuid
+  organisationId String              @db.Uuid
+  sourceSystem   String
+  entityType     CanonicalEntityType
+  externalId     String
+  recordId       String              @db.Uuid
+  lastSeenAt     DateTime?
+  metadata       Json?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([organisationId, sourceSystem, entityType, externalId])
+  @@unique([organisationId, sourceSystem, entityType, recordId])
+  @@index([organisationId, entityType, recordId])
+}
+
+model ReconciliationCase {
+  id                String                @id @default(uuid()) @db.Uuid
+  organisationId    String                @db.Uuid
+  locationId        String?               @db.Uuid
+  reference         String
+  fingerprint       String
+  entityType        CanonicalEntityType
+  reason            ReconciliationReason
+  status            ReconciliationStatus @default(OPEN)
+  candidateRecordIds String[]              @default([])
+  candidateLabels   String[]              @default([])
+  matchSignals      String[]              @default([])
+  summary           String
+  assignedToId      String?               @db.Uuid
+  reviewedById      String?               @db.Uuid
+  canonicalRecordId String?               @db.Uuid
+  reviewNote        String?
+  reviewedAt        DateTime?
+  resolvedAt        DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@unique([organisationId, fingerprint])
+  @@unique([organisationId, reference])
+  @@index([organisationId, status, createdAt])
+  @@index([locationId, status])
+}
+
+model MaterialChange {
+  id                String                 @id @default(uuid()) @db.Uuid
+  organisationId    String                 @db.Uuid
+  locationId        String?                @db.Uuid
+  carePlanId        String                 @db.Uuid
+  carePlanVersionId String                 @db.Uuid
+  carePlanChangeId  String                 @unique @db.Uuid
+  clientId          String                 @db.Uuid
+  category          MaterialChangeCategory
+  severity          MaterialChangeSeverity
+  sectionKey        String
+  fieldPath         String
+  previousValue     Json?
+  proposedValue     Json?
+  summary           String
+  rationale         String
+  status            MaterialChangeStatus   @default(PROPOSED)
+  createdById       String                 @db.Uuid
+  approvedById      String?                @db.Uuid
+  approvedAt        DateTime?
+  appliedAt         DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  carePlanChange CarePlanChange     @relation(fields: [carePlanChangeId], references: [id], onDelete: Cascade)
+  dependencies  DependencyReview[]
+
+  @@index([organisationId, status, severity])
+  @@index([carePlanId, carePlanVersionId])
+  @@index([clientId, status])
+}
+
+model DependencyReview {
+  id               String                 @id @default(uuid()) @db.Uuid
+  organisationId   String                 @db.Uuid
+  locationId       String?                @db.Uuid
+  materialChangeId String                 @db.Uuid
+  type             DependencyReviewType
+  targetRecordId   String?                @db.Uuid
+  targetReference  String?
+  targetTitle      String
+  status           DependencyReviewStatus @default(OPEN)
+  decision         String?
+  reviewedById     String?                @db.Uuid
+  reviewedAt       DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  materialChange MaterialChange @relation(fields: [materialChangeId], references: [id], onDelete: Cascade)
+
+  @@unique([materialChangeId, type, targetTitle])
+  @@index([organisationId, status, createdAt])
+  @@index([locationId, status])
 }

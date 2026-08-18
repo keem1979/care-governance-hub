@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-18 — Phase 2 canonical data and safe synchronisation
+
+- Added tenant-scoped canonical external identifiers and external-party records.
+- Added human-controlled duplicate identity detection for client and staff records.
+- Added reconciliation decisions that never merge, delete or overwrite records automatically.
+- Added material-change category and severity classification for proposed care-plan versions.
+- Added downstream dependency review for risks, actions, evidence, assessments and staff competency.
+- Added a Data Quality management work queue and auditable review decisions.
+
 ## 2026-08-18 — Phase 1 trust foundation
 
 - Added mandatory TOTP MFA for every account, encrypted MFA secrets, one-time

@@ -14,6 +14,7 @@ const protectedRoutes = [
   "/actions",
   "/workforce",
   "/quality",
+  "/data-quality",
   "/meetings",
   "/calendar",
   "/kpis",

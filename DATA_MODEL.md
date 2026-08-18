@@ -1,7 +1,8 @@
 # Canonical Data Model
 
-This is the controlling conceptual model for new work. Existing Prisma models
-remain the implemented schema until a later approved phase introduces reviewed migrations.
+This is the controlling conceptual model for new work. Phase 2 introduces the
+first reviewed canonical identity, reconciliation and material-change models;
+later concepts remain planned until their release phase is implemented.
 
 ## Universal governance fields
 
@@ -93,7 +94,8 @@ authorised retention decision while preserving legally required audit evidence.
 
 ## Implementation status
 
-The repository already implements many foundation, workforce, care-plan,
-register, risk, action, evidence and reporting models. This Phase 0 document
-defines how those models will converge. No database migration is authorised by
-Phase 0 alone.
+The repository implements foundation, workforce, care-plan, register, risk,
+action, evidence and reporting models. Phase 2 now implements `ExternalParty`,
+`ExternalIdentifier`, `ReconciliationCase`, `MaterialChange` and
+`DependencyReview`. The remaining conceptual models in this document are not
+live until their later roadmap phases pass their release gates.

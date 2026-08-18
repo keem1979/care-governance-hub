@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { compareCarePlanSnapshots, materialSectionLabels, parseCarePlanSnapshot, reviewToCarePlanSnapshot } from "@/lib/care-plans";
 import type { CarePlanReviewPayload } from "@/lib/care-plan-reviews";
+import { syncMaterialChangeRecords } from "@/lib/material-changes";
 
 export async function syncCarePlanReviewProposal(tx: Prisma.TransactionClient, input: { organisationId: string; actorId: string; reviewEntryId: string; reviewReference: string; payload: CarePlanReviewPayload }) {
   const carePlanId = String(input.payload.carePlanId ?? "");
@@ -47,6 +48,14 @@ export async function syncCarePlanReviewProposal(tx: Prisma.TransactionClient, i
       source: change.source,
       reviewerId: input.actorId,
     })),
+  });
+  await syncMaterialChangeRecords(tx, {
+    organisationId: input.organisationId,
+    locationId: plan.locationId,
+    carePlanId,
+    carePlanVersionId: version.id,
+    clientId: plan.clientId,
+    actorId: input.actorId,
   });
   if (status === "AWAITING_APPROVAL") await tx.carePlan.update({ where: { id: carePlanId }, data: { status: "AWAITING_APPROVAL" } });
   return { versionId: version.id, changedSections: materialSectionLabels(changes) };

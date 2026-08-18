@@ -1,0 +1,47 @@
+import Link from "next/link";
+import { AlertTriangle, ArrowRight, DatabaseZap, GitCompareArrows, ShieldCheck } from "lucide-react";
+import { DependencyDecision, IdentityScanButton, ReconciliationDecision } from "@/components/data-quality-controls";
+import { requirePermission } from "@/lib/auth/dal";
+import { createDb } from "@/lib/db";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+
+export default async function DataQualityPage() {
+  const context = await requirePermission(PERMISSIONS.GOVERNANCE_VIEW);
+  const db = createDb();
+  try {
+    const locationScope = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map(({ id }) => id) } }] };
+    const [cases, dependencies, materialCounts] = await Promise.all([
+      db.reconciliationCase.findMany({ where: { organisationId: context.organisation.id, status: { in: ["OPEN", "UNDER_REVIEW", "MERGE_ESCALATED"] }, ...locationScope }, orderBy: [{ status: "asc" }, { createdAt: "asc" }], take: 50 }),
+      db.dependencyReview.findMany({ where: { organisationId: context.organisation.id, status: "OPEN", ...locationScope }, include: { materialChange: true }, orderBy: { createdAt: "asc" }, take: 50 }),
+      db.materialChange.groupBy({ by: ["severity", "status"], where: { organisationId: context.organisation.id, ...locationScope }, _count: { _all: true } }),
+    ]);
+    const carePlanIds = [...new Set(dependencies.map((item) => item.materialChange.carePlanId))];
+    const clientIds = [...new Set(dependencies.map((item) => item.materialChange.clientId))];
+    const [plans, clients] = await Promise.all([
+      db.carePlan.findMany({ where: { organisationId: context.organisation.id, id: { in: carePlanIds } }, select: { id: true, reference: true } }),
+      db.client.findMany({ where: { organisationId: context.organisation.id, id: { in: clientIds } }, select: { id: true, firstName: true, lastName: true, clientReference: true } }),
+    ]);
+    const planMap = new Map(plans.map((item) => [item.id, item.reference]));
+    const clientMap = new Map(clients.map((item) => [item.id, `${item.firstName} ${item.lastName} · ${item.clientReference}`]));
+    const openChanges = materialCounts.filter((item) => item.status === "PROPOSED").reduce((sum, item) => sum + item._count._all, 0);
+    const highChanges = materialCounts.filter((item) => ["HIGH", "CRITICAL"].includes(item.severity) && ["PROPOSED", "APPLIED"].includes(item.status)).reduce((sum, item) => sum + item._count._all, 0);
+    const canEdit = hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_EDIT);
+    return <main className="space-y-7">
+      <header className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800 p-7 text-white shadow-sm"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-sm font-bold uppercase tracking-widest text-emerald-200">Phase 2 · canonical data control</p><h1 className="mt-1 text-3xl font-bold">Data Quality & Change Assurance</h1><p className="mt-2 max-w-3xl text-emerald-50">Resolve uncertain identities and review the records affected by material care-plan changes. QCGMS never merges people or overwrites linked governance records automatically.</p></div>{canEdit ? <IdentityScanButton /> : <ShieldCheck className="size-12 text-emerald-200" />}</div></header>
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Stat label="Identity cases" value={cases.length} detail="require human review" warn={cases.length > 0}/><Stat label="Open dependencies" value={dependencies.length} detail="linked records to check" warn={dependencies.length > 0}/><Stat label="Proposed changes" value={openChanges} detail="not yet live"/><Stat label="High-risk changes" value={highChanges} detail="current controlled history" warn={highChanges > 0}/></section>
+      <section className="grid gap-5 xl:grid-cols-2">
+        <Panel icon={GitCompareArrows} title="Identity reconciliation" description="Potential matches are signals, not decisions. Confirm separate people or escalate for a controlled merge review.">{cases.length ? <div className="space-y-4">{cases.map((item) => <article key={item.id} className="rounded-2xl border border-slate-200 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-bold">{item.reference} · {label(item.entityType)}</p><p className="mt-1 text-sm text-slate-600">{item.summary}</p></div><Badge value={item.status}/></div><ul className="mt-3 space-y-1 text-sm">{item.candidateLabels.map((candidate) => <li key={candidate}>• {candidate}</li>)}</ul><div className="mt-3 flex flex-wrap gap-2">{item.matchSignals.map((signal) => <span key={signal} className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-900">{signal}</span>)}</div>{canEdit && item.status !== "MERGE_ESCALATED" ? <ReconciliationDecision id={item.id} candidates={item.candidateRecordIds.map((id, index) => ({ id, label: item.candidateLabels[index] ?? id }))} /> : item.status === "MERGE_ESCALATED" ? <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-900">Escalated for controlled merge review. Both original records remain unchanged and available.</p> : null}</article>)}</div> : <Empty text="No unresolved identity cases. Run a controlled check after imports or directory changes."/>}</Panel>
+        <Panel icon={DatabaseZap} title="Dependency review queue" description="These checks are raised from material care-plan changes. Complete each check in its source module, then record the outcome here.">{dependencies.length ? <div className="space-y-4">{dependencies.map((item) => <article key={item.id} className="rounded-2xl border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold">{item.targetTitle}</p><p className="mt-1 text-xs text-slate-500">{planMap.get(item.materialChange.carePlanId) ?? "Care plan"} · {clientMap.get(item.materialChange.clientId) ?? "Person record"}</p></div><Severity value={item.materialChange.severity}/></div><p className="mt-3 text-sm text-slate-700"><strong>Trigger:</strong> {item.materialChange.summary}</p><p className="mt-1 text-xs text-slate-500">No linked source record has been changed by this queue item.</p><div className="mt-3 flex gap-3 text-xs font-bold"><Link href={`/care-plans/${item.materialChange.carePlanId}`} className="text-emerald-800">Open care plan <ArrowRight className="inline" size={12}/></Link>{sourceHref(item.type) ? <Link href={sourceHref(item.type)!} className="text-emerald-800">Open source module <ArrowRight className="inline" size={12}/></Link> : null}</div>{canEdit ? <DependencyDecision id={item.id}/> : null}</article>)}</div> : <Empty text="There are no linked-record checks waiting for a decision."/>}</Panel>
+      </section>
+      <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><div className="flex gap-3"><AlertTriangle className="mt-0.5 shrink-0 text-blue-800"/><div><h2 className="font-bold text-blue-950">Safe synchronisation boundary</h2><p className="mt-1 text-sm leading-6 text-blue-950">The queue records what should be reviewed; it does not edit risks, assessments, evidence, actions, staff competencies or contact records. An authorised person must make any change in the owning module and record the rationale.</p></div></div></section>
+    </main>;
+  } finally { await db.$disconnect(); }
+}
+
+function Stat({ label, value, detail, warn = false }: { label: string; value: number; detail: string; warn?: boolean }) { return <div className={`rounded-2xl border p-5 ${warn ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}><p className="text-sm text-slate-600">{label}</p><p className="mt-1 text-3xl font-black">{value}</p><p className="text-xs text-slate-500">{detail}</p></div>; }
+function Panel({ icon: Icon, title, description, children }: { icon: typeof DatabaseZap; title: string; description: string; children: React.ReactNode }) { return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><Icon size={20}/></span><div><h2 className="text-lg font-bold">{title}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{description}</p></div></div><div className="mt-5">{children}</div></section>; }
+function Empty({ text }: { text: string }) { return <div className="rounded-xl border border-dashed border-slate-300 p-7 text-center text-sm text-slate-600">{text}</div>; }
+function Badge({ value }: { value: string }) { return <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">{value.replaceAll("_", " ").toLowerCase()}</span>; }
+function Severity({ value }: { value: string }) { const style = value === "CRITICAL" ? "bg-red-100 text-red-800" : value === "HIGH" ? "bg-amber-100 text-amber-900" : "bg-blue-100 text-blue-800"; return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${style}`}>{value}</span>; }
+function label(value: string) { return value === "CLIENT" ? "Client records" : "Staff records"; }
+function sourceHref(type: string) { return ({ RISK_REGISTER: "/risks", ACTION_TRACKER: "/actions", EVIDENCE: "/evidence", STAFF_COMPETENCY: "/workforce", ASSESSMENT: "/assessments", CONTACT_RECORD: "/clients" } as Record<string, string>)[type] ?? null; }
