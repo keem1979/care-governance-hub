@@ -350,6 +350,27 @@ enum ExternalDependencyStatus {
   CANCELLED
 }
 
+enum ManagementCommandView {
+  REGISTERED_MANAGER
+  OWNER
+  LOCATION
+  MY_WORK
+}
+
+enum ManagementFocus {
+  ALL
+  CRITICAL
+  OVERDUE
+  UNVERIFIED
+  EXTERNAL
+}
+
+enum ManagementDelegationStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
 enum MeetingStatus {
   DRAFT
   SCHEDULED
@@ -543,6 +564,8 @@ model Organisation {
   staffLeaveRequests     StaffLeaveRequest[]
   clients                Client[]
   referenceCounters      ReferenceCounter[]
+  managementDelegations  ManagementDelegation[]
+  managementSavedViews   ManagementSavedView[]
 }
 
 model ServiceLocation {
@@ -574,6 +597,8 @@ model ServiceLocation {
   complianceRequirements ComplianceRequirement[]
   staffMembers           StaffMember[]
   clients                Client[]
+  managementDelegations  ManagementDelegation[]
+  managementSavedViews   ManagementSavedView[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -636,6 +661,8 @@ model User {
   staffComplianceVerified StaffComplianceRecord[]  @relation("StaffComplianceVerifier")
   staffLeaveRequested     StaffLeaveRequest[]      @relation("StaffLeaveRequester")
   staffLeaveDecided       StaffLeaveRequest[]      @relation("StaffLeaveDecision")
+  managementSavedViews    ManagementSavedView[]
+  managementDelegationsCreated ManagementDelegation[] @relation("ManagementDelegationCreator")
 }
 
 model Policy {
@@ -2101,10 +2128,63 @@ model OrganisationMembership {
   reportsTo     OrganisationMembership?  @relation("MembershipReportingLine", fields: [reportsToId], references: [id], onDelete: SetNull)
   directReports OrganisationMembership[] @relation("MembershipReportingLine")
   permissions   MembershipPermission[]
+  delegationsGiven    ManagementDelegation[] @relation("ManagementDelegator")
+  delegationsReceived ManagementDelegation[] @relation("ManagementDelegate")
 
   @@unique([organisationId, userId])
   @@index([userId, status])
   @@index([organisationId, reportsToId])
+}
+
+model ManagementSavedView {
+  id             String                @id @default(uuid()) @db.Uuid
+  organisationId String                @db.Uuid
+  userId         String                @db.Uuid
+  locationId     String?               @db.Uuid
+  name           String
+  commandView    ManagementCommandView
+  focus          ManagementFocus       @default(ALL)
+  isDefault      Boolean               @default(false)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([organisationId, userId, name])
+  @@index([organisationId, userId, isDefault])
+  @@index([locationId])
+}
+
+model ManagementDelegation {
+  id             String                     @id @default(uuid()) @db.Uuid
+  organisationId String                     @db.Uuid
+  locationId     String?                    @db.Uuid
+  delegatorId    String                     @db.Uuid
+  delegateId     String                     @db.Uuid
+  createdById    String                     @db.Uuid
+  title          String
+  responsibilities String[]                 @default([])
+  reason         String
+  startsAt       DateTime
+  endsAt         DateTime
+  status         ManagementDelegationStatus @default(ACTIVE)
+  revokedAt      DateTime?
+  revokedReason  String?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  organisation Organisation             @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  location     ServiceLocation?          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  delegator    OrganisationMembership    @relation("ManagementDelegator", fields: [delegatorId], references: [id], onDelete: Restrict)
+  delegate     OrganisationMembership    @relation("ManagementDelegate", fields: [delegateId], references: [id], onDelete: Restrict)
+  createdBy    User                      @relation("ManagementDelegationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, status, endsAt])
+  @@index([delegatorId, status])
+  @@index([delegateId, status])
+  @@index([locationId, status])
 }
 
 model MembershipPermission {

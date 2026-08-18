@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-18 — Phase 4 management intelligence
+
+- Added role-aware owner, registered-manager, location and personal command views.
+- Added record-based critical, overdue, awaiting-assurance and external-dependency filters.
+- Added direct source links so management priorities open their canonical records.
+- Added personal saved views with an optional default view.
+- Added time-bound, location-scoped delegation that never grants extra permissions.
+- Added audit history for saved-view and delegation changes.
+
 ## 2026-08-18 — Phase 3 assurance and sustained improvement
 
 - Added one canonical finding chronology for every improvement action.

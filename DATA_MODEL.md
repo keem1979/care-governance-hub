@@ -35,7 +35,7 @@ ambiguous people or staff is prohibited.
 ## Authority and configuration
 
 - `OrganisationMembership`, `Role`, `Permission` and location assignments control access.
-- `Delegation` grants time-limited authority with explicit limits and audit history.
+- `ManagementDelegation` records time-limited accountability, scope and audit history without granting permissions.
 - `ConfigurationVersion` preserves approved risk matrices, deadlines, terminology and workflows.
 - `Framework`, `FrameworkVersion` and `FrameworkRequirement` hold jurisdiction-specific content.
 
@@ -77,6 +77,8 @@ ambiguous people or staff is prohibited.
 - `CalendarObligation` is the central due-date projection linked to its source record.
 - `KPIEntry` holds a defined measure, source, period and calculation version.
 - Dashboards, quick guides and reports are generated projections with source links.
+- `ManagementSavedView` stores each user's authorised command filters; it does not copy source records.
+- `ManagementDelegation` records temporary responsibility between active tenant memberships and never expands access.
 
 ## Integration and audit
 
@@ -100,4 +102,6 @@ action, evidence and reporting models. Phase 2 implements `ExternalParty`,
 `DependencyReview`. Phase 3 implements `Finding`, `RootCauseReview`,
 `Verification`, `EffectivenessReview`, `RecurrenceCase`, `ImprovementPlan` and
 `ExternalDependency`. Remaining conceptual models are not live until their
-later roadmap phases pass their release gates.
+later roadmap phases pass their release gates. Phase 4 implements
+`ManagementSavedView` and `ManagementDelegation`, with owner, registered-manager,
+location and personal projections over canonical governance records.
