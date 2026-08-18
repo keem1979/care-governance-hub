@@ -61,40 +61,35 @@ export function StructuredTableEditor({
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto" role="region" aria-label={`${label} editable table`} tabIndex={0}>
-        <table className="qcgms-structured-table min-w-max text-left text-xs">
-          <thead>
-            <tr>
-              <th className="w-14 text-center" scope="col">No.</th>
-              {columns.map((column) => <th key={column.key} className={widthClass(column.width)} scope="col">{column.label}</th>)}
-              <th className="w-20 text-center" scope="col">Remove</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={index} className="align-top">
-                <th className="text-center text-slate-500" scope="row">{index + 1}</th>
-                {columns.map((column) => (
-                  <td key={column.key} className={widthClass(column.width)}>
-                    <CellInput
-                      column={column}
-                      value={row[column.key] ?? ""}
-                      onChange={(value) => update(index, column.key, value)}
-                      rowNumber={index + 1}
-                    />
-                  </td>
-                ))}
-                <td className="text-center">
-                  <button type="button" onClick={() => remove(index)} className="rounded-lg p-2 text-red-700 transition hover:bg-red-50" aria-label={`Remove row ${index + 1}`}>
-                    <Trash2 size={16} aria-hidden="true" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-4 p-4 sm:p-5" role="group" aria-label={`${label} editable records`}>
+        {rows.map((row, index) => (
+          <article key={index} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 shadow-sm">
+            <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="grid size-8 place-items-center rounded-full bg-emerald-100 text-xs font-black text-emerald-900">{index + 1}</span>
+                <div><h3 className="text-sm font-bold text-slate-950">{label.replace(/ table$/i, "")} record</h3><p className="text-[11px] text-slate-500">Complete the relevant fields below</p></div>
+              </div>
+              <button type="button" onClick={() => remove(index)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50" aria-label={`Remove record ${index + 1}`}>
+                <Trash2 size={15} aria-hidden="true" /> <span className="hidden sm:inline">Remove</span>
+              </button>
+            </header>
+            <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+              {columns.map((column) => (
+                <div key={column.key} className={fieldSpan(column.width)}>
+                  <p className="mb-1.5 text-xs font-bold text-slate-700">{column.label}</p>
+                  <CellInput
+                    column={column}
+                    value={row[column.key] ?? ""}
+                    onChange={(value) => update(index, column.key, value)}
+                    rowNumber={index + 1}
+                  />
+                </div>
+              ))}
+            </div>
+          </article>
+        ))}
       </div>
-      <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 sm:px-5">Use one row for each distinct item. Scroll sideways on smaller screens; the row number stays visible.</p>
+      <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 sm:px-5">Use one numbered record for each distinct item. The layout automatically adapts to desktop, tablet and mobile screens.</p>
     </fieldset>
   );
 }
@@ -108,8 +103,7 @@ function CellInput({ column, value, onChange, rowNumber }: { column: StructuredT
   return <input aria-label={label} type={column.type === "date" || column.type === "datetime-local" ? column.type : "text"} value={value} placeholder={column.placeholder} onChange={(event) => onChange(event.target.value)} className={inputClass} />;
 }
 
-function widthClass(width: StructuredTableColumn["width"]) {
-  if (width === "compact") return "min-w-28";
-  if (width === "wide") return "min-w-64";
-  return "min-w-44";
+function fieldSpan(width: StructuredTableColumn["width"]) {
+  if (width === "wide") return "md:col-span-2";
+  return "";
 }

@@ -138,7 +138,7 @@ export function CarePlanReviewForm({
 
     {error ? <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</div> : null}
 
-    <div className="grid gap-5 xl:grid-cols-[250px_minmax(0,1fr)_280px]">
+    <div className="grid gap-5 xl:grid-cols-[250px_minmax(0,1fr)]">
       <nav className="space-y-1 rounded-2xl border border-slate-200 bg-white p-3 xl:sticky xl:top-28 xl:self-start">
         <p className="px-3 pb-2 text-xs font-bold uppercase tracking-widest text-emerald-700">Review pathway</p>
         {STEPS.map(([title], index) => <button type="button" key={title} onClick={() => setStep(index)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-xs font-semibold ${step === index ? "bg-emerald-800 text-white" : "hover:bg-slate-100"}`}>
@@ -147,6 +147,19 @@ export function CarePlanReviewForm({
       </nav>
 
       <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <section className="mb-7 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/60" aria-label="Assurance summary">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200 px-4 py-3">
+            <div><h2 className="text-sm font-bold text-emerald-950">Assurance summary</h2><p className="text-xs text-emerald-800">Live review indicators · {organisationName}</p></div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-900 shadow-sm">{workflow}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-px bg-emerald-200 sm:grid-cols-3 lg:grid-cols-5">
+            <SummaryCard label="Current risk" value={risk}/>
+            <SummaryCard label="Person involved" value={value("personInvolved") || "Not recorded"}/>
+            <SummaryCard label="Evidence position" value={value("evidenceConflict") === "Yes" ? "Conflict identified" : "No conflict recorded"}/>
+            <SummaryCard label="Critical / High actions" value={`${actions.filter((item)=>item.priority==="CRITICAL"&&!item.actionId).length} / ${actions.filter((item)=>item.priority==="HIGH"&&!item.actionId).length}`}/>
+            <SummaryCard label="RM assurance" value={value("rmDecision") || "Outstanding"}/>
+          </div>
+        </section>
         <StepPanel active={step === 0} number={1} title="Review details" description="Establish why this review is taking place, the decision required and immediate safety position.">
           <div className="grid gap-4 md:grid-cols-2">
             <TextField name="reference" label="Review reference" defaultValue={initial?.reference} placeholder="Generated automatically if blank" readOnly={Boolean(initial)}/>
@@ -239,17 +252,12 @@ export function CarePlanReviewForm({
         <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t pt-5"><button type="button" disabled={step===0} onClick={()=>setStep((n)=>Math.max(0,n-1))} className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold disabled:opacity-40"><ChevronLeft size={16}/> Previous</button><p className="text-xs font-semibold text-slate-500">Step {step+1} of {STEPS.length}</p>{step<STEPS.length-1?<button type="button" onClick={()=>setStep((n)=>Math.min(STEPS.length-1,n+1))} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white">Next <ChevronRight size={16}/></button>:<button disabled={busy} className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{busy?"Saving…":initial?"Save care-plan review":"Create care-plan review"}</button>}</div>
       </div>
 
-      <aside className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 xl:sticky xl:top-28 xl:self-start">
-        <h2 className="text-sm font-bold">Assurance summary</h2>
-        <Summary label="Current risk" value={risk}/><Summary label="Review status" value={workflow}/><Summary label="Person involved?" value={value("personInvolved") || "Not recorded"}/><Summary label="Medication reconciliation" value={value("medicationChanged") || "Not assessed"}/><Summary label="Open Critical actions" value={String(actions.filter((item)=>item.priority==="CRITICAL"&&!item.actionId).length)}/><Summary label="Open High actions" value={String(actions.filter((item)=>item.priority==="HIGH"&&!item.actionId).length)}/><Summary label="Evidence gaps" value={value("evidenceConflict") === "Yes" ? "Conflict identified" : "No conflict recorded"}/><Summary label="Staff acknowledgement" value={value("readUnderstoodRequired") || "Not assessed"}/><Summary label="RM assurance" value={value("rmDecision") || "Outstanding"}/>
-        <p className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">Tenant: <strong>{organisationName}</strong>. This summary supports, but does not replace, Registered Manager professional judgement.</p>
-      </aside>
     </div>
   </form>;
 }
 
 function HeaderFact({label,value}:{label:string;value:string}) { return <div><p className="text-[10px] uppercase tracking-widest text-slate-400">{label}</p><p className="mt-0.5 truncate text-xs font-bold">{value}</p></div>; }
-function Summary({label,value}:{label:string;value:string}) { return <div className="flex items-start justify-between gap-3 border-b pb-2 text-xs"><span className="text-slate-500">{label}</span><strong className="text-right">{value}</strong></div>; }
+function SummaryCard({label,value}:{label:string;value:string}) { return <div className="min-w-0 bg-white px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 break-words text-xs font-bold text-slate-950">{value}</p></div>; }
 function StepPanel({active,number,title,description,children}:{active:boolean;number:number;title:string;description:string;children:React.ReactNode}) { return <section className={active?"":"hidden"}><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Section {number}</p><h2 className="mt-1 text-2xl font-bold">{title}</h2><p className="mb-6 mt-1 text-sm leading-6 text-slate-600">{description}</p>{children}</section>; }
 function AlertPanel({title,children}:{title:string;children:React.ReactNode}) { return <div className="mt-5 rounded-2xl border-2 border-red-300 bg-red-50 p-5"><h3 className="flex items-center gap-2 font-bold text-red-900"><AlertTriangle size={18}/>{title}</h3><div className="mt-4">{children}</div></div>; }
 const control="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm";
