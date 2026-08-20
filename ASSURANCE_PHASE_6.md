@@ -18,7 +18,7 @@
 - [x] Inspection sign-off is blocked when no current verified and suitable evidence mapping supports the claim.
 - [x] Automatic tag matches are suggestions only and do not contribute to the assurance score.
 - [x] Schema validation, type checking, lint and automated tests pass.
-- [ ] Production database migration applied successfully.
+- [x] Production database migration applied successfully.
 - [ ] Post-deployment evidence, mapping and mock-inspection smoke checks.
 
 ## Safety boundary
