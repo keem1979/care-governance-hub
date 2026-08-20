@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { OrganisationDocumentBrand } from "@/components/organisation-document-brand";
 import { requirePermission } from "@/lib/auth/dal";
+import { createDb } from "@/lib/db";
 import { EXTERNAL_INTEGRATION_CANDIDATES, INTEGRATION_APPROVAL_GATES, NATIVE_DATA_FLOWS } from "@/lib/integrations";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -20,12 +21,13 @@ const securityControls = [
 export default async function AssurancePage() {
   const context = await requirePermission(PERMISSIONS.ORGANISATION_MANAGE);
   const highRisk = EXTERNAL_INTEGRATION_CANDIDATES.filter((item) => item.risk === "High").length;
+  const connectionCounts = await loadConnectionCounts(context.organisation.id);
   return <main className="space-y-8">
-    <header className="rounded-3xl bg-slate-900 p-7 text-white shadow-sm"><OrganisationDocumentBrand name={context.organisation.name} hasLogo={Boolean(context.organisation.policyLogoStorageKey)}/><p className="mt-6 text-xs font-bold uppercase tracking-[.2em] text-emerald-300">Data exchange governance</p><h1 className="mt-2 text-3xl font-bold">Security and Integration Assurance</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">See which data flows operate inside QCGMS, which external connections are only candidates, and the controls required before any supplier data is exchanged.</p></header>
+    <header className="rounded-3xl bg-slate-900 p-7 text-white shadow-sm"><OrganisationDocumentBrand name={context.organisation.name} hasLogo={Boolean(context.organisation.policyLogoStorageKey)}/><p className="mt-6 text-xs font-bold uppercase tracking-[.2em] text-emerald-300">Data exchange governance</p><h1 className="mt-2 text-3xl font-bold">Security and Integration Assurance</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">See which data flows operate inside QCGMS, which external connections are only candidates, and the controls required before any supplier data is exchanged.</p><Link href="/connected-governance" className="mt-5 inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-black text-slate-950">Open Connected Governance</Link></header>
 
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Stat label="Active native flows" value={NATIVE_DATA_FLOWS.length} tone="green"/><Stat label="Active external feeds" value={0}/><Stat label="External candidates" value={EXTERNAL_INTEGRATION_CANDIDATES.length}/><Stat label="High-risk candidates" value={highRisk} tone="amber"/></section>
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Stat label="Active native flows" value={NATIVE_DATA_FLOWS.length} tone="green"/><Stat label="Approved connections" value={connectionCounts.active} tone="green"/><Stat label="Connections in review" value={connectionCounts.review}/><Stat label="Degraded / failed" value={connectionCounts.failed} tone="amber"/><Stat label="High-risk candidates" value={highRisk} tone="amber"/></section>
 
-    <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950"><strong>Phase 1 assurance conclusion:</strong> application MFA, durable sign-in protection, session control and browser protections are active in this build. Independent penetration testing, approved supplier terms, customer DPIA, restore evidence and clinical-safety acceptance remain live-release gates. QCGMS has no evidenced live third-party supplier API feed; candidate names below are not approval or connection status.</section>
+    <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950"><strong>Assurance conclusion:</strong> application MFA, durable sign-in protection, session control and browser protections are active in this build. Independent penetration testing, approved supplier terms, customer DPIA, restore evidence and clinical-safety acceptance remain live-release gates. A QCGMS connection marked active records internal approval gates; it is not independent supplier certification. Candidate names below are discovery options, not approval or connection status.</section>
 
     <section className="space-y-3"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Operating now</p><h2 className="mt-1 text-2xl font-bold">Native QCGMS data flows</h2><p className="mt-1 text-sm text-slate-600">These flows happen within the authorised organisation workspace; they are not external supplier integrations.</p></div><div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className={cell}>Data flow</th><th className={cell}>Direction</th><th className={cell}>Information</th><th className={cell}>Control</th><th className={cell}>Status</th></tr></thead><tbody className="divide-y divide-slate-100">{NATIVE_DATA_FLOWS.map((item) => <tr key={item.name} className="align-top"><td className={cell}><Link href={item.href} className="font-bold text-emerald-800 underline">{item.name}</Link></td><td className={cell}>{item.direction}</td><td className={cell}>{item.data}</td><td className={cell}>{item.control}</td><td className={cell}><Badge tone="green">ACTIVE</Badge></td></tr>)}</tbody></table></div></section>
 
@@ -41,3 +43,17 @@ function Stat({ label, value, tone = "slate" }: { label: string; value: number; 
 function Badge({ children, tone = "slate" }: { children: React.ReactNode; tone?: "slate" | "green" | "amber" | "red" }) { const styles = { slate: "bg-slate-100 text-slate-700", green: "bg-emerald-100 text-emerald-800", amber: "bg-amber-100 text-amber-900", red: "bg-red-100 text-red-800" }; return <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${styles[tone]}`}>{children}</span>; }
 const cell = "px-4 py-4";
 const borderCell = "border border-slate-200 p-3 align-top";
+
+async function loadConnectionCounts(organisationId: string) {
+  const db = createDb();
+  try {
+    const [active, review, failed] = await Promise.all([
+      db.integrationConnection.count({ where: { organisationId, status: "ACTIVE", archivedAt: null } }),
+      db.integrationConnection.count({ where: { organisationId, status: { in: ["DRAFT", "REVIEW_REQUIRED"] }, archivedAt: null } }),
+      db.integrationConnection.count({ where: { organisationId, archivedAt: null, OR: [{ status: "ERROR" }, { health: { in: ["DEGRADED", "FAILED"] } }] } }),
+    ]);
+    return { active, review, failed };
+  } finally {
+    await db.$disconnect();
+  }
+}

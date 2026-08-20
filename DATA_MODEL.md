@@ -130,3 +130,13 @@ remain explicitly scoped; no evidence or decision is shared between tenants.
 - `GovernanceObligationUpdate` is an append-only chronology for notes, chases, submissions, queries, responses, acceptance, closure and escalation.
 - `ExternalParty` is the canonical organisation/agency contact reused by obligations and external action dependencies. Duplicate free-text party creation is not a supported Phase 7 path.
 - High/critical decision implementation is gated by current verified evidence. Independent review must be performed by a user other than the owner and implementer.
+
+# Phase 8 connected-governance extension
+
+- `IntegrationConnection` is the approved operating boundary for one supplier or system connection. It retains direction, data classification, owner, review date, eight assurance gates and visible health.
+- `IntegrationCredential` retains a token hash and display prefix only. The clear token is returned once at issue and is never stored by QCGMS.
+- `IntegrationEvent` is idempotent within its connection and retains the source event ID, operation, payload checksum and processing outcome. Unknown identities are quarantined through `ReconciliationCase`; a received event never silently mutates a canonical record.
+- `ImportBatch` and `ImportRow` retain file checksum, source, analysis counts and row-level decisions. Only `READY_TO_CREATE` rows can create a canonical record; `EXACT_MATCH` links without update and `POTENTIAL_MATCH` remains blocked for human reconciliation.
+- `SourceAuthority` records one approved source decision per organisation and canonical entity type, including authority level, governed fields, rationale and review date.
+- `OfflineCapture` receives a note only after device-local AES-GCM decryption by the submitting user. It remains pending or conflicted until a manager accepts or rejects it; acceptance creates unverified evidence and never edits the linked source.
+- `ExternalIdentifier.connectionId` ties a source identity to its controlled connection while preserving the organisation-scoped uniqueness rules.

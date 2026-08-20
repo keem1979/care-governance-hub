@@ -209,6 +209,97 @@ enum ReconciliationStatus {
   RESOLVED
 }
 
+enum IntegrationDirection {
+  INBOUND
+  OUTBOUND
+  BIDIRECTIONAL
+}
+
+enum IntegrationStatus {
+  DRAFT
+  REVIEW_REQUIRED
+  ACTIVE
+  PAUSED
+  ERROR
+  REVOKED
+}
+
+enum IntegrationHealth {
+  HEALTHY
+  DEGRADED
+  FAILED
+  NEVER_RUN
+}
+
+enum IntegrationAuthMode {
+  API_TOKEN
+  MANAGED_SECRET
+  NONE
+}
+
+enum IntegrationEventStatus {
+  RECEIVED
+  MATCHED
+  QUARANTINED
+  APPLIED
+  FAILED
+  ACKNOWLEDGED
+}
+
+enum IntegrationOperation {
+  CREATE
+  UPDATE
+  UPSERT
+  DELETE
+}
+
+enum ImportTarget {
+  CLIENT
+  STAFF_MEMBER
+}
+
+enum ImportBatchStatus {
+  UPLOADED
+  ANALYSED
+  AWAITING_RECONCILIATION
+  READY_TO_APPLY
+  PARTIALLY_APPLIED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ImportRowStatus {
+  READY_TO_CREATE
+  EXACT_MATCH
+  POTENTIAL_MATCH
+  INVALID
+  CREATED
+  LINKED_NO_CHANGE
+  SKIPPED
+}
+
+enum SourceAuthorityLevel {
+  AUTHORITATIVE
+  CONTRIBUTING
+  REFERENCE_ONLY
+}
+
+enum OfflineCaptureType {
+  OBSERVATION
+  ACTION_EVIDENCE
+  RISK_EVIDENCE
+  POLICY_EVIDENCE
+  OTHER
+}
+
+enum OfflineCaptureStatus {
+  PENDING_REVIEW
+  CONFLICT
+  ACCEPTED
+  REJECTED
+}
+
 enum MaterialChangeCategory {
   IDENTITY
   CARE_NEED
@@ -710,6 +801,14 @@ model Organisation {
   externalDependencies ExternalDependency[]
   governanceDecisions GovernanceDecision[]
   governanceObligations GovernanceObligation[]
+  integrationConnections IntegrationConnection[]
+  integrationCredentials IntegrationCredential[]
+  integrationEvents IntegrationEvent[]
+  importBatches ImportBatch[]
+  importRows ImportRow[]
+  sourceAuthorities SourceAuthority[]
+  offlineCaptures OfflineCapture[]
+  externalIdentifiers ExternalIdentifier[]
 }
 
 model ServiceLocation {
@@ -753,6 +852,10 @@ model ServiceLocation {
   externalDependencies ExternalDependency[]
   governanceDecisions GovernanceDecision[]
   governanceObligations GovernanceObligation[]
+  integrationConnections IntegrationConnection[]
+  integrationEvents IntegrationEvent[]
+  importBatches ImportBatch[]
+  offlineCaptures OfflineCapture[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -839,6 +942,15 @@ model User {
   governanceObligationsOwned GovernanceObligation[]     @relation("GovernanceObligationOwner")
   governanceObligationsCreated GovernanceObligation[]   @relation("GovernanceObligationCreator")
   governanceObligationUpdates GovernanceObligationUpdate[]
+  integrationConnectionsOwned IntegrationConnection[] @relation("IntegrationConnectionOwner")
+  integrationConnectionsCreated IntegrationConnection[] @relation("IntegrationConnectionCreator")
+  integrationCredentialsCreated IntegrationCredential[] @relation("IntegrationCredentialCreator")
+  importBatchesCreated ImportBatch[] @relation("ImportBatchCreator")
+  importBatchesApproved ImportBatch[] @relation("ImportBatchApprover")
+  importRowsApplied ImportRow[] @relation("ImportRowApplier")
+  sourceAuthoritiesApproved SourceAuthority[] @relation("SourceAuthorityApprover")
+  offlineCapturesSubmitted OfflineCapture[] @relation("OfflineCaptureSubmitter")
+  offlineCapturesReviewed OfflineCapture[] @relation("OfflineCaptureReviewer")
 }
 
 model Policy {
@@ -959,6 +1071,7 @@ model Evidence {
   governanceDecisions    GovernanceDecision[]              @relation("GovernanceDecisionEvidence")
   governanceObligations  GovernanceObligation[]            @relation("GovernanceObligationEvidence")
   governanceObligationUpdates GovernanceObligationUpdate[] @relation("GovernanceObligationUpdateEvidence")
+  offlineCaptures        OfflineCapture[]
 
   @@unique([organisationId, generatedPolicyTemplateKey])
   @@index([organisationId, status])
@@ -3002,9 +3115,245 @@ model ExternalParty {
   @@index([locationId, archivedAt])
 }
 
+model IntegrationConnection {
+  id                    String               @id @default(uuid()) @db.Uuid
+  organisationId        String               @db.Uuid
+  locationId            String?              @db.Uuid
+  key                   String
+  name                  String
+  vendor                String
+  purpose               String
+  direction             IntegrationDirection
+  dataClassification    String
+  status                IntegrationStatus    @default(DRAFT)
+  health                IntegrationHealth    @default(NEVER_RUN)
+  endpointUrl           String?
+  authMode              IntegrationAuthMode  @default(API_TOKEN)
+  ownerId               String               @db.Uuid
+  reviewDueAt           DateTime
+  gateBusinessNeed      Boolean              @default(false)
+  gateDataProtection    Boolean              @default(false)
+  gateSupplierAssurance Boolean              @default(false)
+  gateSecurityDesign    Boolean              @default(false)
+  gateTechnicalMapping  Boolean              @default(false)
+  gateSafeTesting       Boolean              @default(false)
+  gateOperations        Boolean              @default(false)
+  gateApproval          Boolean              @default(false)
+  lastSuccessAt         DateTime?
+  lastFailureAt         DateTime?
+  consecutiveFailures   Int                  @default(0)
+  archivedAt            DateTime?
+  createdById           String               @db.Uuid
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  organisation Organisation          @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner User                           @relation("IntegrationConnectionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy User                       @relation("IntegrationConnectionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  credentials IntegrationCredential[]
+  events IntegrationEvent[]
+  importBatches ImportBatch[]
+  sourceAuthorities SourceAuthority[]
+  externalIdentifiers ExternalIdentifier[]
+
+  @@unique([organisationId, key])
+  @@index([organisationId, status, health])
+  @@index([locationId, status])
+  @@index([ownerId, reviewDueAt])
+}
+
+model IntegrationCredential {
+  id             String    @id @default(uuid()) @db.Uuid
+  organisationId String    @db.Uuid
+  connectionId   String    @db.Uuid
+  name           String
+  tokenPrefix    String
+  tokenHash      String    @unique
+  scopes         String[]  @default([])
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdById    String    @db.Uuid
+  createdAt      DateTime  @default(now())
+
+  organisation Organisation         @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  connection IntegrationConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  createdBy User                    @relation("IntegrationCredentialCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, tokenPrefix, revokedAt])
+  @@index([connectionId, revokedAt])
+}
+
+model IntegrationEvent {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  organisationId       String                 @db.Uuid
+  locationId           String?                @db.Uuid
+  connectionId         String                 @db.Uuid
+  externalEventId      String
+  entityType           CanonicalEntityType?
+  operation            IntegrationOperation
+  externalId           String?
+  occurredAt           DateTime
+  payload              Json
+  payloadChecksum      String
+  status               IntegrationEventStatus @default(RECEIVED)
+  failureCode          String?
+  failureMessage       String?
+  matchedRecordId      String?                @db.Uuid
+  reconciliationCaseId String?                @db.Uuid
+  receivedAt           DateTime               @default(now())
+  processedAt          DateTime?
+
+  organisation Organisation         @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?          @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  connection IntegrationConnection  @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  reconciliationCase ReconciliationCase? @relation(fields: [reconciliationCaseId], references: [id], onDelete: SetNull)
+
+  @@unique([connectionId, externalEventId])
+  @@index([organisationId, status, receivedAt])
+  @@index([connectionId, status, receivedAt])
+  @@index([locationId, status])
+  @@index([reconciliationCaseId])
+}
+
+model ImportBatch {
+  id                   String            @id @default(uuid()) @db.Uuid
+  organisationId       String            @db.Uuid
+  locationId           String?           @db.Uuid
+  connectionId         String?           @db.Uuid
+  reference            String
+  sourceSystem         String
+  target               ImportTarget
+  originalFileName     String
+  checksum             String
+  status               ImportBatchStatus @default(UPLOADED)
+  totalRows            Int               @default(0)
+  readyRows            Int               @default(0)
+  matchedRows          Int               @default(0)
+  conflictRows         Int               @default(0)
+  invalidRows          Int               @default(0)
+  appliedRows          Int               @default(0)
+  failureSummary       String?
+  createdById          String            @db.Uuid
+  approvedById         String?           @db.Uuid
+  approvedAt           DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  organisation Organisation          @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  connection IntegrationConnection?   @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  createdBy User                      @relation("ImportBatchCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy User?                    @relation("ImportBatchApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  rows ImportRow[]
+
+  @@unique([organisationId, reference])
+  @@unique([organisationId, checksum, target])
+  @@index([organisationId, status, createdAt])
+  @@index([locationId, status])
+  @@index([connectionId, status])
+}
+
+model ImportRow {
+  id                   String          @id @default(uuid()) @db.Uuid
+  organisationId       String          @db.Uuid
+  batchId              String          @db.Uuid
+  rowNumber            Int
+  externalId           String
+  firstName            String?
+  lastName             String?
+  email                String?
+  phone                String?
+  dateOfBirth          DateTime?
+  jobTitle             String?
+  locationCode         String?
+  rawPayload           Json
+  status               ImportRowStatus
+  validationMessages   String[]        @default([])
+  candidateRecordIds   String[]        @default([])
+  candidateLabels      String[]        @default([])
+  canonicalRecordId    String?         @db.Uuid
+  reconciliationCaseId String?         @db.Uuid
+  appliedById          String?         @db.Uuid
+  appliedAt            DateTime?
+  createdAt            DateTime        @default(now())
+
+  organisation Organisation       @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  batch ImportBatch                @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  reconciliationCase ReconciliationCase? @relation(fields: [reconciliationCaseId], references: [id], onDelete: SetNull)
+  appliedBy User?                  @relation("ImportRowApplier", fields: [appliedById], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, rowNumber])
+  @@index([organisationId, status, createdAt])
+  @@index([batchId, status])
+  @@index([reconciliationCaseId])
+}
+
+model SourceAuthority {
+  id             String               @id @default(uuid()) @db.Uuid
+  organisationId String               @db.Uuid
+  entityType     CanonicalEntityType
+  connectionId   String?              @db.Uuid
+  sourceSystem   String
+  authorityLevel SourceAuthorityLevel
+  governedFields String[]             @default([])
+  rationale      String
+  approvedById   String               @db.Uuid
+  approvedAt     DateTime             @default(now())
+  reviewDueAt    DateTime
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organisation Organisation          @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  connection IntegrationConnection?   @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  approvedBy User                     @relation("SourceAuthorityApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+
+  @@unique([organisationId, entityType])
+  @@index([organisationId, authorityLevel, reviewDueAt])
+  @@index([connectionId])
+}
+
+model OfflineCapture {
+  id                 String               @id @default(uuid()) @db.Uuid
+  organisationId     String               @db.Uuid
+  locationId         String?              @db.Uuid
+  clientCaptureId    String
+  captureType        OfflineCaptureType
+  title              String
+  note               String
+  capturedAt         DateTime
+  receivedAt         DateTime             @default(now())
+  deviceIdHash       String
+  sourceRecordType   String?
+  sourceRecordId     String?              @db.Uuid
+  baseUpdatedAt      DateTime?
+  status             OfflineCaptureStatus @default(PENDING_REVIEW)
+  conflictReason     String?
+  evidenceId         String?              @db.Uuid
+  submittedById      String               @db.Uuid
+  reviewedById       String?              @db.Uuid
+  reviewedAt         DateTime?
+  reviewNote         String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?      @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  evidence Evidence?             @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  submittedBy User               @relation("OfflineCaptureSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  reviewedBy User?               @relation("OfflineCaptureReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([organisationId, clientCaptureId])
+  @@index([organisationId, status, receivedAt])
+  @@index([locationId, status])
+  @@index([submittedById, status])
+}
+
 model ExternalIdentifier {
   id             String              @id @default(uuid()) @db.Uuid
   organisationId String              @db.Uuid
+  connectionId   String?             @db.Uuid
   sourceSystem   String
   entityType     CanonicalEntityType
   externalId     String
@@ -3013,6 +3362,9 @@ model ExternalIdentifier {
   metadata       Json?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
+
+  organisation Organisation          @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  connection IntegrationConnection?  @relation(fields: [connectionId], references: [id], onDelete: SetNull)
 
   @@unique([organisationId, sourceSystem, entityType, externalId])
   @@unique([organisationId, sourceSystem, entityType, recordId])
@@ -3040,6 +3392,9 @@ model ReconciliationCase {
   resolvedAt        DateTime?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
+
+  integrationEvents IntegrationEvent[]
+  importRows ImportRow[]
 
   @@unique([organisationId, fingerprint])
   @@unique([organisationId, reference])

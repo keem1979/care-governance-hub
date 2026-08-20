@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-20 — Phase 8 connected governance
+
+- Added a responsive Connected Governance workspace for integration assurance, staged imports, source authority, event failures and offline review.
+- Required eight recorded assurance gates, a named owner and a future review date before connection activation.
+- Added one-time inbound API tokens stored only as hashes, with expiry, revocation, scoped use and audited issuance.
+- Added idempotent inbound events that match approved external identifiers or quarantine unknown identities without changing canonical records.
+- Added controlled CSV analysis and authorised apply for client and staff records; exact matches link without overwrite and potential duplicates remain in reconciliation.
+- Added explicit source-of-truth decisions per canonical entity type and governed field set.
+- Added an encrypted device-local offline observation queue whose synchronised records require management review and separate evidence verification.
+- Made rejected authenticated events and connection health visible without retaining rejected payloads.
+
 ## 2026-08-20 — Phase 7 governance control
 
 - Added a responsive Governance Control workspace for formal decisions, commissioner obligations and external delays.
