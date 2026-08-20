@@ -123,3 +123,10 @@ source and the organisation's owned impact work. `MockInspection` and
 `MockInspectionSample` retain the sampling plan and conclusions from documentary,
 observational and experiential checks. All organisation and location relations
 remain explicitly scoped; no evidence or decision is shared between tenants.
+# Phase 7 governance-control extension
+
+- `GovernanceDecision` is a one-to-one controlled record for a `MeetingAgendaItem` decision from an approved `GovernanceMeeting`. It retains the exact source wording, accountable owner, impact, optional linked action/external party, implementation evidence and independent review.
+- `GovernanceObligation` tracks a commissioner, regulator, contract or information-return commitment without replacing its canonical KPI return, action, calendar item or decision. Its source fields deep-link to that canonical record.
+- `GovernanceObligationUpdate` is an append-only chronology for notes, chases, submissions, queries, responses, acceptance, closure and escalation.
+- `ExternalParty` is the canonical organisation/agency contact reused by obligations and external action dependencies. Duplicate free-text party creation is not a supported Phase 7 path.
+- High/critical decision implementation is gated by current verified evidence. Independent review must be performed by a user other than the owner and implementer.

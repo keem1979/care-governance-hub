@@ -397,6 +397,59 @@ enum ExternalDependencyStatus {
   CANCELLED
 }
 
+enum GovernanceDecisionImpact {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum GovernanceDecisionStatus {
+  RECORDED
+  ACTION_REQUIRED
+  IMPLEMENTED
+  REVIEWED
+  SUPERSEDED
+  WITHDRAWN
+}
+
+enum GovernanceObligationType {
+  COMMISSIONER_RETURN
+  REGULATORY_NOTIFICATION
+  CONTRACT_REVIEW
+  INFORMATION_REQUEST
+  OTHER
+}
+
+enum GovernanceObligationSource {
+  KPI_RETURN
+  CALENDAR_ITEM
+  GOVERNANCE_DECISION
+  ACTION
+  MANUAL
+}
+
+enum GovernanceObligationStatus {
+  OPEN
+  PREPARING
+  SUBMITTED
+  QUERY_RECEIVED
+  ACCEPTED
+  CLOSED
+  CANCELLED
+}
+
+enum GovernanceObligationUpdateType {
+  NOTE
+  CHASE
+  SUBMISSION
+  QUERY
+  RESPONSE
+  ACCEPTANCE
+  CLOSURE
+  ESCALATION
+}
+
 enum ManagementCommandView {
   REGISTERED_MANAGER
   OWNER
@@ -653,6 +706,10 @@ model Organisation {
   regulatoryFrameworkVersions RegulatoryFrameworkVersion[]
   frameworkChangeReviews FrameworkChangeReview[]
   mockInspections MockInspection[]
+  externalParties ExternalParty[]
+  externalDependencies ExternalDependency[]
+  governanceDecisions GovernanceDecision[]
+  governanceObligations GovernanceObligation[]
 }
 
 model ServiceLocation {
@@ -692,6 +749,10 @@ model ServiceLocation {
   evidenceVerifications EvidenceVerification[]
   frameworkChangeReviews FrameworkChangeReview[]
   mockInspections MockInspection[]
+  externalParties ExternalParty[]
+  externalDependencies ExternalDependency[]
+  governanceDecisions GovernanceDecision[]
+  governanceObligations GovernanceObligation[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -770,6 +831,14 @@ model User {
   mockInspectionsLed     MockInspection[]              @relation("MockInspectionLead")
   mockInspectionsCreated MockInspection[]              @relation("MockInspectionCreator")
   mockSamplesReviewed    MockInspectionSample[]        @relation("MockInspectionSampleReviewer")
+  externalDependenciesOwned ExternalDependency[]       @relation("ExternalDependencyOwner")
+  governanceDecisionsOwned GovernanceDecision[]        @relation("GovernanceDecisionOwner")
+  governanceDecisionsCreated GovernanceDecision[]      @relation("GovernanceDecisionCreator")
+  governanceDecisionsImplemented GovernanceDecision[]  @relation("GovernanceDecisionImplementer")
+  governanceDecisionsReviewed GovernanceDecision[]     @relation("GovernanceDecisionReviewer")
+  governanceObligationsOwned GovernanceObligation[]     @relation("GovernanceObligationOwner")
+  governanceObligationsCreated GovernanceObligation[]   @relation("GovernanceObligationCreator")
+  governanceObligationUpdates GovernanceObligationUpdate[]
 }
 
 model Policy {
@@ -887,6 +956,9 @@ model Evidence {
   actionOccurrences      ActionOccurrence[]
   generatedPolicy        Policy?                         @relation("GeneratedPolicyEvidence", fields: [generatedPolicyId], references: [id], onDelete: Cascade)
   verifications          EvidenceVerification[]
+  governanceDecisions    GovernanceDecision[]              @relation("GovernanceDecisionEvidence")
+  governanceObligations  GovernanceObligation[]            @relation("GovernanceObligationEvidence")
+  governanceObligationUpdates GovernanceObligationUpdate[] @relation("GovernanceObligationUpdateEvidence")
 
   @@unique([organisationId, generatedPolicyTemplateKey])
   @@index([organisationId, status])
@@ -1297,6 +1369,7 @@ model Action {
   effectivenessReviews EffectivenessReview[]
   recurrenceCases      RecurrenceCase[]
   externalDependencies ExternalDependency[]
+  governanceDecisions GovernanceDecision[] @relation("GovernanceDecisionAction")
   improvementPlanLinks ImprovementPlanAction[]
 
   @@unique([organisationId, reference])
@@ -1588,11 +1661,118 @@ model ExternalDependency {
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
 
-  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  action       Action           @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  externalParty ExternalParty?  @relation(fields: [externalPartyId], references: [id], onDelete: SetNull)
+  owner        User             @relation("ExternalDependencyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
 
   @@index([organisationId, status, dueDate])
   @@index([actionId, status])
   @@index([locationId, status])
+}
+
+model GovernanceDecision {
+  id                       String                   @id @default(uuid()) @db.Uuid
+  organisationId           String                   @db.Uuid
+  locationId               String?                  @db.Uuid
+  meetingId                String                   @db.Uuid
+  agendaItemId             String                   @unique @db.Uuid
+  decisionText             String
+  impact                   GovernanceDecisionImpact @default(MODERATE)
+  status                   GovernanceDecisionStatus @default(RECORDED)
+  ownerId                  String                   @db.Uuid
+  effectiveDate            DateTime?
+  reviewDueAt              DateTime?
+  linkedActionId           String?                  @db.Uuid
+  externalPartyId          String?                  @db.Uuid
+  implementationEvidenceId String?                  @db.Uuid
+  implementationNote       String?
+  implementedById          String?                  @db.Uuid
+  implementedAt            DateTime?
+  reviewedById             String?                  @db.Uuid
+  reviewedAt               DateTime?
+  reviewOutcome            String?
+  createdById              String                   @db.Uuid
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  organisation Organisation        @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  meeting GovernanceMeeting         @relation(fields: [meetingId], references: [id], onDelete: Restrict)
+  agendaItem MeetingAgendaItem      @relation(fields: [agendaItemId], references: [id], onDelete: Restrict)
+  owner User                        @relation("GovernanceDecisionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  linkedAction Action?              @relation("GovernanceDecisionAction", fields: [linkedActionId], references: [id], onDelete: SetNull)
+  externalParty ExternalParty?      @relation(fields: [externalPartyId], references: [id], onDelete: SetNull)
+  implementationEvidence Evidence? @relation("GovernanceDecisionEvidence", fields: [implementationEvidenceId], references: [id], onDelete: SetNull)
+  implementedBy User?               @relation("GovernanceDecisionImplementer", fields: [implementedById], references: [id], onDelete: SetNull)
+  reviewedBy User?                  @relation("GovernanceDecisionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdBy User                    @relation("GovernanceDecisionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, status, reviewDueAt])
+  @@index([locationId, status])
+  @@index([ownerId, status])
+  @@index([meetingId])
+}
+
+model GovernanceObligation {
+  id                  String                     @id @default(uuid()) @db.Uuid
+  organisationId      String                     @db.Uuid
+  locationId          String?                    @db.Uuid
+  reference           String
+  title               String
+  obligationType      GovernanceObligationType
+  sourceType          GovernanceObligationSource @default(MANUAL)
+  sourceRecordId      String?                    @db.Uuid
+  sourceHref          String?
+  externalPartyId     String                     @db.Uuid
+  ownerId             String                     @db.Uuid
+  dueAt               DateTime
+  responseDueAt       DateTime?
+  status              GovernanceObligationStatus @default(OPEN)
+  submissionReference String?
+  latestResponse      String?
+  interimControl      String
+  escalationRoute     String
+  lastChasedAt        DateTime?
+  chaseCount          Int                        @default(0)
+  evidenceId          String?                    @db.Uuid
+  closedAt            DateTime?
+  createdById         String                     @db.Uuid
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?      @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  externalParty ExternalParty    @relation(fields: [externalPartyId], references: [id], onDelete: Restrict)
+  owner User                     @relation("GovernanceObligationOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  evidence Evidence?             @relation("GovernanceObligationEvidence", fields: [evidenceId], references: [id], onDelete: SetNull)
+  createdBy User                 @relation("GovernanceObligationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updates GovernanceObligationUpdate[]
+
+  @@unique([organisationId, reference])
+  @@unique([organisationId, sourceType, sourceRecordId])
+  @@index([organisationId, status, dueAt])
+  @@index([locationId, status])
+  @@index([externalPartyId, status])
+  @@index([ownerId, status])
+}
+
+model GovernanceObligationUpdate {
+  id           String                         @id @default(uuid()) @db.Uuid
+  obligationId String                         @db.Uuid
+  updateType   GovernanceObligationUpdateType
+  note         String
+  evidenceId   String?                        @db.Uuid
+  actorId      String                         @db.Uuid
+  createdAt    DateTime                       @default(now())
+
+  obligation GovernanceObligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  evidence Evidence?               @relation("GovernanceObligationUpdateEvidence", fields: [evidenceId], references: [id], onDelete: SetNull)
+  actor User                       @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([obligationId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model GovernanceMeeting {
@@ -1635,6 +1815,7 @@ model GovernanceMeeting {
   attendees     MeetingAttendee[]
   agendaItems   MeetingAgendaItem[]
   evidenceLinks MeetingEvidence[]
+  controlledDecisions GovernanceDecision[]
 
   @@unique([organisationId, reference])
   @@index([organisationId, status, meetingDate])
@@ -1667,6 +1848,7 @@ model MeetingAgendaItem {
   updatedAt      DateTime @updatedAt
 
   meeting GovernanceMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  controlledDecision GovernanceDecision?
 
   @@unique([meetingId, sortOrder])
   @@index([meetingId])
@@ -2809,6 +2991,12 @@ model ExternalParty {
   archivedAt     DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  organisation Organisation          @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  dependencies ExternalDependency[]
+  decisions GovernanceDecision[]
+  obligations GovernanceObligation[]
 
   @@index([organisationId, name])
   @@index([locationId, archivedAt])

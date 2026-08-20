@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-20 — Phase 7 governance control
+
+- Added a responsive Governance Control workspace for formal decisions, commissioner obligations and external delays.
+- Registered decisions only from approved meeting minutes and retained their canonical meeting and action links.
+- Required current verified evidence for high-impact implementation and an independent reviewer before assurance.
+- Added controlled external-party profiles with email or phone contacts for reuse across obligations and action dependencies.
+- Added append-only obligation chronology with controlled transitions through submission, query, acceptance and closure.
+- Added decision reviews, external obligations and dependency deadlines to the unified compliance calendar.
+- Kept commissioner returns and action records as canonical sources rather than duplicating their operational data.
+
 ## 2026-08-18 — Phase 6 evidence and regulatory assurance
 
 - Added evidence provenance, current-version validity and named verification history.
