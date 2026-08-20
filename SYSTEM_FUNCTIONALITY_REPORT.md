@@ -75,6 +75,10 @@ Most record-entry forms support voice dictation where text is entered. Dictation
 
 The dashboard is the management overview and uses live, tenant-scoped records rather than invented figures.
 
+#### My Work — `/my-work`
+
+My Work is a separate personal execution workspace rather than a management dashboard. It brings together open records assigned to the signed-in user, including actions, risks, audits, policy and evidence reviews, meetings, governance decisions and obligations, external follow-up, inspection assurance, scheduled tasks, open register records and management escalations. Work is ordered by overdue status, seven-day urgency, priority and target date. Missing targets are identified explicitly. Temporary management delegations are shown separately because a broad responsibility area does not replace a specific deliverable, owner and measurable target.
+
 Capabilities include:
 
 - Automatic UK greeting, date, time and reporting-month display.

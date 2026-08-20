@@ -46,8 +46,9 @@ import type { AuthorisedContext } from "@/lib/auth/dal";
 import { PERMISSIONS } from "@/lib/permissions";
 
 const primaryNavigation = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
-  { href: "/management", label: "Management Command", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+  { href: "/my-work", label: "My Work", icon: ListChecks, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+  { href: "/management", label: "Management Command", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
 ] as const;
 
 const navigationGroups = [
@@ -158,6 +159,7 @@ const moduleConnections: Record<string, {
   assurance: { source: "Settings, access controls, audit history and security evidence", links: [{ href: "/settings", label: "Access settings" }, { href: "/activity", label: "Audit trail" }, { href: "/evidence", label: "Security evidence" }] },
   settings: { source: "Organisation structure, locations, licences, users and permissions", links: [{ href: "/activity", label: "Permission history" }, { href: "/assurance", label: "Security readiness" }] },
   dashboard: { source: "Live alerts and summaries from all QCGMS modules", links: [{ href: "/reports/monthly-governance", label: "Governance report" }, { href: "/activity", label: "Recent activity" }] },
+  "my-work": { source: "Live records assigned to the signed-in user, ordered by target date and urgency", links: [{ href: "/actions", label: "Action Tracker" }, { href: "/calendar", label: "Compliance Calendar" }] },
   management: { source: "Live actions, risks, external dependencies and assurance decisions within your authorised scope", links: [{ href: "/actions", label: "Action Tracker" }, { href: "/improvement", label: "Improvement Assurance" }, { href: "/activity?recordType=ManagementDelegation", label: "Delegation history" }] },
 };
 

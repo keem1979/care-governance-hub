@@ -7,7 +7,7 @@ import { allowedManagementViews, managementFocusLabel, managementViewLabel, MANA
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 export default async function ManagementPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const context = await requireAnyPermission([PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ASSIGNED_TASKS_EDIT]);
+  const context = await requireAnyPermission([PERMISSIONS.GOVERNANCE_VIEW]);
   const query = await searchParams;
   const savedDefault = !query.view && !query.focus && !query.location ? await getDefaultManagementFilters(context) : null;
   const filters = parseManagementFilters(savedDefault ? { ...query, ...savedDefault } : query, { roleKey: context.role.key, allLocations: context.allLocations, locationIds: context.locations.map(({ id }) => id) });

@@ -55,17 +55,17 @@ export type ManagementQueueItem = {
 
 export function defaultManagementView(roleKey: string, allLocations: boolean): ManagementView {
   if (allLocations && [ROLE_KEYS.OWNER, ROLE_KEYS.NOMINATED_INDIVIDUAL].includes(roleKey as never)) return "OWNER";
-  if ([ROLE_KEYS.REGISTERED_MANAGER, ROLE_KEYS.QUALITY_MANAGER, ROLE_KEYS.AUDITOR].includes(roleKey as never)) return "REGISTERED_MANAGER";
-  return "MY_WORK";
+  return "REGISTERED_MANAGER";
 }
 
 export function allowedManagementViews(roleKey: string, allLocations: boolean): ManagementView[] {
-  const views: ManagementView[] = ["MY_WORK"];
+  const views: ManagementView[] = [];
   if ([ROLE_KEYS.OWNER, ROLE_KEYS.NOMINATED_INDIVIDUAL, ROLE_KEYS.REGISTERED_MANAGER, ROLE_KEYS.QUALITY_MANAGER, ROLE_KEYS.AUDITOR, ROLE_KEYS.VIEWER].includes(roleKey as never)) {
     views.unshift("REGISTERED_MANAGER");
     views.splice(1, 0, "LOCATION");
   }
   if (allLocations && [ROLE_KEYS.OWNER, ROLE_KEYS.NOMINATED_INDIVIDUAL].includes(roleKey as never)) views.unshift("OWNER");
+  if (!views.length) views.push("REGISTERED_MANAGER");
   return [...new Set(views)];
 }
 
@@ -106,7 +106,7 @@ export function managementViewLabel(value: string): string {
     REGISTERED_MANAGER: "Registered manager",
     OWNER: "Owner overview",
     LOCATION: "Location command",
-    MY_WORK: "My work",
+    MY_WORK: "My work (legacy)",
   } as Record<string, string>)[value] ?? sentence(value);
 }
 

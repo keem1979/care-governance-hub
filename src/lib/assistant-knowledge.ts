@@ -184,6 +184,11 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Add a risk", "/risks/new", ["add", "create", "new"], edit),
     link("Open risk report", "/risks/report", ["report", "print", "pdf"], reports),
   ]),
+  topic("My Work", "/my-work", ["my work", "assigned to me", "my tasks", "to do", "todo", "my deadlines", "my targets"], "My Work is the signed-in user's personal execution list. It brings assigned actions, reviews, audits, deadlines, governance work and escalations into one urgency-ordered view without exposing management-wide queues.", "Start with overdue items, then work through targets due in seven days. Open the source record to update progress or evidence. If an item has no target, ask the assigning manager to set one; a broad delegation record does not replace a specific measurable task.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT], [
+    link("Open My Work", "/my-work", ["open", "view", "assigned", "tasks"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT]),
+    link("Show overdue work", "/my-work?view=OVERDUE", ["overdue", "late"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT]),
+    link("Show work without targets", "/my-work?view=NEEDS_TARGET", ["missing target", "no date"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT]),
+  ]),
   topic("Action Tracker", "/actions", ["action", "actions", "task", "tasks", "due", "overdue", "closure"], "Action Tracker manages accountable improvement actions through evidence-based closure.", "Create or assign an action, add progress updates, change status, attach evidence, obtain verification and use the action report for oversight.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT], [
     link("Open Action Tracker", "/actions", ["view", "list", "assigned"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT]),
     link("Create an action", "/actions/new", ["add", "create", "new", "assign"], [PERMISSIONS.ACTIONS_MANAGE]),
@@ -308,6 +313,10 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/actions": {
     hsc: "an action tracker turns findings and decisions into owned work with deadlines, progress records and evidence of completion.",
     cqc: "it can show that the service responds to concerns, learns and improves. Closure should be supported by evidence and verification rather than a status change alone.",
+  },
+  "/my-work": {
+    hsc: "a personal worklist helps each authorised worker see the care, safety and governance work assigned to them, with clear priorities, targets and direct access to the source record.",
+    cqc: "clear ownership, timely follow-up and evidence-backed completion can support well-led assurance, but a worklist is only useful when assignments are proportionate, staff are competent and managers verify outcomes rather than relying on task status alone.",
   },
   "/workforce": {
     hsc: "safer recruitment, current training, observed competence, supervision and appraisal help services ensure that staff are suitable, supported and able to deliver safe care.",

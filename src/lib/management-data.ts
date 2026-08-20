@@ -15,7 +15,6 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
     ? {}
     : { OR: [{ locationId: null }, { locationId: { in: authorisedLocationIds } }] };
   const selectedLocation = filters.locationId ? { locationId: filters.locationId } : {};
-  const myWork = filters.view === "MY_WORK" ? { ownerId: context.user.id } : {};
 
   try {
     const [actions, risks, dependencies, savedViews, delegations, members] = await Promise.all([
@@ -27,7 +26,6 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
           lifecycleStatus: { notIn: [...CLOSED_ASSURANCE] },
           ...locationScope,
           ...selectedLocation,
-          ...myWork,
         },
         select: { id: true, reference: true, title: true, locationId: true, priority: true, status: true, lifecycleStatus: true, dueDate: true, owner: { select: { name: true } }, location: { select: { name: true } } },
         orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
@@ -40,7 +38,6 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
           status: { notIn: ["CLOSED", "ARCHIVED"] },
           ...locationScope,
           ...selectedLocation,
-          ...myWork,
         },
         select: { id: true, reference: true, title: true, locationId: true, residualLevel: true, residualScore: true, toleranceScore: true, status: true, nextReviewDate: true, owner: { select: { name: true } }, location: { select: { name: true } } },
         orderBy: [{ residualScore: "desc" }, { nextReviewDate: "asc" }],
@@ -52,7 +49,6 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
           status: { notIn: ["RESOLVED", "CANCELLED"] },
           ...locationScope,
           ...selectedLocation,
-          ...myWork,
         },
         select: { id: true, partyName: true, request: true, locationId: true, status: true, dueDate: true, ownerId: true, action: { select: { id: true, reference: true, title: true, owner: { select: { name: true } }, location: { select: { name: true } } } } },
         orderBy: { dueDate: "asc" },
