@@ -154,6 +154,36 @@ textarea {
   scrollbar-width: thin;
 }
 
+.audit-print-document {
+  box-shadow: 0 24px 70px rgb(15 77 67 / 0.12);
+}
+
+.qcgms-app main .audit-control-table,
+.qcgms-app main .audit-assessment-table {
+  border-radius: 0.65rem;
+  box-shadow: none;
+}
+
+.qcgms-app main .audit-control-table tbody th {
+  width: 10.5rem;
+  background: #eef6f3;
+  color: #28574e;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.qcgms-app main .audit-assessment-table thead {
+  background: #164f45;
+  color: white;
+}
+
+.qcgms-app main .audit-assessment-table thead th {
+  border-bottom-color: #0f4d43;
+  color: white;
+}
+
 @media (max-width: 767px) {
   .qcgms-app main table {
     display: block;
@@ -190,6 +220,63 @@ textarea {
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 11mm 10mm 15mm;
+  }
+
+  body {
+    background: white;
+  }
+
+  .qcgms-app {
+    display: block !important;
+    min-height: 0 !important;
+  }
+
+  .qcgms-app > aside,
+  .qcgms-app > div > header,
+  .qcgms-app > div > section[aria-label="Module data and related views"] {
+    display: none !important;
+  }
+
+  .qcgms-app > div > main {
+    padding: 0 !important;
+  }
+
+  .audit-print-document {
+    width: 100%;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .audit-print-masthead,
+  .audit-print-section {
+    break-inside: avoid;
+  }
+
+  .audit-print-document table {
+    font-size: 8.5pt;
+  }
+
+  .audit-print-document table th,
+  .audit-print-document table td {
+    position: static !important;
+    padding: 5pt 6pt !important;
+    box-shadow: none !important;
+  }
+
+  .audit-print-document .audit-assessment-table tbody tr:nth-child(even) > *,
+  .audit-print-document .audit-control-table tbody tr:nth-child(even) > * {
+    background-color: #f7faf9 !important;
+  }
+
+  .audit-report-footer {
+    margin-top: 10mm;
+    break-inside: avoid;
+  }
+
   .qcgms-app main table {
     display: table;
     overflow: visible;

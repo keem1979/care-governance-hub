@@ -26,7 +26,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
     });
     if (!audit) notFound();
     const generatedEvidence=await db.evidence.findFirst({where:{organisationId:context.organisation.id,relatedModule:"Audit",relatedRecordId:id},select:{id:true,status:true}});
-    const evidence = await db.evidence.findMany({ where: { ...evidenceScopeWhere(context), status: "ACTIVE" }, select: { id: true, title: true }, orderBy: { title: "asc" } });
+    const evidence = await db.evidence.findMany({ where: { ...evidenceScopeWhere(context), status: "ACTIVE" }, select: { id: true, title: true, category: true, evidenceType: true, sourceName: true, sourceReference: true }, orderBy: [{ category: "asc" }, { title: "asc" }] });
     const canEdit = hasPermission(context.permissions, PERMISSIONS.AUDITS_COMPLETE) && !["COMPLETED", "CLOSED", "ARCHIVED"].includes(audit.status);
     const canGovern = hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_EDIT);
     const questionCount = audit.template.sections.reduce((sum, section) => sum + section.questions.length, 0);
@@ -51,7 +51,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
       <AuditAssessmentForm
         auditId={id}
         sections={audit.template.sections}
-        saved={audit.responses.map((item) => ({ questionId: item.questionId, answer: item.answer, comment: item.comment, evidenceId: item.evidenceId }))}
+        saved={audit.responses.map((item) => ({ questionId: item.questionId, answer: item.answer, comment: item.comment, evidenceId: item.evidenceId, evidenceSourceType: item.evidenceSourceType, evidenceSourceReference: item.evidenceSourceReference }))}
         evidence={evidence}
         summary={{ strengths: audit.strengths ?? "", risks: audit.risks ?? "", recommendations: audit.recommendations ?? "", reviewDate: audit.reviewDate?.toISOString().slice(0, 10) ?? "" }}
         readOnly={!canEdit}

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { syncAuditEvidence } from "@/lib/audit-evidence";
 import { requirePermission } from "@/lib/auth/dal";
-import { auditScopeWhere, calculateAuditScore, scoreAnswer } from "@/lib/audits";
+import { AUDIT_EVIDENCE_SOURCE_OPTIONS, auditScopeWhere, calculateAuditScore, hasTraceableAuditEvidence, scoreAnswer } from "@/lib/audits";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
 
-type SubmittedResponse = { questionId:string;answer:string;comment:string;evidenceId:string };
+type SubmittedResponse = { questionId:string;answer:string;comment:string;evidenceId:string;evidenceSourceType:string;evidenceSourceReference:string };
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}) {
   const context = await requirePermission(PERMISSIONS.AUDITS_COMPLETE); const {id}=await params;
   try {
@@ -24,14 +24,18 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
           const item=responseByQuestion.get(question.id);
           if(question.mandatory && !item?.answer) throw new Error(`Answer every mandatory question before submitting.`);
           if(question.requiresCommentNonCompliant && item?.answer==="NON_COMPLIANT" && !item.comment.trim()) throw new Error("Add a comment for every non-compliant answer.");
-          if(question.requiresEvidence && item?.answer && item.answer!=="NOT_APPLICABLE" && !item.evidenceId) throw new Error("Attach evidence where the template requires it.");
-          if(["COMPLIANCE","YES_NO"].includes(question.responseType) && item?.answer && item.answer!=="NOT_APPLICABLE" && !item.evidenceId && item.comment.trim().length < 8) throw new Error("For every applicable check, describe what you checked or link supporting evidence.");
+          if(question.requiresEvidence && item?.answer && item.answer!=="NOT_APPLICABLE" && !hasTraceableAuditEvidence(item)) throw new Error("For every applicable evidence-led check, link a controlled record or choose the source type and enter its exact reference.");
+          if(["COMPLIANCE","YES_NO"].includes(question.responseType) && item?.answer && item.answer!=="NOT_APPLICABLE" && !hasTraceableAuditEvidence(item) && item.comment.trim().length < 8) throw new Error("For every applicable check, describe what you checked or record traceable supporting evidence.");
         }
       }
       for(const item of submitted) {
         const question=questions.find((candidate)=>candidate.id===item.questionId); if(!question) continue;
+        const evidenceSourceType=item.evidenceSourceType?.trim()||(item.evidenceId?"EVIDENCE_LIBRARY":null);
+        const evidenceSourceReference=item.evidenceSourceReference?.trim()||null;
+        if(evidenceSourceType && !AUDIT_EVIDENCE_SOURCE_OPTIONS.some((option)=>option.value===evidenceSourceType)) throw new Error("Choose a valid supporting evidence source.");
+        if(evidenceSourceReference && evidenceSourceReference.length>220) throw new Error("Keep the supporting evidence reference within 220 characters.");
         if(item.evidenceId && !(await db.evidence.findFirst({where:{id:item.evidenceId,...evidenceScopeWhere(context)},select:{id:true}}))) throw new Error("Linked evidence could not be found.");
-        const response=await db.auditResponse.upsert({where:{auditId_questionId:{auditId:id,questionId:item.questionId}},create:{auditId:id,questionId:item.questionId,answer:item.answer||null,comment:item.comment.trim()||null,evidenceId:item.evidenceId||null,score:scoreAnswer(item.answer)},update:{answer:item.answer||null,comment:item.comment.trim()||null,evidenceId:item.evidenceId||null,score:scoreAnswer(item.answer)}});
+        const response=await db.auditResponse.upsert({where:{auditId_questionId:{auditId:id,questionId:item.questionId}},create:{auditId:id,questionId:item.questionId,answer:item.answer||null,comment:item.comment.trim()||null,evidenceId:item.evidenceId||null,evidenceSourceType,evidenceSourceReference,score:scoreAnswer(item.answer)},update:{answer:item.answer||null,comment:item.comment.trim()||null,evidenceId:item.evidenceId||null,evidenceSourceType,evidenceSourceReference,score:scoreAnswer(item.answer)}});
         if(item.answer==="NON_COMPLIANT" || item.answer==="PARTIALLY_COMPLIANT") await db.auditFinding.upsert({where:{responseId:response.id},create:{auditId:id,responseId:response.id,severity:item.answer==="NON_COMPLIANT"?"HIGH":"MEDIUM",summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true},update:{severity:item.answer==="NON_COMPLIANT"?"HIGH":"MEDIUM",summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true,resolvedAt:null}});
         else await db.auditFinding.deleteMany({where:{responseId:response.id}});
       }

@@ -1377,15 +1377,17 @@ model Audit {
 }
 
 model AuditResponse {
-  id         String   @id @default(uuid()) @db.Uuid
-  auditId    String   @db.Uuid
-  questionId String   @db.Uuid
-  answer     String?
-  comment    String?
-  score      Float?
-  evidenceId String?  @db.Uuid
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                      String   @id @default(uuid()) @db.Uuid
+  auditId                 String   @db.Uuid
+  questionId              String   @db.Uuid
+  answer                  String?
+  comment                 String?
+  score                   Float?
+  evidenceId              String?  @db.Uuid
+  evidenceSourceType      String?
+  evidenceSourceReference String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   audit    Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
   question AuditQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
@@ -1394,6 +1396,7 @@ model AuditResponse {
 
   @@unique([auditId, questionId])
   @@index([evidenceId])
+  @@index([evidenceSourceType])
 }
 
 model AuditFinding {
