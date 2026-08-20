@@ -86,7 +86,7 @@ ambiguous people or staff is prohibited.
 - `ImportBatch` and `IntegrationEvent` retain source, counts, outcome and failures.
 - `ReconciliationCase` requires human resolution for conflicts or duplicate identity.
 - `ActivityLog` is append-only for ordinary users and records material actions.
-- `AIInteractionLog` is planned to record authorised sources, response class and feedback without unnecessary sensitive text.
+- `AIInteractionLog` records authorised sources, response class and feedback without unnecessary sensitive text.
 
 ## Deletion and history
 
@@ -140,3 +140,11 @@ remain explicitly scoped; no evidence or decision is shared between tenants.
 - `SourceAuthority` records one approved source decision per organisation and canonical entity type, including authority level, governed fields, rationale and review date.
 - `OfflineCapture` receives a note only after device-local AES-GCM decryption by the submitting user. It remains pending or conflicted until a manager accepts or rejects it; acceptance creates unverified evidence and never edits the linked source.
 - `ExternalIdentifier.connectionId` ties a source identity to its controlled connection while preserving the organisation-scoped uniqueness rules.
+
+# Phase 9 trustworthy-Abi extension
+
+- `AIInteractionLog` is the tenant-scoped audit record for one Abi question and answer. It stores a cryptographic query hash, redacted question summary, answer text and hash, response class, confidence and current module path.
+- `AIInteractionSource` records every controlled internal or official regulator source shown with the exact answer, including authority, source URL and checked date where relevant.
+- `AssistantFeedback` links helpful, not-helpful or unsafe feedback to the exact interaction and user. Feedback comments are redacted before storage.
+- `AssistantEscalation` is created automatically for uncertain and prohibited questions. It retains a controlled reference, priority, redacted question, raised-by and assigned management identities, decision response and chronology.
+- Raw questions are not persisted. The redaction layer removes email addresses, phone numbers, governed record references, UUIDs and long identifiers before the management audit record is written.

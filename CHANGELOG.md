@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-20 — Phase 9 trustworthy Abi
+
+- Added known, uncertain, prohibited, navigation, greeting and access-denied answer classes with visible confidence.
+- Added source citations for every issued Abi answer, including controlled module links and named official CQC guidance.
+- Added fail-closed interaction audit: Abi does not issue an answer if its required audit record cannot be created.
+- Added privacy-aware question hashing and redaction of contact details, record references and long identifiers before storage.
+- Added real management escalations for unsupported and prohibited questions, with priority, ownership and controlled resolution.
+- Added explicit emergency, clinical, legal, rating-prediction, security-bypass and record-tampering boundaries.
+- Added helpful, not-helpful and unsafe feedback controls linked to the exact audited answer.
+- Added a responsive Abi Assurance workspace for management oversight, source review, feedback and escalation decisions.
+
 ## 2026-08-20 — Phase 8 connected governance
 
 - Added a responsive Connected Governance workspace for integration assurance, staged imports, source authority, event failures and offline review.

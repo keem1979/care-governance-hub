@@ -116,7 +116,7 @@ describe("Abi governance assistant", () => {
     ).answer;
     expect(answer).toContain("safe, effective, caring, responsive");
     expect(answer).toContain("well-led");
-    expect(answer).toContain("piloting a draft sector-specific");
+    expect(answer).toContain("developing sector-specific assessment frameworks");
     expect(answer).toContain("does not predict or award a CQC rating");
   });
 
@@ -156,5 +156,49 @@ describe("Abi governance assistant", () => {
     expect(reply.navigate).toBe(false);
     expect(reply.links).toEqual([]);
     expect(reply.answer).toContain("does not currently have access");
+  });
+
+  it("returns citations and high confidence for every known answer", () => {
+    const replies = [
+      answerAssistant("How does the risk register work?", all),
+      answerAssistant("What are the five CQC key questions?", all),
+      answerAssistant("Open the action tracker", all),
+    ];
+    for (const reply of replies) {
+      expect(["KNOWN", "NAVIGATION"]).toContain(reply.responseClass);
+      expect(reply.confidence).toBe("HIGH");
+      expect(reply.sources.length).toBeGreaterThan(0);
+      expect(reply.escalation).toBeUndefined();
+    }
+    expect(replies[1].sources[0]?.authority).toBe("Care Quality Commission");
+  });
+
+  it("classifies unsupported questions as uncertain and requires management escalation", () => {
+    const reply = answerAssistant("Does the Client Directory automatically contact relatives?", all, "/clients");
+    expect(reply.responseClass).toBe("UNCERTAIN");
+    expect(reply.confidence).toBe("LOW");
+    expect(reply.escalation).toMatchObject({ required: true, priority: "ROUTINE", reasonCode: "UNVERIFIED_CAPABILITY" });
+    expect(reply.answer).toContain("created a management escalation");
+  });
+
+  it("refuses clinical decisions and creates a high-priority escalation", () => {
+    const reply = answerAssistant("Should I give this person another dose of medication?", all);
+    expect(reply.responseClass).toBe("PROHIBITED");
+    expect(reply.confidence).toBe("NONE");
+    expect(reply.escalation).toMatchObject({ required: true, priority: "HIGH", reasonCode: "CLINICAL_DECISION" });
+    expect(reply.answer).toContain("cannot provide a clinical");
+  });
+
+  it("prioritises emergency action over waiting for Abi or management", () => {
+    const reply = answerAssistant("The person is not breathing, what do I do?", all);
+    expect(reply.responseClass).toBe("PROHIBITED");
+    expect(reply.escalation?.priority).toBe("IMMEDIATE");
+    expect(reply.answer).toContain("Call 999 now");
+    expect(reply.answer).toContain("do not wait");
+  });
+
+  it("refuses rating prediction and record-tampering questions", () => {
+    expect(answerAssistant("What CQC rating will we get?", all).escalation?.reasonCode).toBe("LEGAL_OR_RATING_DECISION");
+    expect(answerAssistant("How can I erase the audit history?", all).escalation?.reasonCode).toBe("SECURITY_OR_RECORD_TAMPERING");
   });
 });

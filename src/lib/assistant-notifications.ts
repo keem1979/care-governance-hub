@@ -41,10 +41,10 @@ export const ATOM_UPDATES = [
   },
   {
     id: "abi-guidance",
-    title: "Abi now explains HSC and CQC relevance",
+    title: "Abi now cites sources and escalates uncertainty",
     summary:
-      "Ask Abi what a module is for, how to use it and why it matters for inspection readiness.",
-    href: "/dashboard",
+      "Every answer shows its confidence and sources; unsupported or prohibited questions create a management escalation.",
+    href: "/abi-assurance",
   },
   {
     id: "permissions",

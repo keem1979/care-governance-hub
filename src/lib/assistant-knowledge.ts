@@ -21,10 +21,71 @@ export type AssistantReply = {
   answer: string;
   links: { label: string; href: string }[];
   navigate: boolean;
+  responseClass: "GREETING" | "NAVIGATION" | "KNOWN" | "UNCERTAIN" | "PROHIBITED" | "ACCESS_DENIED";
+  confidence: "HIGH" | "MEDIUM" | "LOW" | "NONE";
+  topicName?: string;
+  sources: AssistantSource[];
+  escalation?: {
+    required: true;
+    priority: "ROUTINE" | "HIGH" | "IMMEDIATE";
+    reasonCode: string;
+    message: string;
+  };
+};
+
+export type AssistantSource = {
+  kind: "INTERNAL_MODULE" | "INTERNAL_CONTROL" | "OFFICIAL_REGULATOR";
+  label: string;
+  href: string;
+  authority: string;
+  versionLabel?: string;
+  checkedAt?: string;
 };
 
 const MANAGEMENT_ESCALATION =
-  "I cannot confirm a reliable answer to that question from the verified QCGMS guidance, so I will not guess or invent one. Please escalate it to your management team for review and guidance.";
+  "I cannot confirm a reliable answer to that question from the verified QCGMS guidance authorised for Abi, so I will not guess or invent one. I will escalate it to your management team and have created a management escalation for review.";
+
+const ABI_CONTROL_SOURCE: AssistantSource = {
+  kind: "INTERNAL_CONTROL",
+  label: "Abi scope, safety and escalation controls",
+  href: "/abi-assurance",
+  authority: "QCGMS controlled guidance",
+  versionLabel: "Phase 9",
+};
+
+const CQC_FRAMEWORK_SOURCE: AssistantSource = {
+  kind: "OFFICIAL_REGULATOR",
+  label: "CQC assessment framework",
+  href: "https://www.cqc.org.uk/guidance-regulation/providers/assessment/assessment-framework",
+  authority: "Care Quality Commission",
+  versionLabel: "Official web guidance",
+  checkedAt: "2026-08-20",
+};
+
+const CQC_EVIDENCE_SOURCE: AssistantSource = {
+  kind: "OFFICIAL_REGULATOR",
+  label: "CQC evidence categories",
+  href: "https://www.cqc.org.uk/guidance-regulation/providers/assessment/evidence-categories",
+  authority: "Care Quality Commission",
+  versionLabel: "Official web guidance",
+  checkedAt: "2026-08-20",
+};
+
+const CQC_STANDARDS_SOURCE: AssistantSource = {
+  kind: "OFFICIAL_REGULATOR",
+  label: "CQC fundamental standards of care",
+  href: "https://www.cqc.org.uk/about-us/fundamental-standards",
+  authority: "Care Quality Commission",
+  versionLabel: "Official web guidance",
+  checkedAt: "2026-08-20",
+};
+
+export const TRUSTED_ASSISTANT_SOURCES: AssistantSource[] = [
+  ABI_CONTROL_SOURCE,
+  CQC_FRAMEWORK_SOURCE,
+  CQC_EVIDENCE_SOURCE,
+  CQC_STANDARDS_SOURCE,
+];
 
 const CAPABILITY_ACTIONS = [
   "access",
@@ -181,6 +242,13 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
   topic("Security & Integration Assurance", "/assurance", ["security", "integration", "nourish", "carelens", "carenexus", "microsoft 365", "payroll", "training platform", "dspt", "cyber essentials", "mfa", "backup"], "Security & Integration Assurance separates active native QCGMS data flows from unconnected external candidates and shows the mandatory approval gates before supplier data exchange.", "Use it to review security-control ownership, export the candidate review schedule and plan a connection without claiming that a supplier integration or external certification is active.", [PERMISSIONS.ORGANISATION_MANAGE], [
     link("Open Security & Integration Readiness", "/assurance", ["view", "open", "review"], [PERMISSIONS.ORGANISATION_MANAGE]),
   ]),
+  topic("Connected Governance", "/connected-governance", ["connected governance", "integration connection", "api token", "staged import", "source authority", "offline capture", "quarantined event"], "Connected Governance controls approved integrations, staged imports, source authority, failed events and encrypted offline observations.", "Propose and approve each connection through eight gates, issue inbound credentials only after activation, stage CSV records for analysis and reconcile uncertain identities before applying safe rows.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ORGANISATION_MANAGE], [
+    link("Open Connected Governance", "/connected-governance", ["open", "view", "connections"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ORGANISATION_MANAGE]),
+    link("Open Data Quality", "/data-quality", ["reconcile", "conflict", "identity"], view),
+  ]),
+  topic("Abi Assurance", "/abi-assurance", ["abi", "assistant", "source", "citation", "confidence", "uncertain", "prohibited", "feedback", "escalation"], "Abi Assurance shows how every guidance answer is classified, cited, audited and escalated when QCGMS cannot support a safe answer.", "Review known, uncertain and prohibited answers, inspect the sources used, monitor user feedback and record management decisions for escalated questions.", view, [
+    link("Open Abi Assurance", "/abi-assurance", ["open", "view", "review", "escalation"], view),
+  ]),
   topic("Settings", "/settings", ["settings", "organisation", "location", "locations", "user", "users", "role", "roles", "permission", "access"], "Settings manages organisation details, service locations, users, roles and location access.", "Authorised administrators can add or archive locations, add users, change roles or account status and review central role permissions. Safeguards prevent self-lockout and removal of the last owner.", [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE], [
     link("Open Settings", "/settings", ["view", "manage", "open"], [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE]),
   ]),
@@ -257,7 +325,7 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   },
   "/inspection": {
     hsc: "inspection preparation should be ongoing quality assurance, not a last-minute collection of documents. It helps teams understand strengths, gaps and improvement priorities.",
-    cqc: "the five key questions remain safe, effective, caring, responsive and well-led. CQC is piloting a draft sector-specific adult social care framework in 2026, so this module is an internal evidence-readiness tool and must not be treated as an official rating predictor.",
+    cqc: "the five key questions remain safe, effective, caring, responsive and well-led. CQC is developing sector-specific assessment frameworks during 2026, so this module is an internal evidence-readiness tool and must not be treated as an official rating predictor.",
   },
   "/templates": {
     hsc: "approved templates help staff capture information consistently and reduce omissions in recurring governance work.",
@@ -283,6 +351,14 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
     hsc: "secure, proportionate information handling and reliable system connections protect people, staff and service continuity.",
     cqc: "access controls, audit trails, continuity arrangements and information-governance assurance may support well-led and safe evidence, but external certifications and hosting controls must be verified separately.",
   },
+  "/connected-governance": {
+    hsc: "controlled connections reduce duplicate entry while keeping identity conflicts, failures and source authority visible to accountable managers.",
+    cqc: "traceable data exchange and reconciliation may support safe and well-led evidence when suppliers, lawful processing, operational fallbacks and source decisions are independently assured.",
+  },
+  "/abi-assurance": {
+    hsc: "a constrained assistant can help staff find governance guidance while making clear when professional or management judgement is required.",
+    cqc: "source citations, uncertainty, feedback and escalation may support transparent governance, but Abi is not regulator guidance and cannot assess compliance or predict a rating.",
+  },
   "/settings": {
     hsc: "settings define organisational accountability, location scope and least-privilege access to sensitive governance information.",
     cqc: "clear responsibilities, controlled access and traceable permission changes can support well-led and good-governance evidence, including confidentiality and information security.",
@@ -297,6 +373,22 @@ export function answerAssistant(query: string, permissions: readonly string[], c
       answer: "Hi, I’m Abi. I can explain every part of QCGMS, why it matters in health and social care, how it may support CQC inspection evidence, or give you the right page link. You could ask, “How do I complete the monthly performance return?”, “Why does the risk register matter for CQC?” or “Open Reports.”",
       links: accessible(ASSISTANT_TOPICS.map((item) => ({ label: item.name, href: item.href, requiredAny: item.requiredAny })), permissions).slice(0, 6),
       navigate: false,
+      responseClass: "GREETING",
+      confidence: "HIGH",
+      sources: [ABI_CONTROL_SOURCE],
+    };
+  }
+
+  const prohibited = prohibitedQuestion(clean);
+  if (prohibited) {
+    return {
+      answer: prohibited.answer,
+      links: prohibited.priority === "IMMEDIATE" ? [] : accessible([{ label: "Open Abi Assurance", href: "/abi-assurance", requiredAny: view }], permissions),
+      navigate: false,
+      responseClass: "PROHIBITED",
+      confidence: "NONE",
+      sources: [ABI_CONTROL_SOURCE],
+      escalation: { required: true, priority: prohibited.priority, reasonCode: prohibited.reasonCode, message: prohibited.escalationMessage },
     };
   }
 
@@ -311,6 +403,10 @@ export function answerAssistant(query: string, permissions: readonly string[], c
         { label: "Open Reports", href: "/reports", requiredAny: reports },
       ], permissions),
       navigate: false,
+      responseClass: "KNOWN",
+      confidence: "HIGH",
+      topicName: "CQC assessment framework",
+      sources: cqcSources(clean),
     };
   }
   if (!topic) {
@@ -318,6 +414,10 @@ export function answerAssistant(query: string, permissions: readonly string[], c
       answer: MANAGEMENT_ESCALATION,
       links: [],
       navigate: false,
+      responseClass: "UNCERTAIN",
+      confidence: "LOW",
+      sources: [ABI_CONTROL_SOURCE],
+      escalation: { required: true, priority: "ROUTINE", reasonCode: "NO_AUTHORISED_TOPIC", message: "No authorised Abi topic could support a reliable answer." },
     };
   }
 
@@ -326,6 +426,11 @@ export function answerAssistant(query: string, permissions: readonly string[], c
       answer: MANAGEMENT_ESCALATION,
       links: [],
       navigate: false,
+      responseClass: "UNCERTAIN",
+      confidence: "LOW",
+      topicName: topic.name,
+      sources: [moduleSource(topic), ABI_CONTROL_SOURCE],
+      escalation: { required: true, priority: "ROUTINE", reasonCode: "UNVERIFIED_CAPABILITY", message: `The question referred to ${topic.name}, but the requested capability is not confirmed by its controlled guidance.` },
     };
   }
 
@@ -334,6 +439,10 @@ export function answerAssistant(query: string, permissions: readonly string[], c
       answer: `${topic.name} sounds like the right place, but your account does not currently have access to it. Please ask an organisation administrator to check your role or location access in Settings.`,
       links: accessible([{ label: "Open Settings", href: "/settings", requiredAny: [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE] }], permissions),
       navigate: false,
+      responseClass: "ACCESS_DENIED",
+      confidence: "HIGH",
+      topicName: topic.name,
+      sources: [moduleSource(topic), ABI_CONTROL_SOURCE],
     };
   }
 
@@ -350,7 +459,37 @@ export function answerAssistant(query: string, permissions: readonly string[], c
       : professionalModuleAnswer(topic, moduleContext),
     links,
     navigate: false,
+    responseClass: wantsNavigation ? "NAVIGATION" : "KNOWN",
+    confidence: "HIGH",
+    topicName: topic.name,
+    sources: wantsNavigation ? [moduleSource(topic)] : [moduleSource(topic), CQC_FRAMEWORK_SOURCE],
   };
+}
+
+function prohibitedQuestion(query: string): { answer: string; priority: "HIGH" | "IMMEDIATE"; reasonCode: string; escalationMessage: string } | null {
+  if (/\b(not breathing|unconscious|choking|immediate danger|life threatening|suicide|suicidal|overdose|severe bleeding|999|emergency now)\b/.test(query)) {
+    return { answer: "I cannot assess or manage an emergency. Call 999 now if someone is in immediate danger or needs urgent medical help, and follow your service’s emergency and safeguarding procedure. I have also raised an immediate management escalation, but do not wait for that response.", priority: "IMMEDIATE", reasonCode: "URGENT_SAFETY", escalationMessage: "The question may describe an urgent safety or medical situation. Immediate procedures take priority over Abi." };
+  }
+  if (/\b(what dose|which dose|change (the )?(dose|medication)|stop (the )?(medicine|medication)|should i (give|administer)|diagnos|prescribe|clinical decision|treatment decision)\b/.test(query)) {
+    return { answer: "I cannot provide a clinical, diagnostic, prescribing or medication-administration decision. Follow the person’s current authorised care and medicines instructions and contact the appropriate clinician or manager. I have raised this for management review.", priority: "HIGH", reasonCode: "CLINICAL_DECISION", escalationMessage: "Abi was asked for a clinical or medication decision outside its permitted scope." };
+  }
+  if (/\b(legal advice|is this legal|guarantee compliance|guarantee.*cqc|predict.*rating|what.*cqc.*rating|what.*rating.*cqc|cqc rating will|official cqc rating)\b/.test(query)) {
+    return { answer: "I cannot give legal advice, certify compliance or predict an official regulator rating. I can help locate the relevant controlled records, but an authorised manager or qualified adviser must make the decision. I have raised this for management review.", priority: "HIGH", reasonCode: "LEGAL_OR_RATING_DECISION", escalationMessage: "Abi was asked to provide legal assurance, certify compliance or predict a regulator decision." };
+  }
+  if (/\b(bypass|disable|evade|hide|cover up|erase|tamper)\b.*\b(access|security|audit|activity|evidence|history|record|mfa|permission)\b/.test(query)) {
+    return { answer: "I cannot help bypass access controls, hide evidence or tamper with audit history. The request has been raised for management review.", priority: "HIGH", reasonCode: "SECURITY_OR_RECORD_TAMPERING", escalationMessage: "Abi received a request that could weaken security or record integrity." };
+  }
+  return null;
+}
+
+function moduleSource(topic: AssistantTopic): AssistantSource {
+  return { kind: "INTERNAL_MODULE", label: `${topic.name} controlled module guidance`, href: topic.href, authority: "QCGMS live module", versionLabel: "Current deployed workflow" };
+}
+
+function cqcSources(query: string): AssistantSource[] {
+  if (/\b(evidence categories|types of evidence|what evidence)\b/.test(query)) return [CQC_EVIDENCE_SOURCE];
+  if (/\b(fundamental standards|minimum standards)\b/.test(query)) return [CQC_STANDARDS_SOURCE];
+  return [CQC_FRAMEWORK_SOURCE];
 }
 
 function hasVerifiedTopicAnswer(
@@ -437,12 +576,12 @@ function isGeneralCqcQuestion(
 
 function cqcOverview(query: string): string {
   if (/\b(evidence categories|types of evidence|what evidence)\b/.test(query)) {
-    return "CQC currently groups assessment evidence into six categories: people’s experience of health and care services; feedback from staff and leaders; feedback from partners; observation; processes; and outcomes. The Hub mainly helps organise process and outcome records, but good preparation should also consider what people, staff and partners say and what inspectors may observe. CQC is piloting a draft sector-specific adult social care framework in 2026, so always check current official guidance.";
+    return "CQC currently groups assessment evidence into six categories: people’s experience of health and care services; feedback from staff and leaders; feedback from partners; observation; processes; and outcomes. The Hub mainly helps organise process and outcome records, but good preparation should also consider what people, staff and partners say and what inspectors may observe. CQC is developing sector-specific assessment frameworks during 2026, so always check current official guidance.";
   }
   if (/\b(fundamental standards|minimum standards)\b/.test(query)) {
     return "The fundamental standards are the minimum standards below which care must never fall. They cover areas such as person-centred care, dignity, consent, safety, safeguarding, complaints, good governance, staffing, fit and proper staff and duty of candour. The Hub can organise supporting governance records, but it cannot determine legal compliance.";
   }
-  return "CQC regulates health and adult social care services in England. Its five key questions remain: is the service safe, effective, caring, responsive to people’s needs and well-led? CQC considers evidence about people’s experiences, staff and leaders, partners, observation, processes and outcomes. In 2026 CQC is piloting a draft sector-specific adult social care framework, so Abi explains readiness using the five questions while reminding users to confirm the latest official CQC guidance. The Hub supports internal assurance and does not predict or award a CQC rating.";
+  return "CQC regulates health and adult social care services in England. Its five key questions remain: is the service safe, effective, caring, responsive to people’s needs and well-led? CQC considers evidence about people’s experiences, staff and leaders, partners, observation, processes and outcomes. CQC is developing sector-specific assessment frameworks during 2026, so Abi explains readiness using the five questions while reminding users to confirm the latest official CQC guidance. The Hub supports internal assurance and does not predict or award a CQC rating.";
 }
 
 function topic(name: string, href: string, keywords: string[], summary: string, guidance: string, requiredAny: string[] | undefined, links: AssistantLink[]): AssistantTopic {

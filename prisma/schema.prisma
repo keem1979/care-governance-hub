@@ -300,6 +300,47 @@ enum OfflineCaptureStatus {
   REJECTED
 }
 
+enum AssistantResponseClass {
+  GREETING
+  NAVIGATION
+  KNOWN
+  UNCERTAIN
+  PROHIBITED
+  ACCESS_DENIED
+}
+
+enum AssistantConfidence {
+  HIGH
+  MEDIUM
+  LOW
+  NONE
+}
+
+enum AssistantSourceKind {
+  INTERNAL_MODULE
+  INTERNAL_CONTROL
+  OFFICIAL_REGULATOR
+}
+
+enum AssistantFeedbackRating {
+  HELPFUL
+  NOT_HELPFUL
+  UNSAFE
+}
+
+enum AssistantEscalationStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum AssistantEscalationPriority {
+  ROUTINE
+  HIGH
+  IMMEDIATE
+}
+
 enum MaterialChangeCategory {
   IDENTITY
   CARE_NEED
@@ -809,6 +850,9 @@ model Organisation {
   sourceAuthorities SourceAuthority[]
   offlineCaptures OfflineCapture[]
   externalIdentifiers ExternalIdentifier[]
+  assistantInteractions AIInteractionLog[]
+  assistantFeedback AssistantFeedback[]
+  assistantEscalations AssistantEscalation[]
 }
 
 model ServiceLocation {
@@ -856,6 +900,8 @@ model ServiceLocation {
   integrationEvents IntegrationEvent[]
   importBatches ImportBatch[]
   offlineCaptures OfflineCapture[]
+  assistantInteractions AIInteractionLog[]
+  assistantEscalations AssistantEscalation[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -951,6 +997,11 @@ model User {
   sourceAuthoritiesApproved SourceAuthority[] @relation("SourceAuthorityApprover")
   offlineCapturesSubmitted OfflineCapture[] @relation("OfflineCaptureSubmitter")
   offlineCapturesReviewed OfflineCapture[] @relation("OfflineCaptureReviewer")
+  assistantInteractions AIInteractionLog[]
+  assistantFeedback AssistantFeedback[]
+  assistantEscalationsRaised AssistantEscalation[] @relation("AssistantEscalationRaiser")
+  assistantEscalationsAssigned AssistantEscalation[] @relation("AssistantEscalationAssignee")
+  assistantEscalationsResolved AssistantEscalation[] @relation("AssistantEscalationResolver")
 }
 
 model Policy {
@@ -3348,6 +3399,104 @@ model OfflineCapture {
   @@index([organisationId, status, receivedAt])
   @@index([locationId, status])
   @@index([submittedById, status])
+}
+
+model AIInteractionLog {
+  id               String                 @id @default(uuid()) @db.Uuid
+  organisationId   String                 @db.Uuid
+  locationId       String?                @db.Uuid
+  userId           String                 @db.Uuid
+  queryHash        String
+  queryRedacted    String
+  currentPath      String?
+  responseClass    AssistantResponseClass
+  confidence       AssistantConfidence
+  topicName        String?
+  answerHash       String
+  answerText       String
+  escalationReason String?
+  createdAt        DateTime               @default(now())
+
+  organisation Organisation          @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  user User                            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sources AIInteractionSource[]
+  feedback AssistantFeedback?
+  escalation AssistantEscalation?
+
+  @@index([organisationId, responseClass, createdAt])
+  @@index([organisationId, confidence, createdAt])
+  @@index([locationId, createdAt])
+  @@index([userId, createdAt])
+  @@index([queryHash])
+}
+
+model AIInteractionSource {
+  id             String              @id @default(uuid()) @db.Uuid
+  interactionId  String              @db.Uuid
+  kind           AssistantSourceKind
+  label          String
+  href           String
+  authority      String
+  versionLabel   String?
+  checkedAt      DateTime?
+  createdAt      DateTime            @default(now())
+
+  interaction AIInteractionLog @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+
+  @@index([interactionId])
+  @@index([kind, authority])
+}
+
+model AssistantFeedback {
+  id             String                  @id @default(uuid()) @db.Uuid
+  organisationId String                  @db.Uuid
+  interactionId  String                  @unique @db.Uuid
+  userId         String                  @db.Uuid
+  rating         AssistantFeedbackRating
+  commentRedacted String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  interaction AIInteractionLog  @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  user User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, rating, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AssistantEscalation {
+  id               String                      @id @default(uuid()) @db.Uuid
+  organisationId   String                      @db.Uuid
+  locationId       String?                     @db.Uuid
+  interactionId    String                      @unique @db.Uuid
+  reference        String
+  priority         AssistantEscalationPriority
+  status           AssistantEscalationStatus   @default(OPEN)
+  reasonCode       String
+  questionRedacted String
+  raisedById       String                      @db.Uuid
+  assignedToId     String?                     @db.Uuid
+  response         String?
+  acknowledgedAt   DateTime?
+  resolvedAt       DateTime?
+  resolvedById     String?                     @db.Uuid
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+
+  organisation Organisation      @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation?       @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  interaction AIInteractionLog    @relation(fields: [interactionId], references: [id], onDelete: Restrict)
+  raisedBy User                   @relation("AssistantEscalationRaiser", fields: [raisedById], references: [id], onDelete: Restrict)
+  assignedTo User?                @relation("AssistantEscalationAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  resolvedBy User?                @relation("AssistantEscalationResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@unique([organisationId, reference])
+  @@index([organisationId, status, priority, createdAt])
+  @@index([locationId, status])
+  @@index([assignedToId, status])
+  @@index([raisedById, createdAt])
 }
 
 model ExternalIdentifier {

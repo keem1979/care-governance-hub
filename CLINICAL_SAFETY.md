@@ -19,7 +19,7 @@ and post-release monitoring. Safety defects override feature deadlines.
 | H-002 | Staff act on draft or superseded care instructions | High | Controlled version/status model, human approval and current-version presentation | Controlled in build; workflow validation pending |
 | H-003 | Material change is not communicated or acknowledged | High | Version comparison, assignments and acknowledgement requirement | Controlled in build; end-to-end validation pending |
 | H-004 | Outage hides time-critical information | High | QCGMS is not the sole point-of-care record; downtime, restore and reconciliation plan required | Operational evidence pending |
-| H-005 | Dashboard or AI output is treated as fact without evidence | High | Provenance, human decision, uncertainty/escalation rule and no autonomous care action | Controlled in design; evaluation pending |
+| H-005 | Dashboard or AI output is treated as fact without evidence | High | Provenance, human decision, uncertainty/escalation rule and no autonomous care action | Phase 9 controls built; independent evaluation pending |
 
 No hazard may be accepted by the developer alone. A named owner must record
 severity, likelihood, control evidence, residual risk, affected release and

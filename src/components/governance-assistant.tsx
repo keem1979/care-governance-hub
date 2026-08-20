@@ -2,10 +2,15 @@
 
 import {
   Bell,
+  BookOpenCheck,
   ChevronRight,
   ExternalLink,
+  Flag,
   Send,
+  ShieldAlert,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -21,6 +26,12 @@ type Message = {
   role: "user" | "assistant";
   text: string;
   links?: { label: string; href: string }[];
+  interactionId?: string;
+  responseClass?: string;
+  confidence?: string;
+  sources?: { kind: string; label: string; href: string; authority: string; versionLabel?: string; checkedAt?: string }[];
+  escalationReference?: string | null;
+  feedback?: string;
 };
 
 type AtomUpdate = {
@@ -142,6 +153,11 @@ export function GovernanceAssistant() {
             : (result.error ??
               "Sorry, I couldn’t get that answer just now. Please try once more."),
           links: response.ok ? result.links : undefined,
+          interactionId: response.ok ? result.interactionId : undefined,
+          responseClass: response.ok ? result.responseClass : undefined,
+          confidence: response.ok ? result.confidence : undefined,
+          sources: response.ok ? result.sources : undefined,
+          escalationReference: response.ok ? result.escalationReference : undefined,
         },
       ]);
     } catch {
@@ -161,6 +177,12 @@ export function GovernanceAssistant() {
   function openPage(href: string) {
     router.push(href);
     setOpen(false);
+  }
+
+  async function sendFeedback(messageId: number, interactionId: string, rating: "HELPFUL" | "NOT_HELPFUL" | "UNSAFE") {
+    const response = await fetch(`/api/assistant/interactions/${interactionId}/feedback`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ rating }) }), result = await response.json().catch(() => ({}));
+    if (!response.ok) return;
+    setMessages((current) => current.map((message) => message.id === messageId ? { ...message, feedback: rating, escalationReference: result.escalationReference ?? message.escalationReference } : message));
   }
 
   const pendingCount = notifications?.pendingCount ?? 0;
@@ -392,6 +414,17 @@ export function GovernanceAssistant() {
                       ))}
                     </div>
                   ) : null}
+                  {message.role === "assistant" && message.responseClass ? (
+                    <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-wide">
+                        <span className={`rounded-full px-2 py-1 ${message.responseClass === "KNOWN" || message.responseClass === "NAVIGATION" ? "bg-emerald-100 text-emerald-800" : message.responseClass === "UNCERTAIN" ? "bg-amber-100 text-amber-900" : message.responseClass === "PROHIBITED" ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-700"}`}>{readable(message.responseClass)}</span>
+                        <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-800">{readable(message.confidence ?? "NONE")} confidence</span>
+                      </div>
+                      {message.escalationReference ? <p className="mt-2 flex items-start gap-1.5 text-xs font-bold text-amber-900"><ShieldAlert size={14} className="mt-0.5 shrink-0" />Management escalation {message.escalationReference} was created.</p> : null}
+                      {message.sources?.length ? <details className="mt-2"><summary className="flex cursor-pointer items-center gap-1.5 text-xs font-bold text-emerald-800"><BookOpenCheck size={14} />Sources used ({message.sources.length})</summary><div className="mt-2 space-y-2">{message.sources.map((source) => source.href.startsWith("http") ? <a key={`${message.id}-${source.href}`} href={source.href} target="_blank" rel="noreferrer" className="block rounded-lg bg-slate-50 p-2 text-xs"><strong className="text-emerald-800">{source.label} ↗</strong><span className="mt-0.5 block text-slate-500">{source.authority}{source.versionLabel ? ` · ${source.versionLabel}` : ""}{source.checkedAt ? ` · checked ${source.checkedAt}` : ""}</span></a> : <button key={`${message.id}-${source.href}`} onClick={() => openPage(source.href)} className="block w-full rounded-lg bg-slate-50 p-2 text-left text-xs"><strong className="text-emerald-800">{source.label}</strong><span className="mt-0.5 block text-slate-500">{source.authority}{source.versionLabel ? ` · ${source.versionLabel}` : ""}</span></button>)}</div></details> : null}
+                      {message.interactionId ? <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-2"><span className="mr-1 text-[10px] font-bold text-slate-500">Was this safe and useful?</span><button disabled={Boolean(message.feedback)} onClick={() => void sendFeedback(message.id, message.interactionId!, "HELPFUL")} aria-label="Helpful answer" className={`rounded-lg p-1.5 ${message.feedback === "HELPFUL" ? "bg-emerald-100 text-emerald-800" : "text-slate-500 hover:bg-slate-100"}`}><ThumbsUp size={14} /></button><button disabled={Boolean(message.feedback)} onClick={() => void sendFeedback(message.id, message.interactionId!, "NOT_HELPFUL")} aria-label="Not helpful" className={`rounded-lg p-1.5 ${message.feedback === "NOT_HELPFUL" ? "bg-amber-100 text-amber-900" : "text-slate-500 hover:bg-slate-100"}`}><ThumbsDown size={14} /></button><button disabled={Boolean(message.feedback)} onClick={() => void sendFeedback(message.id, message.interactionId!, "UNSAFE")} aria-label="Flag unsafe answer" className={`rounded-lg p-1.5 ${message.feedback === "UNSAFE" ? "bg-red-100 text-red-800" : "text-slate-500 hover:bg-slate-100"}`}><Flag size={14} /></button></div> : null}
+                    </div>
+                  ) : null}
                 </div>
               ))}
               {busy ? (
@@ -453,10 +486,10 @@ export function GovernanceAssistant() {
             </button>
           </form>
           <p className="bg-white px-4 pb-3 text-[10px] leading-4 text-slate-500">
-            Abi explains the Hub and general inspection-readiness concepts. She
-            cannot give clinical, legal or regulatory advice, predict a CQC
-            rating or replace current official guidance. This conversation is
-            not saved.
+            Abi uses controlled QCGMS guidance and named official sources. She
+            cannot give clinical or legal advice, certify compliance or predict
+            a CQC rating. Each question, answer class, source and feedback decision
+            is audited; contact details and identifiers are redacted before storage.
           </p>
         </section>
       ) : null}
