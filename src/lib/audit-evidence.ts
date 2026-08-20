@@ -80,6 +80,8 @@ export async function syncAuditEvidence(tx: Prisma.TransactionClient, input: {
     description,
     category: "Audits",
     evidenceType: "Audit assurance record",
+    sourceType: "INTERNAL_RECORD" as const,
+    sourceName: "Audit Centre",
     ownerId: input.auditorId,
     evidenceDate: input.auditDate,
     reviewExpiryDate: input.reviewDate,

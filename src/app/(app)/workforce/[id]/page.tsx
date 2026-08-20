@@ -44,7 +44,7 @@ export default async function StaffMemberPage({
     const [documents, courses, organisationUsers] = await Promise.all([
       db.evidence.findMany({ where: { organisationId: context.organisation.id, relatedModule: "StaffMember", relatedRecordId: id, archivedAt: null }, include: { currentVersion: { select: { id: true, fileName: true } } }, orderBy: { createdAt: "desc" } }),
       db.trainingCourse.findMany({ where: { archivedAt: null, OR: [{ organisationId: null }, { organisationId: context.organisation.id }] }, select: { id: true, title: true, suggestedRenewalMonths: true }, orderBy: { title: "asc" } }),
-      canManage ? db.organisationMembership.findMany({ where: { organisationId: context.organisation.id, status: "ACTIVE", user: { status: "ACTIVE" } }, select: { user: { select: { id: true, name: true, email: true } } }, orderBy: { user: { name: "asc" } } }) : Promise.resolve([]),
+      canManage ? db.organisationMembership.findMany({ where: { organisationId: context.organisation.id, status: "ACTIVE", user: { isActive: true } }, select: { user: { select: { id: true, name: true, email: true } } }, orderBy: { user: { name: "asc" } } }) : Promise.resolve([]),
     ]);
     const now = new Date();
     const leaveYear = leaveYearRange(staff.leaveYearStartMonth, staff.leaveYearStartDay, now);

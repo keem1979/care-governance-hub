@@ -109,3 +109,17 @@ implements version-scoped `CarePlanStaffAssignment`,
 `AcknowledgementRequirement`, `UnderstandingCheck` and
 `CareCompetencyRequirement`, plus an explicit one-to-one link between a login
 and its tenant workforce profile.
+# Phase 6 evidence assurance additions
+
+Evidence provenance is held on `Evidence`; immutable reviewer decisions are held
+in `EvidenceVerification` and may point to the exact `EvidenceVersion` reviewed.
+`ComplianceRequirementEvidence` now records suitability, rationale, categories
+and reviewer metadata. `PolicyRequirementMapping` and
+`TemplateRequirementMapping` distinguish content coverage from evidence of
+implementation.
+
+`RegulatoryFrameworkVersion` and `FrameworkChangeReview` record the external
+source and the organisation's owned impact work. `MockInspection` and
+`MockInspectionSample` retain the sampling plan and conclusions from documentary,
+observational and experiential checks. All organisation and location relations
+remain explicitly scoped; no evidence or decision is shared between tenants.

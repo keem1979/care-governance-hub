@@ -7,6 +7,7 @@ export type InspectionAssuranceInput = {
   coveredCategories: readonly string[];
   currentEvidence: number;
   expiredEvidence: number;
+  unsupportedEvidence?: number;
   activeAudits: number;
   unresolvedFindings: number;
   activeRegisters: number;
@@ -39,6 +40,8 @@ export function calculateInspectionAssurance(input: InspectionAssuranceInput): I
   const blockers: string[] = [], warnings: string[] = [];
   if (!currentRecords) blockers.push("No current supporting records");
   if (input.expiredEvidence) blockers.push(`${input.expiredEvidence} expired evidence item${input.expiredEvidence === 1 ? "" : "s"}`);
+  if (input.unsupportedEvidence) blockers.push(`${input.unsupportedEvidence} evidence mapping${input.unsupportedEvidence === 1 ? " is" : "s are"} not supported by current verification and suitability review`);
+  if ((input.managementDecision === "ASSURED" || input.signedOffAt) && input.currentEvidence === 0) blockers.push("No current verified and suitable evidence mapping supports sign-off");
   if (input.overdueActions) blockers.push(`${input.overdueActions} overdue improvement action${input.overdueActions === 1 ? "" : "s"}`);
   if (input.unresolvedFindings) blockers.push(`${input.unresolvedFindings} unresolved audit finding${input.unresolvedFindings === 1 ? "" : "s"}`);
   if (input.adverseSignals) blockers.push(`${input.adverseSignals} adverse live signal${input.adverseSignals === 1 ? "" : "s"}`);
@@ -54,7 +57,7 @@ export function calculateInspectionAssurance(input: InspectionAssuranceInput): I
   if (input.reviewedAt && input.managementDecision !== "NOT_REVIEWED") score += 20;
   if (input.signedOffAt) score += 15;
   if (!blockers.length) score += 15;
-  score = Math.max(0, Math.min(100, score - Math.min(30, input.expiredEvidence * 5 + input.overdueActions * 5 + input.unresolvedFindings * 5 + input.adverseSignals * 5)));
+  score = Math.max(0, Math.min(100, score - Math.min(30, input.expiredEvidence * 5 + (input.unsupportedEvidence ?? 0) * 5 + input.overdueActions * 5 + input.unresolvedFindings * 5 + input.adverseSignals * 5)));
   const status: AssuranceStatus = blockers.length || input.managementDecision === "NOT_ASSURED"
     ? "NOT_READY"
     : input.managementDecision === "ASSURED" && input.signedOffAt && categoryCoverage === 100

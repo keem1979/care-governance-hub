@@ -9,6 +9,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { parseOptionalDate, splitList } from "@/lib/policies";
 import { deletePrivateFile, putPrivateFile } from "@/lib/private-storage";
 import { evidenceRequirementByKey } from "@/lib/evidence-requirements";
+import { EVIDENCE_SOURCE_TYPES } from "@/lib/evidence-assurance";
 
 function text(form: FormData, key: string) { return String(form.get(key) ?? "").trim(); }
 async function checksum(bytes: ArrayBuffer) {
@@ -45,6 +46,11 @@ export async function POST(request: Request) {
         if (!policy) throw new Error("The related policy could not be found.");
       }
       if (relatedModule === "EvidenceRequirement" && !evidenceRequirementByKey(relatedRecordId)) throw new Error("The evidence requirement could not be found.");
+      const sourceType = text(form, "sourceType");
+      const sourceName = text(form, "sourceName");
+      const sourceUrl = text(form, "sourceUrl") || null;
+      if (!EVIDENCE_SOURCE_TYPES.includes(sourceType as never) || sourceName.length < 2) throw new Error("Record a valid evidence source type and source organisation or system.");
+      if (sourceUrl && (!sourceUrl.startsWith("https://") || !URL.canParse(sourceUrl))) throw new Error("Source links must be valid HTTPS URLs.");
 
       const createdIds: string[] = [];
       for (const file of files) {
@@ -63,6 +69,9 @@ export async function POST(request: Request) {
             tags: splitList(form.get("tags")), relatedModule, relatedRecordId,
             confidentiality: confidentiality as "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED",
             notes: text(form, "notes") || null, uploadedById: context.user.id,
+            sourceType: sourceType as never, sourceName, sourceReference: text(form, "sourceReference") || null,
+            sourceUrl, originalAuthor: text(form, "originalAuthor") || null,
+            capturedAt: parseOptionalDate(form.get("capturedAt")), provenanceNote: text(form, "provenanceNote") || null,
           } });
           const version = await tx.evidenceVersion.create({ data: {
             evidenceId: created.id, versionNumber: "1.0", storageKey, fileName: file.name,
@@ -73,7 +82,7 @@ export async function POST(request: Request) {
           await tx.activityLog.create({ data: {
             organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE",
             recordType: "Evidence", recordId: created.id, summary: `Uploaded evidence: ${title}`,
-            afterValue: { title, category, evidenceType, version: "1.0", relatedModule, relatedRecordId },
+            afterValue: { title, category, evidenceType, version: "1.0", relatedModule, relatedRecordId, sourceType, sourceName },
           } });
           return created;
         });

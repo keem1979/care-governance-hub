@@ -4,6 +4,7 @@ import { createDb } from "@/lib/db";
 import { EVIDENCE_CATEGORIES, EVIDENCE_CONFIDENTIALITY, EVIDENCE_STATUSES, EVIDENCE_TYPES, evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
 import { parseOptionalDate, splitList } from "@/lib/policies";
+import { EVIDENCE_SOURCE_TYPES } from "@/lib/evidence-assurance";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -38,6 +39,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const relatedModule = String(form.get("relatedModule") ?? "") || null;
     const relatedRecordId = String(form.get("relatedRecordId") ?? "") || null;
     if (relatedModule === "Policy" && relatedRecordId && !(await db.policy.findFirst({ where: { id: relatedRecordId, organisationId: context.organisation.id } }))) throw new Error("Related policy not found.");
+    const sourceType = String(form.get("sourceType") ?? "");
+    const sourceName = String(form.get("sourceName") ?? "").trim();
+    const sourceUrl = String(form.get("sourceUrl") ?? "").trim() || null;
+    if (!EVIDENCE_SOURCE_TYPES.includes(sourceType as never) || sourceName.length < 2) throw new Error("Record a valid evidence source type and source organisation or system.");
+    if (sourceUrl && (!sourceUrl.startsWith("https://") || !URL.canParse(sourceUrl))) throw new Error("Source links must be valid HTTPS URLs.");
     await db.$transaction([
       db.evidence.update({ where: { id }, data: {
         title, description: String(form.get("description") ?? "").trim() || null, category, evidenceType, ownerId, locationId,
@@ -45,8 +51,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         tags: splitList(form.get("tags")), relatedModule, relatedRecordId,
         confidentiality: confidentiality as typeof current.confidentiality, status: status as typeof current.status,
         notes: String(form.get("notes") ?? "").trim() || null,
+        sourceType: sourceType as never, sourceName, sourceReference: String(form.get("sourceReference") ?? "").trim() || null,
+        sourceUrl, originalAuthor: String(form.get("originalAuthor") ?? "").trim() || null,
+        capturedAt: parseOptionalDate(form.get("capturedAt")), provenanceNote: String(form.get("provenanceNote") ?? "").trim() || null,
       } }),
-      db.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "Evidence", recordId: id, summary: `Updated evidence: ${title}`, beforeValue: { title: current.title, status: current.status }, afterValue: { title, status } } }),
+      db.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "UPDATE", recordType: "Evidence", recordId: id, summary: `Updated evidence: ${title}`, beforeValue: { title: current.title, status: current.status, sourceType: current.sourceType }, afterValue: { title, status, sourceType, sourceName } } }),
     ]);
     return NextResponse.json({ ok: true });
   } catch (error) {

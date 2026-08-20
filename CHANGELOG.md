@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-18 — Phase 6 evidence and regulatory assurance
+
+- Added evidence provenance, current-version validity and named verification history.
+- Required explicit suitability decisions before evidence can substantiate an assurance claim.
+- Blocked inspection sign-off where no current verified and suitable evidence supports the claim.
+- Added governed policy and template mappings without treating documents as proof of implementation.
+- Added owned regulatory-framework change reviews using recorded official source links.
+- Added responsive mock-inspection sampling across documents, observed practice, people’s experience and staff feedback.
+- Preserved legacy evidence as unverified and legacy mappings as pending for safe review.
+
 ## 2026-08-18 — Phase 5 care and workforce assurance
 
 - Prevented draft and approval-stage care instructions from appearing in the staff quick view.

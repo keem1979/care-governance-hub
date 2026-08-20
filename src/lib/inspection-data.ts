@@ -10,6 +10,7 @@ import { ensureInspectionBaseline } from "@/lib/inspection-baseline";
 import { inspectionScopeWhere } from "@/lib/inspection";
 import { evidenceCategoriesFor, evidenceRequirementKeys } from "@/lib/inspection-sync";
 import { registerScopeWhere } from "@/lib/registers";
+import { evidenceAssuranceState, mappingSupportsClaim } from "@/lib/evidence-assurance";
 
 export type InspectionRecordLink = { id: string; label: string; href: string; type: string; status: string; date: Date | null };
 export type InspectionRequirementView = Awaited<ReturnType<typeof getInspectionRequirements>>[number];
@@ -24,7 +25,7 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
         where: scope,
         include: {
           owner: { select: { id: true, name: true } }, location: { select: { id: true, name: true } }, reviewedBy: { select: { name: true } }, signedOffBy: { select: { name: true } },
-          evidenceLinks: { include: { evidence: { select: { id: true, title: true, category: true, status: true, reviewExpiryDate: true, relatedModule: true, relatedRecordId: true, tags: true } } } },
+          evidenceLinks: { include: { evidence: { select: { id: true, title: true, category: true, status: true, reviewExpiryDate: true, relatedModule: true, relatedRecordId: true, tags: true, updatedAt: true, currentVersionId: true, verifications: { orderBy: { verifiedAt: "desc" }, take: 1 } } } } },
           auditLinks: { include: { audit: { select: { id: true, title: true, status: true, reviewDate: true, findings: { where: { resolvedAt: null }, select: { id: true } } } } } },
           registerLinks: { include: { registerEntry: { select: { id: true, reference: true, title: true, status: true, eventDate: true, definition: { select: { key: true } } } } } },
           actionLinks: { include: { action: { select: { id: true, reference: true, title: true, status: true, dueDate: true } } } },
@@ -44,14 +45,16 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
 
     return requirements.map((item) => {
       const automatic = item.catalogueKey ? autoByKey.get(item.catalogueKey) ?? [] : [];
+      const mappedDocuments = item.evidenceLinks.map((link) => { const state=evidenceAssuranceState({status:link.evidence.status,reviewExpiryDate:link.evidence.reviewExpiryDate,updatedAt:link.evidence.updatedAt,currentVersionId:link.evidence.currentVersionId,verification:link.evidence.verifications[0]},now); return {link,state,support:mappingSupportsClaim(link.decision,state)}; });
       const documents = uniqueById([...item.evidenceLinks.map((x) => x.evidence), ...automatic]);
-      const currentDocuments = documents.filter((x) => x.status === "ACTIVE" && (!x.reviewExpiryDate || x.reviewExpiryDate >= now));
-      const expiredDocuments = documents.filter((x) => x.status !== "ACTIVE" || Boolean(x.reviewExpiryDate && x.reviewExpiryDate < now));
+      const currentDocuments = mappedDocuments.filter((x) => x.support === "FULL").map((x)=>x.link.evidence);
+      const expiredDocuments = mappedDocuments.filter((x) => ["EXPIRED","ARCHIVED"].includes(x.state)).map((x)=>x.link.evidence);
+      const unsupportedEvidence = mappedDocuments.filter((x) => x.support === "NONE" && !["EXPIRED","ARCHIVED"].includes(x.state)).length;
       const audits = item.auditLinks.map((x) => x.audit), registers = item.registerLinks.map((x) => x.registerEntry), actions = item.actionLinks.map((x) => x.action);
       const openActions = actions.filter((x) => !["COMPLETED", "CANCELLED", "ARCHIVED"].includes(x.status));
       const overdueActions = openActions.filter((x) => x.dueDate < now);
       const live = liveModuleSignals(item.catalogueKey, { policies, risks, kpis, meetings, workforce }, now);
-      const inferredCategories = documents.flatMap(evidenceCategoriesFor);
+      const inferredCategories = mappedDocuments.filter((x)=>x.support==="FULL").flatMap((x)=>x.link.evidenceCategories.length?x.link.evidenceCategories:evidenceCategoriesFor(x.link.evidence));
       if (audits.length) inferredCategories.push("OBSERVATION", "PROCESSES");
       if (registers.length) inferredCategories.push("PEOPLES_EXPERIENCE", "PROCESSES");
       if (actions.length) inferredCategories.push("OUTCOMES");
@@ -62,6 +65,7 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
         coveredCategories,
         currentEvidence: currentDocuments.length,
         expiredEvidence: expiredDocuments.length,
+        unsupportedEvidence,
         activeAudits: audits.filter((x) => ["AWAITING_REVIEW", "COMPLETED", "CLOSED"].includes(x.status)).length,
         unresolvedFindings: audits.reduce((sum, x) => sum + x.findings.length, 0),
         activeRegisters: registers.filter((x) => x.status !== "ARCHIVED").length,
@@ -75,7 +79,8 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
         now,
       });
       const connectedRecords: InspectionRecordLink[] = [
-        ...documents.map((x) => ({ id: x.id, label: x.title, href: `/evidence/${x.id}`, type: x.relatedModule ?? "Evidence", status: x.status, date: x.reviewExpiryDate })),
+        ...mappedDocuments.map(({link,state}) => ({ id: link.evidence.id, label: link.evidence.title, href: `/evidence/${link.evidence.id}`, type: link.evidence.relatedModule ?? "Evidence", status: `${link.decision} · ${state}`, date: link.evidence.reviewExpiryDate })),
+        ...automatic.filter((candidate)=>!item.evidenceLinks.some((link)=>link.evidenceId===candidate.id)).map((x)=>({id:x.id,label:x.title,href:`/evidence/${x.id}`,type:x.relatedModule??"Evidence suggestion",status:"UNMAPPED",date:x.reviewExpiryDate})),
         ...audits.map((x) => ({ id: x.id, label: x.title, href: `/audits/${x.id}`, type: "Audit", status: x.status, date: x.reviewDate })),
         ...registers.map((x) => ({ id: x.id, label: `${x.reference} - ${x.title}`, href: `/registers/${x.definition.key}/${x.id}`, type: "Register", status: x.status, date: x.eventDate })),
         ...actions.map((x) => ({ id: x.id, label: `${x.reference} - ${x.title}`, href: `/actions/${x.id}`, type: "Action", status: x.status, date: x.dueDate })),
