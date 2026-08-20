@@ -828,6 +828,64 @@ enum AdoptionEventOutcome {
   ABANDONED
 }
 
+enum LaunchPilotCohort {
+  INTERNAL_DBAM
+  EXTERNAL_PROVIDER
+}
+
+enum LaunchPilotStatus {
+  PLANNED
+  ACTIVE
+  OUTCOME_REVIEW
+  COMPLETE
+  WITHDRAWN
+}
+
+enum LaunchMeasureType {
+  ACTION_CLOSURE_DAYS
+  OVERDUE_ACTION_PERCENT
+  EVIDENCE_VERIFICATION_PERCENT
+  RECURRENCE_PERCENT
+  MANAGEMENT_TIME_HOURS
+  USER_CONFIDENCE_PERCENT
+}
+
+enum MeasureDirection {
+  LOWER_IS_BETTER
+  HIGHER_IS_BETTER
+}
+
+enum LaunchMeasureStatus {
+  BASELINE_ONLY
+  OUTCOME_RECORDED
+  VERIFIED
+  REJECTED
+}
+
+enum ServiceReadinessStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  EVIDENCED
+  BLOCKED
+}
+
+enum CommercialIntentStatus {
+  DISCOVERY
+  PILOT_ONLY
+  BUDGET_CONFIRMED
+  CONTRACT_REVIEW
+  READY_TO_BUY
+  DECLINED
+}
+
+enum BenchmarkConsentStatus {
+  NOT_CONSIDERED
+  REQUESTED
+  APPROVED
+  DECLINED
+  WITHDRAWN
+}
+
 model Organisation {
   id                       String    @id @default(uuid()) @db.Uuid
   name                     String
@@ -908,6 +966,11 @@ model Organisation {
   notificationPreferences NotificationPreference[]
   implementationPlan ImplementationPlan?
   adoptionEvents ProductAdoptionEvent[]
+  launchPilots LaunchPilot[]
+  launchMeasures LaunchOutcomeMeasure[]
+  serviceReadinessItems ServiceReadinessItem[]
+  commercialIntentRecords CommercialIntentRecord[]
+  benchmarkConsent BenchmarkConsent?
 }
 
 model ServiceLocation {
@@ -1066,6 +1129,14 @@ model User {
   implementationPlansUpdated ImplementationPlan[] @relation("ImplementationPlanUpdater")
   implementationItemsCompleted ImplementationChecklistItem[] @relation("ImplementationItemCompleter")
   adoptionEvents ProductAdoptionEvent[]
+  launchPilotsOwned LaunchPilot[] @relation("LaunchPilotOwner")
+  launchPilotsCreated LaunchPilot[] @relation("LaunchPilotCreator")
+  launchMeasuresRecorded LaunchOutcomeMeasure[] @relation("LaunchMeasureRecorder")
+  launchMeasuresVerified LaunchOutcomeMeasure[] @relation("LaunchMeasureVerifier")
+  serviceReadinessCompleted ServiceReadinessItem[] @relation("ServiceReadinessCompleter")
+  commercialIntentsRecorded CommercialIntentRecord[] @relation("CommercialIntentRecorder")
+  benchmarkConsentsRequested BenchmarkConsent[] @relation("BenchmarkConsentRequester")
+  benchmarkConsentsReviewed BenchmarkConsent[] @relation("BenchmarkConsentReviewer")
 }
 
 model Policy {
@@ -1187,6 +1258,7 @@ model Evidence {
   governanceObligations  GovernanceObligation[]            @relation("GovernanceObligationEvidence")
   governanceObligationUpdates GovernanceObligationUpdate[] @relation("GovernanceObligationUpdateEvidence")
   offlineCaptures        OfflineCapture[]
+  serviceReadinessItems  ServiceReadinessItem[]
 
   @@unique([organisationId, generatedPolicyTemplateKey])
   @@index([organisationId, status])
@@ -3070,6 +3142,137 @@ model ProductAdoptionEvent {
   @@index([organisationId, createdAt])
   @@index([organisationId, moduleKey, eventName, outcome, createdAt])
   @@index([userId, createdAt])
+}
+
+model LaunchPilot {
+  id                  String            @id @default(uuid()) @db.Uuid
+  organisationId      String            @db.Uuid
+  name                String
+  cohort              LaunchPilotCohort
+  serviceType         String
+  locationCount       Int
+  status              LaunchPilotStatus @default(PLANNED)
+  primaryOutcome      String
+  successCriteria     String
+  riskControls        String
+  dataProtectionBasis String
+  startDate           DateTime
+  targetEndDate       DateTime
+  completedAt         DateTime?
+  ownerId             String            @db.Uuid
+  createdById         String            @db.Uuid
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  organisation    Organisation           @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  owner           User                   @relation("LaunchPilotOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy       User                   @relation("LaunchPilotCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  measures        LaunchOutcomeMeasure[]
+  commercialIntent CommercialIntentRecord?
+
+  @@index([organisationId, cohort, status, startDate])
+  @@index([ownerId, status])
+}
+
+model LaunchOutcomeMeasure {
+  id                  String              @id @default(uuid()) @db.Uuid
+  organisationId      String              @db.Uuid
+  pilotId             String              @db.Uuid
+  type                LaunchMeasureType
+  label               String
+  unit                String
+  direction           MeasureDirection
+  baselineValue       Decimal             @db.Decimal(18, 4)
+  outcomeValue        Decimal?            @db.Decimal(18, 4)
+  sampleSize          Int
+  measurementMethod   String
+  evidenceReference   String
+  status              LaunchMeasureStatus @default(BASELINE_ONLY)
+  recordedById        String              @db.Uuid
+  verifiedById        String?             @db.Uuid
+  verificationNote    String?
+  verifiedAt          DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  pilot        LaunchPilot  @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+  recordedBy   User         @relation("LaunchMeasureRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+  verifiedBy   User?        @relation("LaunchMeasureVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@unique([pilotId, type])
+  @@index([organisationId, status, type])
+  @@index([pilotId, status])
+}
+
+model ServiceReadinessItem {
+  id             String                 @id @default(uuid()) @db.Uuid
+  organisationId String                 @db.Uuid
+  key            String
+  title          String
+  description    String
+  required       Boolean                @default(true)
+  status         ServiceReadinessStatus @default(NOT_STARTED)
+  evidenceNote   String?
+  completedById  String?                @db.Uuid
+  evidenceId     String?                @db.Uuid
+  completedAt    DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  completedBy  User?        @relation("ServiceReadinessCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+  evidence     Evidence?    @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+
+  @@unique([organisationId, key])
+  @@index([organisationId, required, status])
+  @@index([evidenceId])
+}
+
+model CommercialIntentRecord {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  organisationId     String                 @db.Uuid
+  pilotId            String                 @unique @db.Uuid
+  status             CommercialIntentStatus
+  buyerRole          String
+  proposedPlan       String
+  licenceEstimate    Int
+  targetDecisionDate DateTime?
+  evidenceNote       String
+  recordedById       String                 @db.Uuid
+  recordedAt         DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  pilot        LaunchPilot  @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+  recordedBy   User         @relation("CommercialIntentRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, status, recordedAt])
+}
+
+model BenchmarkConsent {
+  id                        String                 @id @default(uuid()) @db.Uuid
+  organisationId            String                 @unique @db.Uuid
+  status                    BenchmarkConsentStatus @default(NOT_CONSIDERED)
+  permittedMetricKeys       String[]               @default([])
+  minimumCohortSize         Int                    @default(10)
+  dpiaReference             String?
+  aggregationOnly           Boolean                @default(true)
+  directIdentifiersExcluded Boolean                @default(true)
+  freeTextExcluded          Boolean                @default(true)
+  requestedById             String?                @db.Uuid
+  requestedAt               DateTime?
+  reviewedById              String?                @db.Uuid
+  reviewedAt                DateTime?
+  reviewNote                String?
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  requestedBy  User?        @relation("BenchmarkConsentRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  reviewedBy   User?        @relation("BenchmarkConsentReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, updatedAt])
 }
 
 model ActivityLog {

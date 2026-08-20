@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-20 — Phase 11 validated launch
+
+- Added the Launch Assurance Centre for controlled DBAM and external-provider pilots.
+- Added pre-agreed pilot outcomes, matched baseline and follow-up measures, evidence references and independent verification.
+- Added a commercial service-readiness register covering support, security, data protection, continuity, onboarding, exit and service levels.
+- Added explicit external commercial-intent evidence without treating discovery or pilot interest as paying intent.
+- Added a calculated launch-evidence gate that remains incomplete when DBAM, external benefit, service, security or paying-intent evidence is missing.
+- Added independently reviewed, withdrawable consent for future privacy-preserving benchmarking; no benchmark output is produced in Phase 11.
+
 ## 2026-08-20 — Phase 10 configurable delivery
 
 - Added the Implementation Centre for controlled onboarding, sandbox configuration, independent promotion and go-live evidence.

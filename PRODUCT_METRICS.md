@@ -43,6 +43,10 @@ use real tenant-scoped events and never fabricate missing values.
 ## Measurement rules
 
 - Show `No data recorded` when a valid denominator does not exist.
+- Agree each pilot measure, direction and observation method before comparing baseline and follow-up.
+- Count external launch benefit only after a different authorised manager verifies the source, sample and calculation.
+- Do not treat discovery, a free trial or internal DBAM use as external paying intent.
+- Do not pool tenant measures for benchmarking without explicit, independently reviewed and withdrawable permission, an approved DPIA and a cohort of at least ten organisations.
 - Do not combine incomparable locations or service types without explanation.
 - Preserve the source records and calculation version behind every displayed measure.
 - Never convert these measures into a predicted regulator rating.

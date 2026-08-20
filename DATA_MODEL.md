@@ -157,3 +157,12 @@ remain explicitly scoped; no evidence or decision is shared between tenants.
 - `ImplementationPlan` and `ImplementationChecklistItem` retain accountable ownership, target date, status, completion evidence and go-live chronology.
 - `NotificationPreference` belongs to one organisation membership. Critical-safety notifications remain enabled and immediate regardless of saved input.
 - `ProductAdoptionEvent` contains only tenant-scoped workflow metadata: module, allow-listed event name, outcome, optional duration and attributable user. It must never contain form narrative, care content, document text or unnecessary personal data.
+
+# Phase 11 validated-launch extension
+
+- `LaunchPilot` records one bounded internal DBAM or external-provider evaluation with a named operational outcome, success criteria, risk controls, authorised data scope, dates and accountable owner.
+- `LaunchOutcomeMeasure` retains one governed metric definition per pilot, its matched baseline and follow-up, sample size, method, evidence reference and independent verification. A recorded value is not launch evidence until a different authorised manager verifies it.
+- `ServiceReadinessItem` is the evidence-bearing commercial operating register for support, security assurance, data protection, incident and continuity operations, onboarding and offboarding, and service levels.
+- `CommercialIntentRecord` belongs only to an external-provider pilot. Discovery and pilot-only statuses do not count as paying intent; budget confirmation, contract review or ready-to-buy status must retain a meaningful evidence note.
+- `BenchmarkConsent` records an organisation's explicitly scoped, independently reviewed and withdrawable permission for possible future aggregate measures. Aggregation-only processing, direct-identifier exclusion, free-text exclusion and a cohort of at least ten organisations are mandatory defaults.
+- Phase 11 does not implement cross-tenant benchmark output. Tenant data remains isolated, and missing pilot or outcome evidence is displayed as incomplete rather than inferred.
