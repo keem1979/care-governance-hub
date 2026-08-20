@@ -11,6 +11,7 @@ import {
   CalendarDays,
   ChartNoAxesCombined,
   ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   ClipboardPenLine,
   FileCheck2,
@@ -36,6 +37,7 @@ import {
   ScanSearch,
   Workflow,
   Landmark,
+  Search,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -43,39 +45,82 @@ import { GovernanceAssistant } from "@/components/governance-assistant";
 import type { AuthorisedContext } from "@/lib/auth/dal";
 import { PERMISSIONS } from "@/lib/permissions";
 
-const navigation = [
+const primaryNavigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
   { href: "/management", label: "Management Command", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
-  { href: "/clients", label: "Client Directory", icon: ContactRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/care-plans", label: "Care Plans", icon: HeartPulse, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/care-assurance", label: "Care Assurance", icon: ShieldCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
-  { href: "/policies", label: "Policies", icon: BookOpenCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/evidence", label: "Evidence Library", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
-  { href: "/evidence-assurance", label: "Evidence Assurance", icon: FileCheck2, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
-  { href: "/audits", label: "Audit Centre", icon: ClipboardCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE] },
-  { href: "/assessments", label: "Assessment Centre", icon: ClipboardPenLine, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/registers", label: "Registers", icon: NotebookTabs, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/risks", label: "Risk Register", icon: ShieldEllipsis, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/actions", label: "Action Tracker", icon: ListChecks, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
-  { href: "/improvement", label: "Improvement Assurance", icon: Workflow, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE] },
-  { href: "/governance-control", label: "Governance Control", icon: Landmark, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/workforce", label: "Workforce Compliance", icon: UserRoundCheck, anyOf: [PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE] },
-  { href: "/quality", label: "Care Quality", icon: HeartPulse, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
-  { href: "/data-quality", label: "Data Quality", icon: ScanSearch, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/connected-governance", label: "Connected Governance", icon: PlugZap, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ORGANISATION_MANAGE] },
-  { href: "/abi-assurance", label: "Abi Assurance", icon: Bot, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
-  { href: "/meetings", label: "Governance Meetings", icon: UsersRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/calendar", label: "Compliance Calendar", icon: CalendarDays, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/kpis", label: "KPI Suite", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/inspection", label: "Inspection Centre", icon: FileCheck2, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/templates", label: "Templates", icon: FileStack, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-  { href: "/reports", label: "Reports", icon: ScrollText, anyOf: [PERMISSIONS.REPORTS_EXPORT] },
-  { href: "/activity", label: "Activity Log", icon: Activity, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
-  { href: "/security", label: "My Security", icon: KeyRound, anyOf: Object.values(PERMISSIONS) },
-  { href: "/assurance", label: "Security & Integrations", icon: PlugZap, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
-  { href: "/implementation", label: "Implementation Centre", icon: SlidersHorizontal, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
-  { href: "/launch-readiness", label: "Launch Assurance", icon: FlaskConical, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
-  { href: "/settings", label: "Settings", icon: Settings, anyOf: [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE] },
+] as const;
+
+const navigationGroups = [
+  {
+    key: "care",
+    label: "People & Care",
+    description: "People, plans and workforce",
+    icon: HeartPulse,
+    items: [
+      { href: "/clients", label: "Client Directory", icon: ContactRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/care-plans", label: "Care Plans", icon: HeartPulse, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/care-assurance", label: "Care Assurance", icon: ShieldCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+      { href: "/workforce", label: "Workforce Compliance", icon: UserRoundCheck, anyOf: [PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE] },
+      { href: "/quality", label: "Care Quality", icon: HeartPulse, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+    ],
+  },
+  {
+    key: "governance",
+    label: "Governance & Assurance",
+    description: "Controls, evidence and improvement",
+    icon: ShieldCheck,
+    items: [
+      { href: "/policies", label: "Policies", icon: BookOpenCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/evidence", label: "Evidence Library", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
+      { href: "/evidence-assurance", label: "Evidence Assurance", icon: FileCheck2, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+      { href: "/audits", label: "Audit Centre", icon: ClipboardCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE] },
+      { href: "/assessments", label: "Assessment Centre", icon: ClipboardPenLine, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/registers", label: "Registers", icon: NotebookTabs, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/risks", label: "Risk Register", icon: ShieldEllipsis, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/actions", label: "Action Tracker", icon: ListChecks, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+      { href: "/improvement", label: "Improvement Assurance", icon: Workflow, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE] },
+      { href: "/governance-control", label: "Governance Control", icon: Landmark, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+    ],
+  },
+  {
+    key: "oversight",
+    label: "Oversight & Reporting",
+    description: "Reviews, deadlines and outputs",
+    icon: ChartNoAxesCombined,
+    items: [
+      { href: "/meetings", label: "Governance Meetings", icon: UsersRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/calendar", label: "Compliance Calendar", icon: CalendarDays, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/kpis", label: "KPI Suite", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/inspection", label: "Inspection Centre", icon: FileCheck2, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/templates", label: "Templates", icon: FileStack, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/reports", label: "Reports", icon: ScrollText, anyOf: [PERMISSIONS.REPORTS_EXPORT] },
+      { href: "/activity", label: "Activity Log", icon: Activity, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+    ],
+  },
+  {
+    key: "intelligence",
+    label: "Data & Intelligence",
+    description: "Quality, connections and guidance",
+    icon: PlugZap,
+    items: [
+      { href: "/data-quality", label: "Data Quality", icon: ScanSearch, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/connected-governance", label: "Connected Governance", icon: PlugZap, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ORGANISATION_MANAGE] },
+      { href: "/abi-assurance", label: "Abi Assurance", icon: Bot, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+    ],
+  },
+  {
+    key: "administration",
+    label: "Administration",
+    description: "Security, setup and launch",
+    icon: Settings,
+    items: [
+      { href: "/security", label: "My Security", icon: KeyRound, anyOf: Object.values(PERMISSIONS) },
+      { href: "/assurance", label: "Security & Integrations", icon: PlugZap, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
+      { href: "/implementation", label: "Implementation Centre", icon: SlidersHorizontal, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
+      { href: "/launch-readiness", label: "Launch Assurance", icon: FlaskConical, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
+      { href: "/settings", label: "Organisation Settings", icon: Settings, anyOf: [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE] },
+    ],
+  },
 ] as const;
 
 const moduleConnections: Record<string, {
@@ -127,9 +172,26 @@ export function AppShell({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [navQuery, setNavQuery] = useState("");
   const location = context.locations[0];
   const moduleKey = pathname.split("/").filter(Boolean)[0] ?? "dashboard";
   const connections = moduleConnections[moduleKey];
+  const canOpen = (anyOf: readonly string[]) => anyOf.some((permission) => context.permissions.includes(permission));
+  const visiblePrimary = primaryNavigation.filter(({ anyOf }) => canOpen(anyOf));
+  const visibleGroups = navigationGroups.map((group) => ({ ...group, items: group.items.filter(({ anyOf }) => canOpen(anyOf)) })).filter((group) => group.items.length > 0);
+  const activeGroupKey = visibleGroups.find((group) => group.items.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`)))?.key;
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set([activeGroupKey ?? "care"]));
+  const cleanNavQuery = navQuery.trim().toLowerCase();
+  const displayedGroups = visibleGroups.map((group) => ({ ...group, items: cleanNavQuery ? group.items.filter((item) => `${item.label} ${group.label} ${group.description}`.toLowerCase().includes(cleanNavQuery)) : group.items })).filter((group) => group.items.length > 0);
+
+  function toggleGroup(key: string) {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   async function signOut() {
     setSigningOut(true);
@@ -151,7 +213,7 @@ export function AppShell({
   }
 
   return (
-    <div data-has-company-logo={Boolean(context.organisation.policyLogoStorageKey)} className="qcgms-app min-h-screen lg:grid lg:grid-cols-[276px_1fr]">
+    <div data-has-company-logo={Boolean(context.organisation.policyLogoStorageKey)} className="qcgms-app min-h-screen lg:grid lg:grid-cols-[304px_1fr]">
       {open ? (
         <button
           className="fixed inset-0 z-30 bg-slate-950/35 lg:hidden"
@@ -160,7 +222,7 @@ export function AppShell({
         />
       ) : null}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[276px] flex-col bg-brand-dark text-white transition-transform lg:sticky lg:top-0 lg:h-screen ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[304px] max-w-[90vw] flex-col bg-brand-dark text-white shadow-2xl transition-transform lg:sticky lg:top-0 lg:h-screen lg:max-w-none lg:shadow-none ${
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -190,47 +252,54 @@ export function AppShell({
             <X aria-hidden="true" size={20} />
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
+        <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
+          <div className="relative mb-4">
+            <Search aria-hidden="true" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-100/55" />
+            <input
+              type="search"
+              value={navQuery}
+              onChange={(event) => setNavQuery(event.target.value)}
+              placeholder="Find a feature"
+              aria-label="Find a feature"
+              className="w-full rounded-xl border border-white/10 bg-white/8 py-2.5 pl-9 pr-3 text-sm text-white outline-none placeholder:text-emerald-100/45 focus:border-emerald-300/60 focus:bg-white/12 focus:ring-2 focus:ring-emerald-300/15"
+            />
+          </div>
+
+          {!cleanNavQuery ? <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[.18em] text-emerald-100/45">Workspace</p> : null}
           <ul className="space-y-1">
-            {navigation
-              .filter(({ anyOf }) =>
-                anyOf.some((permission) =>
-                  context.permissions.includes(permission),
-                ),
-              )
-              .map(({ href, label, icon: Icon }) => {
+            {visiblePrimary.filter((item) => !cleanNavQuery || item.label.toLowerCase().includes(cleanNavQuery)).map(({ href, label, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
-              return (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    prefetch={false}
-                    onMouseEnter={() => router.prefetch(href)}
-                    onFocus={() => router.prefetch(href)}
-                    onClick={() => setOpen(false)}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                      active
-                        ? "bg-white text-brand-dark shadow-sm"
-                        : "text-emerald-50/80 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <Icon aria-hidden="true" size={18} />
-                    {label}
-                  </Link>
-                </li>
-              );
-              })}
+              return <li key={href}><Link href={href} prefetch={false} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active ? "bg-white text-brand-dark shadow-sm" : "text-emerald-50/80 hover:bg-white/10 hover:text-white"}`}><span className={`grid size-8 place-items-center rounded-lg ${active ? "bg-emerald-50 text-emerald-800" : "bg-white/6 text-emerald-100/75 group-hover:bg-white/10 group-hover:text-white"}`}><Icon aria-hidden="true" size={17} /></span><span className="min-w-0 flex-1 truncate">{label}</span>{active ? <span className="size-1.5 rounded-full bg-emerald-600" aria-hidden="true" /> : null}</Link></li>;
+            })}
           </ul>
+
+          <div className="mt-4 space-y-2">
+            {displayedGroups.map((group) => {
+              const GroupIcon = group.icon, containsActive = group.items.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`)), expanded = cleanNavQuery ? true : expandedGroups.has(group.key) || containsActive;
+              return <section key={group.key} className={`overflow-hidden rounded-2xl border transition ${containsActive ? "border-emerald-300/25 bg-white/7" : "border-white/7 bg-white/[.025]"}`} aria-labelledby={`nav-group-${group.key}`}>
+                <button type="button" id={`nav-group-${group.key}`} aria-expanded={expanded} aria-controls={`nav-group-items-${group.key}`} onClick={() => toggleGroup(group.key)} className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-white/7 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-emerald-300">
+                  <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${containsActive ? "bg-emerald-400 text-slate-950" : "bg-white/8 text-emerald-100"}`}><GroupIcon aria-hidden="true" size={18} /></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-black text-white">{group.label}</span><span className="mt-0.5 block truncate text-[10px] text-emerald-100/55">{group.description}</span></span>
+                  <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-black text-emerald-100/65">{group.items.length}</span>
+                  {expanded ? <ChevronDown aria-hidden="true" size={15} className="text-emerald-100/55" /> : <ChevronRight aria-hidden="true" size={15} className="text-emerald-100/55" />}
+                </button>
+                {expanded ? <ul id={`nav-group-items-${group.key}`} className="space-y-1 border-t border-white/7 px-2 py-2">{group.items.map(({ href, label, icon: Icon }) => {
+                  const active = pathname === href || pathname.startsWith(`${href}/`);
+                  return <li key={href}><Link href={href} prefetch={false} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-white font-bold text-brand-dark shadow-sm" : "text-emerald-50/75 hover:bg-white/10 hover:text-white"}`}><Icon aria-hidden="true" size={17} className={active ? "text-emerald-700" : "text-emerald-100/55 group-hover:text-white"} /><span className="min-w-0 flex-1 truncate">{label}</span>{active ? <span className="size-1.5 rounded-full bg-emerald-600" aria-hidden="true" /> : null}</Link></li>;
+                })}</ul> : null}
+              </section>;
+            })}
+          </div>
+          {cleanNavQuery && displayedGroups.length === 0 && !visiblePrimary.some((item) => item.label.toLowerCase().includes(cleanNavQuery)) ? <p className="mt-4 rounded-xl border border-dashed border-white/15 p-4 text-center text-xs text-emerald-100/60">No accessible feature matches “{navQuery.trim()}”.</p> : null}
         </nav>
-        <div className="border-t border-white/10 p-4">
-          <p className="truncate text-sm font-semibold">{context.user.name}</p>
+        <div className="border-t border-white/10 bg-white/[.025] p-4">
+          <p className="truncate text-sm font-bold">{context.user.name}</p>
           <p className="mt-0.5 truncate text-xs text-emerald-100/65">
             {context.role.name}
             {context.accessMode === "READ_ONLY" ? " · Read only" : ""}
           </p>
           <button
-            className="mt-3 text-xs font-semibold text-emerald-100 underline-offset-4 hover:underline disabled:opacity-50"
+            className="mt-3 w-full rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
             onClick={signOut}
             disabled={signingOut}
           >
