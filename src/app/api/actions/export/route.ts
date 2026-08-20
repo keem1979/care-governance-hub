@@ -1,2 +1,40 @@
-import{requirePermission}from"@/lib/auth/dal";import{actionLabel,actionScopeWhere,effectiveActionStatus}from"@/lib/actions";import{createDb}from"@/lib/db";import{PERMISSIONS}from"@/lib/permissions";
-export async function GET(request:Request){const context=await requirePermission(PERMISSIONS.REPORTS_EXPORT),format=new URL(request.url).searchParams.get("format")==="xls"?"xls":"csv",db=createDb();const actions=await db.action.findMany({where:actionScopeWhere(context),include:{owner:{select:{name:true}},location:{select:{name:true}},_count:{select:{evidenceLinks:true,updates:true}}},orderBy:{dueDate:"asc"}}).finally(()=>db.$disconnect());const header=["Reference","Category","Title","Description","Expected outcome","Success measure","Source","Source record","Priority","Status","Progress %","Owner","Location","Review date","Due date","Escalation","Evidence","Updates"];const rows=actions.map((item)=>[item.reference,item.category,item.title,item.description,item.expectedOutcome??"",item.successMeasure??"",actionLabel(item.sourceType),item.sourceReference??"",actionLabel(item.priority),actionLabel(effectiveActionStatus(item.status,item.dueDate)),item.progressPercent,item.owner.name,item.location?.name??"Organisation-wide",item.reviewDate?.toISOString().slice(0,10)??"",item.dueDate.toISOString().slice(0,10),item.escalationRequired?item.escalationReason??"Yes":"No",item._count.evidenceLinks,item._count.updates]);if(format==="xls"){const sheet=`<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Action Tracker" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Table>${[header,...rows].map((row)=>`<Row>${row.map((cell)=>`<Cell><Data ss:Type="String">${xml(cell)}</Data></Cell>`).join("")}</Row>`).join("")}</Table></Worksheet></Workbook>`;return new Response(sheet,{headers:{"Content-Type":"application/vnd.ms-excel","Content-Disposition":'attachment; filename="action-tracker.xls"'}})}return new Response(`\uFEFF${[header,...rows].map((row)=>row.map(csv).join(",")).join("\r\n")}`,{headers:{"Content-Type":"text/csv; charset=utf-8","Content-Disposition":'attachment; filename="action-tracker.csv"'}})}function csv(value:unknown){return`"${String(value??"").replaceAll('"','""')}"`}function xml(value:unknown){return String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+import { requirePermission } from "@/lib/auth/dal";
+import { actionLabel, actionScopeWhere, effectiveActionStatus } from "@/lib/actions";
+import { createDb } from "@/lib/db";
+import { PERMISSIONS } from "@/lib/permissions";
+
+export async function GET(request: Request) {
+  const context = await requirePermission(PERMISSIONS.REPORTS_EXPORT);
+  const format = new URL(request.url).searchParams.get("format") === "xls" ? "xls" : "csv";
+  const db = createDb();
+  const actions = await db.action.findMany({
+    where: actionScopeWhere(context),
+    include: {
+      owner: { select: { name: true } },
+      oversightOwner: { select: { name: true } },
+      client: { select: { firstName: true, lastName: true, clientReference: true } },
+      location: { select: { name: true } },
+      _count: { select: { evidenceLinks: true, updates: true } },
+    },
+    orderBy: { dueDate: "asc" },
+  }).finally(() => db.$disconnect());
+  const header = ["Reference", "Responsibility area", "Title", "Description", "Expected outcome", "Success measure", "Source", "Source record", "Priority", "Status", "Progress %", "Delivery owner", "RM / senior oversight", "Client", "Location", "Review date", "Due date", "Escalation", "Evidence", "Updates"];
+  const rows = actions.map((item) => [
+    item.reference, item.category, item.title, item.description, item.expectedOutcome ?? "", item.successMeasure ?? "",
+    actionLabel(item.sourceType), item.sourceReference ?? "", actionLabel(item.priority),
+    actionLabel(effectiveActionStatus(item.status, item.dueDate)), item.progressPercent, item.owner.name,
+    item.oversightOwner?.name ?? "Not assigned",
+    item.client ? `${item.client.clientReference} · ${item.client.firstName} ${item.client.lastName}` : "Not linked",
+    item.location?.name ?? "Organisation-wide", item.reviewDate?.toISOString().slice(0, 10) ?? "",
+    item.dueDate.toISOString().slice(0, 10), item.escalationRequired ? item.escalationReason ?? "Yes" : "No",
+    item._count.evidenceLinks, item._count.updates,
+  ]);
+  if (format === "xls") {
+    const sheet = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Action Tracker" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Table>${[header, ...rows].map((row) => `<Row>${row.map((cell) => `<Cell><Data ss:Type="String">${xml(cell)}</Data></Cell>`).join("")}</Row>`).join("")}</Table></Worksheet></Workbook>`;
+    return new Response(sheet, { headers: { "Content-Type": "application/vnd.ms-excel", "Content-Disposition": "attachment; filename=\"action-tracker.xls\"" } });
+  }
+  return new Response(`\uFEFF${[header, ...rows].map((row) => row.map(csv).join(",")).join("\r\n")}`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": "attachment; filename=\"action-tracker.csv\"" } });
+}
+
+function csv(value: unknown) { return `"${String(value ?? "").replaceAll('"', '""')}"`; }
+function xml(value: unknown) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }

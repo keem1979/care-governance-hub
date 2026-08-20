@@ -464,6 +464,7 @@ enum ActionPriority {
 
 enum ActionSourceType {
   AUDIT
+  CARE_PLAN
   COMPLAINT
   INCIDENT
   SAFEGUARDING
@@ -475,6 +476,11 @@ enum ActionSourceType {
   INSPECTION
   KPI
   WORKFORCE
+  SPOT_CHECK
+  SUPERVISION
+  APPRAISAL
+  COMPETENCY
+  TRAINING
   EVIDENCE
   MANUAL
 }
@@ -1058,6 +1064,7 @@ model User {
   risksApproved           Risk[]                   @relation("RiskClosureApprover")
   riskReviews             RiskReview[]
   actionsOwned            Action[]                 @relation("ActionOwner")
+  actionsOverseen         Action[]                 @relation("ActionOversightOwner")
   actionsCreated          Action[]                 @relation("ActionCreator")
   actionsVerified         Action[]                 @relation("ActionVerifier")
   actionResponses         Action[]                 @relation("ActionManagementResponder")
@@ -1622,6 +1629,7 @@ model Action {
   managementResponseById    String?                  @db.Uuid
   managementResponseAt      DateTime?
   ownerId                   String                   @db.Uuid
+  oversightOwnerId          String?                  @db.Uuid
   priority                  ActionPriority           @default(MEDIUM)
   dueDate                   DateTime
   reviewDate                DateTime?
@@ -1654,6 +1662,7 @@ model Action {
   organisation         Organisation                  @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   location             ServiceLocation?              @relation(fields: [locationId], references: [id], onDelete: Restrict)
   owner                User                          @relation("ActionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  oversightOwner       User?                         @relation("ActionOversightOwner", fields: [oversightOwnerId], references: [id], onDelete: SetNull)
   createdBy            User                          @relation("ActionCreator", fields: [createdById], references: [id], onDelete: Restrict)
   verifiedBy           User?                         @relation("ActionVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
   managementResponseBy User?                         @relation("ActionManagementResponder", fields: [managementResponseById], references: [id], onDelete: SetNull)
@@ -1676,6 +1685,7 @@ model Action {
   @@index([organisationId, status, priority])
   @@index([organisationId, dueDate])
   @@index([ownerId, status])
+  @@index([oversightOwnerId, status])
   @@index([locationId])
   @@index([sourceType, sourceRecordId])
   @@index([organisationId, lifecycleStatus, lastSeenAt])
@@ -2525,6 +2535,8 @@ model Client {
   nextOfKinContactAllowed   Boolean      @default(false)
   nextOfKinHasAuthority     Boolean      @default(false)
   nextOfKinAuthorityDetails String?
+  profilePhotoKey           String?      @unique
+  profilePhotoType          String?
   notes                     String?
   archivedAt                DateTime?
   createdAt                 DateTime     @default(now())

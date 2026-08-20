@@ -11,8 +11,9 @@ export async function listActionSources(db: PrismaClient, context: SourceContext
   const ids = context.locations.map(({ id }) => id);
   const scoped = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: ids } }] };
   const strict = context.allLocations ? {} : { locationId: { in: ids } };
-  const [audits, registers, risks, policies, meetings, inspection, kpis, staff, evidence] = await Promise.all([
+  const [audits, carePlans, registers, risks, policies, meetings, inspection, kpis, staff, workforceRecords, evidence] = await Promise.all([
     db.audit.findMany({ where: { organisationId: context.organisation.id, ...strict }, select: { id: true, title: true }, orderBy: { auditDate: "desc" }, take: 100 }),
+    db.carePlan.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, ...scoped }, select: { id: true, reference: true }, orderBy: { updatedAt: "desc" }, take: 100 }),
     db.registerEntry.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, ...scoped }, select: { id: true, reference: true, title: true, definition: { select: { key: true, name: true } } }, orderBy: { eventDate: "desc" }, take: 200 }),
     db.risk.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, ...scoped }, select: { id: true, reference: true, title: true }, orderBy: { updatedAt: "desc" }, take: 100 }),
     db.policy.findMany({ where: { organisationId: context.organisation.id, status: { not: "ARCHIVED" } }, select: { id: true, title: true }, orderBy: { title: "asc" }, take: 100 }),
@@ -20,10 +21,12 @@ export async function listActionSources(db: PrismaClient, context: SourceContext
     db.complianceRequirement.findMany({ where: { organisationId: context.organisation.id, ...scoped }, select: { id: true, keyQuestion: true, title: true }, orderBy: { updatedAt: "desc" }, take: 100 }),
     db.kpiEntry.findMany({ where: { organisationId: context.organisation.id, ...scoped }, select: { id: true, reportingMonth: true, ragStatus: true, kpi: { select: { name: true } } }, orderBy: { reportingMonth: "desc" }, take: 100 }),
     db.staffMember.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, ...scoped }, select: { id: true, employeeReference: true, firstName: true, lastName: true }, orderBy: [{ lastName: "asc" }, { firstName: "asc" }], take: 150 }),
+    db.staffComplianceRecord.findMany({ where: { organisationId: context.organisation.id, type: { in: ["SPOT_CHECK", "SUPERVISION", "APPRAISAL", "COMPETENCY", "TRAINING"] }, staffMember: { archivedAt: null, ...scoped } }, select: { id: true, type: true, title: true, completedDate: true, staffMember: { select: { employeeReference: true, firstName: true, lastName: true } } }, orderBy: { updatedAt: "desc" }, take: 200 }),
     db.evidence.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, status: "ACTIVE", ...scoped }, select: { id: true, title: true, category: true }, orderBy: { updatedAt: "desc" }, take: 150 }),
   ]);
   return [
     ...audits.map((item) => ({ type: "AUDIT", id: item.id, label: item.title })),
+    ...carePlans.map((item) => ({ type: "CARE_PLAN", id: item.id, label: item.reference })),
     ...registers.map((item) => ({ type: isAssessmentKey(item.definition.key) ? "ASSESSMENT" : registerSourceType(item.definition.key), id: item.id, label: `${item.definition.name} · ${item.reference} — ${item.title}` })),
     ...risks.map((item) => ({ type: "RISK", id: item.id, label: `${item.reference} — ${item.title}` })),
     ...policies.map((item) => ({ type: "POLICY_REVIEW", id: item.id, label: item.title })),
@@ -31,6 +34,7 @@ export async function listActionSources(db: PrismaClient, context: SourceContext
     ...inspection.map((item) => ({ type: "INSPECTION", id: item.id, label: `${item.keyQuestion} · ${item.title}` })),
     ...kpis.map((item) => ({ type: "KPI", id: item.id, label: `${item.kpi.name} · ${month(item.reportingMonth)} · ${item.ragStatus}` })),
     ...staff.map((item) => ({ type: "WORKFORCE", id: item.id, label: `${item.employeeReference} · ${item.firstName} ${item.lastName}` })),
+    ...workforceRecords.map((item) => ({ type: item.type, id: item.id, label: `${item.staffMember.employeeReference} · ${item.staffMember.firstName} ${item.staffMember.lastName} · ${item.title}` })),
     ...evidence.map((item) => ({ type: "EVIDENCE", id: item.id, label: `${item.category} · ${item.title}` })),
   ];
 }
@@ -40,6 +44,7 @@ export async function resolveActionSource(db: PrismaClient, context: SourceConte
   if (type === "MANUAL") { if (id) throw new Error("Manual actions cannot have a source record."); return sourceMeta({ reference: null, title: "Manual entry", locationId: null, url: null }); }
   if (!id) throw new Error("Choose a source record.");
   if (type === "AUDIT") { const item = await db.audit.findFirst({ where: { id, organisationId,...strict }, select: { title: true, locationId: true, auditDate: true } }); if (item) return sourceMeta({ reference: item.title, title: item.title, locationId: item.locationId, url: `/audits/${id}`, occurredAt: item.auditDate }); }
+  if (type === "CARE_PLAN") { const item = await db.carePlan.findFirst({ where: { id, organisationId, archivedAt: null,...scoped }, select: { reference: true, locationId: true, clientId: true, effectiveDate: true, updatedAt: true } }); if (item) return sourceMeta({ reference: item.reference, title: `Care plan ${item.reference}`, locationId: item.locationId, clientId: item.clientId, url: `/care-plans/${id}`, occurredAt: item.effectiveDate ?? item.updatedAt }); }
   if (["COMPLAINT", "INCIDENT", "SAFEGUARDING", "REGISTER", "ASSESSMENT"].includes(type)) { const item = await db.registerEntry.findFirst({ where: { id, organisationId,...scoped }, select: { reference: true, title: true, locationId: true, clientId: true, staffMemberId: true, eventDate: true, definition: { select: { key: true } } } }); if (item) return sourceMeta({ reference: item.reference, title: item.title, locationId: item.locationId, clientId: item.clientId, staffMemberId: item.staffMemberId, occurredAt: item.eventDate, url: `/registers/${item.definition.key}/${id}` }); }
   if (type === "RISK") { const item = await db.risk.findFirst({ where: { id, organisationId,...scoped }, select: { reference: true, title: true, locationId: true } }); if (item) return sourceMeta({ reference: item.reference, title: item.title, locationId: item.locationId, url: `/risks/${id}` }); }
   if (type === "POLICY_REVIEW") { const item = await db.policy.findFirst({ where: { id, organisationId }, select: { title: true } }); if (item) return sourceMeta({ reference: item.title, title: item.title, locationId: null, url: `/policies/${id}` }); }
@@ -47,6 +52,7 @@ export async function resolveActionSource(db: PrismaClient, context: SourceConte
   if (type === "INSPECTION") { const item = await db.complianceRequirement.findFirst({ where: { id, organisationId,...scoped }, select: { title: true, keyQuestion: true, locationId: true } }); if (item) return sourceMeta({ reference: `${item.keyQuestion} · ${item.title}`, title: item.title, locationId: item.locationId, url: `/inspection/${id}` }); }
   if (type === "KPI") { const item = await db.kpiEntry.findFirst({ where: { id, organisationId,...scoped }, select: { reportingMonth: true, locationId: true, kpi: { select: { name: true } } } }); if (item) return sourceMeta({ reference: `${item.kpi.name} · ${month(item.reportingMonth)}`, title: item.kpi.name, locationId: item.locationId, occurredAt: item.reportingMonth, url: `/kpis?month=${item.reportingMonth.toISOString().slice(0, 7)}` }); }
   if (type === "WORKFORCE") { const item = await db.staffMember.findFirst({ where: { id, organisationId, archivedAt: null,...scoped }, select: { employeeReference: true, firstName: true, lastName: true, locationId: true } }); if (item) return sourceMeta({ reference: item.employeeReference, title: `${item.firstName} ${item.lastName}`, locationId: item.locationId, staffMemberId: id, url: `/workforce/${id}` }); }
+  if (["SPOT_CHECK", "SUPERVISION", "APPRAISAL", "COMPETENCY", "TRAINING"].includes(type)) { const item = await db.staffComplianceRecord.findFirst({ where: { id, organisationId, type: type as never, staffMember: { archivedAt: null,...scoped } }, select: { title: true, reference: true, completedDate: true, createdAt: true, staffMemberId: true, staffMember: { select: { employeeReference: true, locationId: true } } } }); if (item) return sourceMeta({ reference: item.reference ?? item.staffMember.employeeReference, title: item.title, locationId: item.staffMember.locationId, staffMemberId: item.staffMemberId, url: `/workforce/${item.staffMemberId}`, occurredAt: item.completedDate ?? item.createdAt }); }
   if (type === "EVIDENCE") { const item = await db.evidence.findFirst({ where: { id, organisationId, archivedAt: null,...scoped }, select: { title: true, locationId: true, evidenceDate: true } }); if (item) return sourceMeta({ reference: item.title, title: item.title, locationId: item.locationId, occurredAt: item.evidenceDate ?? new Date(), url: `/evidence/${id}` }); }
   throw new Error("The selected source record is not available in this organisation.");
 }

@@ -10,6 +10,7 @@ import {
   workforceLabel,
 } from "@/lib/workforce";
 import { FormPurpose } from "@/components/form-purpose";
+import { ProfilePhotoForm } from "@/components/profile-photo-form";
 
 type Option = { id: string; name: string };
 
@@ -242,10 +243,8 @@ async function postForm(url: string, form: HTMLFormElement) {
   return result;
 }
 
-export function StaffPhotoForm({ staffId }: { staffId: string }) {
-  const router = useRouter(); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); try { await postForm(`/api/workforce/${staffId}/photo`, event.currentTarget); router.refresh(); } catch (value) { setError(value instanceof Error ? value.message : "Could not upload the profile picture."); } finally { setBusy(false); } }
-  return <form onSubmit={submit} className="space-y-3"><label className="block text-sm font-medium">Profile picture<input className={field} name="photo" type="file" required accept="image/jpeg,image/png,image/webp" /></label><p className="text-xs text-slate-500">JPG, PNG or WebP, up to 2 MB. The picture is private and visible only to authorised workforce users.</p>{error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}<button disabled={busy} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white">{busy ? "Uploading…" : "Upload picture"}</button></form>;
+export function StaffPhotoForm({ staffId, hasPhoto }: { staffId: string; hasPhoto: boolean }) {
+  return <ProfilePhotoForm endpoint={`/api/workforce/${staffId}/photo`} entityLabel="Staff" hasPhoto={hasPhoto} />;
 }
 
 export function StaffDocumentForm({ staffId }: { staffId: string }) {

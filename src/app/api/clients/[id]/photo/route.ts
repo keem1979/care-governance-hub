@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { requireAnyPermission, requirePermission } from "@/lib/auth/dal";
+import { requirePermission } from "@/lib/auth/dal";
+import { clientScopeWhere } from "@/lib/clients";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
 import { deletePrivateFile, getPrivateFile, putPrivateFile } from "@/lib/private-storage";
 import { validateProfilePhoto } from "@/lib/profile-photo";
-import { workforceScopeWhere } from "@/lib/workforce";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const context = await requirePermission(PERMISSIONS.WORKFORCE_MANAGE);
+  const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
   const { id } = await params;
   const form = await request.formData();
   let photo: Awaited<ReturnType<typeof validateProfilePhoto>>;
@@ -23,39 +23,39 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const db = createDb();
-  const key = `${context.organisation.id}/workforce/${id}/profile-${crypto.randomUUID()}`;
+  const key = `${context.organisation.id}/clients/${id}/profile-${crypto.randomUUID()}`;
   let uploaded = false;
   try {
-    const staff = await db.staffMember.findFirst({
-      where: { id, ...workforceScopeWhere(context) },
+    const client = await db.client.findFirst({
+      where: { id, ...clientScopeWhere(context) },
       select: { id: true, locationId: true, profilePhotoKey: true },
     });
-    if (!staff) return NextResponse.json({ error: "Staff record not found." }, { status: 404 });
+    if (!client) return NextResponse.json({ error: "Client record not found." }, { status: 404 });
 
     await putPrivateFile(key, photo.bytes);
     uploaded = true;
     await db.$transaction([
-      db.staffMember.update({
+      db.client.update({
         where: { id },
         data: { profilePhotoKey: key, profilePhotoType: photo.contentType },
       }),
       db.activityLog.create({
         data: {
           organisationId: context.organisation.id,
-          locationId: staff.locationId,
+          locationId: client.locationId,
           userId: context.user.id,
           action: "UPDATE",
-          recordType: "StaffMember",
+          recordType: "Client",
           recordId: id,
-          summary: "Updated staff profile picture",
+          summary: "Updated client profile picture",
         },
       }),
     ]);
     uploaded = false;
-    if (staff.profilePhotoKey) {
-      await deletePrivateFile(staff.profilePhotoKey).catch(() => undefined);
+    if (client.profilePhotoKey) {
+      await deletePrivateFile(client.profilePhotoKey).catch(() => undefined);
     }
-    return NextResponse.json({ message: "Staff profile picture updated." });
+    return NextResponse.json({ message: "Client profile picture updated." });
   } catch (error) {
     if (uploaded) await deletePrivateFile(key).catch(() => undefined);
     return NextResponse.json(
@@ -68,23 +68,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const context = await requireAnyPermission([
-    PERMISSIONS.WORKFORCE_VIEW,
-    PERMISSIONS.WORKFORCE_MANAGE,
-  ]);
+  const context = await requirePermission(PERMISSIONS.GOVERNANCE_VIEW);
   const { id } = await params;
   const db = createDb();
   try {
-    const staff = await db.staffMember.findFirst({
-      where: { id, ...workforceScopeWhere(context) },
+    const client = await db.client.findFirst({
+      where: { id, ...clientScopeWhere(context) },
       select: { profilePhotoKey: true, profilePhotoType: true },
     });
-    if (!staff?.profilePhotoKey) return new NextResponse(null, { status: 404 });
-    const body = await getPrivateFile(staff.profilePhotoKey);
+    if (!client?.profilePhotoKey) return new NextResponse(null, { status: 404 });
+    const body = await getPrivateFile(client.profilePhotoKey);
     if (!body) return new NextResponse(null, { status: 404 });
     return new NextResponse(body, {
       headers: {
-        "Content-Type": staff.profilePhotoType ?? "image/jpeg",
+        "Content-Type": client.profilePhotoType ?? "image/jpeg",
         "Cache-Control": "private, no-store",
         "Content-Security-Policy": "default-src 'none'; img-src 'self'",
         "X-Content-Type-Options": "nosniff",
@@ -96,36 +93,36 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const context = await requirePermission(PERMISSIONS.WORKFORCE_MANAGE);
+  const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
   const { id } = await params;
   const db = createDb();
   try {
-    const staff = await db.staffMember.findFirst({
-      where: { id, ...workforceScopeWhere(context) },
+    const client = await db.client.findFirst({
+      where: { id, ...clientScopeWhere(context) },
       select: { id: true, locationId: true, profilePhotoKey: true },
     });
-    if (!staff) return NextResponse.json({ error: "Staff record not found." }, { status: 404 });
-    if (!staff.profilePhotoKey) return NextResponse.json({ message: "No staff profile picture is stored." });
+    if (!client) return NextResponse.json({ error: "Client record not found." }, { status: 404 });
+    if (!client.profilePhotoKey) return NextResponse.json({ message: "No client profile picture is stored." });
 
     await db.$transaction([
-      db.staffMember.update({
+      db.client.update({
         where: { id },
         data: { profilePhotoKey: null, profilePhotoType: null },
       }),
       db.activityLog.create({
         data: {
           organisationId: context.organisation.id,
-          locationId: staff.locationId,
+          locationId: client.locationId,
           userId: context.user.id,
           action: "UPDATE",
-          recordType: "StaffMember",
+          recordType: "Client",
           recordId: id,
-          summary: "Removed staff profile picture",
+          summary: "Removed client profile picture",
         },
       }),
     ]);
-    await deletePrivateFile(staff.profilePhotoKey).catch(() => undefined);
-    return NextResponse.json({ message: "Staff profile picture removed." });
+    await deletePrivateFile(client.profilePhotoKey).catch(() => undefined);
+    return NextResponse.json({ message: "Client profile picture removed." });
   } finally {
     await db.$disconnect();
   }

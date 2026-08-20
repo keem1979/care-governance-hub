@@ -1,0 +1,15 @@
+ALTER TYPE "ActionSourceType" ADD VALUE IF NOT EXISTS 'CARE_PLAN';
+ALTER TYPE "ActionSourceType" ADD VALUE IF NOT EXISTS 'SPOT_CHECK';
+ALTER TYPE "ActionSourceType" ADD VALUE IF NOT EXISTS 'SUPERVISION';
+ALTER TYPE "ActionSourceType" ADD VALUE IF NOT EXISTS 'APPRAISAL';
+ALTER TYPE "ActionSourceType" ADD VALUE IF NOT EXISTS 'COMPETENCY';
+ALTER TYPE "ActionSourceType" ADD VALUE IF NOT EXISTS 'TRAINING';
+
+ALTER TABLE "Action" ADD COLUMN "oversightOwnerId" UUID;
+
+CREATE INDEX "Action_oversightOwnerId_status_idx" ON "Action"("oversightOwnerId", "status");
+
+ALTER TABLE "Action"
+  ADD CONSTRAINT "Action_oversightOwnerId_fkey"
+  FOREIGN KEY ("oversightOwnerId") REFERENCES "User"("id")
+  ON DELETE SET NULL ON UPDATE CASCADE;

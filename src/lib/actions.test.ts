@@ -1,4 +1,4 @@
-import{describe,expect,it}from"vitest";import{actionDaysRemaining,actionProgressValue,actionReadiness,effectiveActionStatus,makeActionReference,sourcePath,validateActionClosure}from"@/lib/actions";
+import{describe,expect,it}from"vitest";import{ACTION_CATEGORIES,ACTION_SOURCE_TYPES,actionDaysRemaining,actionProgressValue,actionReadiness,effectiveActionStatus,makeActionReference,sourcePath,validateActionClosure}from"@/lib/actions";
 describe("action workflow",()=>{
   it("creates readable references",()=>expect(makeActionReference(new Date("2026-07-25T00:00:00Z"),4)).toBe("ACT-20260725-004"));
   it("marks active past-due work overdue",()=>expect(effectiveActionStatus("IN_PROGRESS",new Date("2026-07-01"),new Date("2026-07-25"))).toBe("OVERDUE"));
@@ -11,4 +11,6 @@ describe("action workflow",()=>{
   it("sets completed progress to 100",()=>expect(actionProgressValue("COMPLETED",40)).toBe(100));
   it("identifies an evidence gap before closure",()=>expect(actionReadiness({status:"IN_PROGRESS",progressPercent:100,evidenceRequired:true,evidenceCount:0})).toBe("NEEDS_EVIDENCE"));
   it("identifies independently verified readiness",()=>expect(actionReadiness({status:"AWAITING_VERIFICATION",progressPercent:100,evidenceRequired:true,evidenceCount:1,verifiedById:"manager",verificationDate:new Date()})).toBe("READY_TO_CLOSE"));
+  it("covers care plans and observed workforce practice as action sources",()=>expect(ACTION_SOURCE_TYPES).toEqual(expect.arrayContaining(["CARE_PLAN","SPOT_CHECK","SUPERVISION","APPRAISAL","COMPETENCY","TRAINING"])));
+  it("covers regulated and operational responsibility areas",()=>expect(ACTION_CATEGORIES).toEqual(expect.arrayContaining(["Care planning and reviews","Assessments and changing needs","Spot checks and observed practice","Audits and inspection readiness","Notifications and statutory reporting"])));
 });

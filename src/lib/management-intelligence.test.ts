@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { defaultManagementView, filterManagementQueue, parseManagementFilters, validateDelegationWindow, type ManagementQueueItem } from "@/lib/management-intelligence";
+import { DELEGATION_RESPONSIBILITIES, defaultManagementView, filterManagementQueue, parseManagementFilters, validateDelegationWindow, type ManagementQueueItem } from "@/lib/management-intelligence";
 
 const item: ManagementQueueItem = { key: "A-1", source: "ACTION", reference: "ACT-1", title: "Review", locationId: "loc-1", locationName: "Home", ownerName: "Manager", severity: "HIGH", state: "AWAITING_VERIFICATION", reason: "Evidence requires assurance", dueAt: new Date("2026-08-01"), overdue: true, unverified: true, href: "/actions/a/assurance" };
 
 describe("management intelligence", () => {
+  it("supports delegation across operational assurance while retaining management oversight", () => {
+    expect(DELEGATION_RESPONSIBILITIES).toEqual(expect.arrayContaining(["AUDIT_PROGRAMME", "ASSESSMENT_REVIEW", "CARE_PLAN_REVIEW", "SPOT_CHECKS", "SAFEGUARDING_OVERSIGHT", "WORKFORCE_COMPLIANCE", "STATUTORY_NOTIFICATIONS"]));
+  });
   it("defaults owners to an owner view and staff to their own work", () => {
     expect(defaultManagementView("organisation-owner", true)).toBe("OWNER");
     expect(defaultManagementView("staff-contributor", false)).toBe("MY_WORK");

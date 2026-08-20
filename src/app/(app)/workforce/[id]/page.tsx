@@ -71,7 +71,9 @@ export default async function StaffMemberPage({
                 {workforceLabel(staff.employmentStatus)}
               </p>
             </div>
-            <div className="relative h-24 w-24 overflow-hidden rounded-2xl border-4 border-white bg-emerald-100 shadow"><Image unoptimized fill className="object-cover" sizes="96px" src={staff.profilePhotoKey ? `/api/workforce/${staff.id}/photo` : "/abi-avatar.png"} alt={`${staff.firstName} ${staff.lastName} profile`} /></div>
+            <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-emerald-100 text-2xl font-bold text-emerald-800 shadow">
+              {staff.profilePhotoKey ? <Image unoptimized fill className="object-cover" sizes="96px" src={`/api/workforce/${staff.id}/photo?v=${staff.updatedAt.getTime()}`} alt={`${staff.firstName} ${staff.lastName} profile`} /> : <span aria-label="No profile picture">{staff.firstName[0]}{staff.lastName[0]}</span>}
+            </div>
           </div>
         </header>
 
@@ -83,7 +85,7 @@ export default async function StaffMemberPage({
         </section>
 
         <section className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-bold">Staff profile picture</h2><p className="mt-1 mb-4 text-sm text-slate-600">Helps managers identify the correct profile. It is never shown publicly.</p>{canManage ? <StaffPhotoForm staffId={staff.id} /> : <p className="text-sm text-slate-500">Only workforce managers can update this picture.</p>}</div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-bold">Staff profile picture</h2><p className="mt-1 mb-4 text-sm text-slate-600">Helps managers identify the correct profile. It is never shown publicly.</p>{canManage ? <StaffPhotoForm staffId={staff.id} hasPhoto={Boolean(staff.profilePhotoKey)} /> : <p className="text-sm text-slate-500">Only workforce managers can update this picture.</p>}</div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 lg:col-span-2"><h2 className="font-bold">Annual leave balance</h2><div className="mt-4 grid gap-3 sm:grid-cols-4"><Info label="Allowance" value={`${allowance} days`} /><Info label="Approved" value={`${annualInYear} days`} /><Info label="Pending" value={`${pendingAnnual} days`} /><Info label="Available" value={`${Math.max(0, allowance - annualInYear)} days`} /></div><p className="mt-3 text-xs text-slate-500">Leave year {date(leaveYear.start)} to {date(new Date(leaveYear.end.getTime() - 86_400_000))}. Balance uses recorded entitlement and approved annual leave.</p></div>
         </section>
 

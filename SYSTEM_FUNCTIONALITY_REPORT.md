@@ -97,6 +97,7 @@ Capabilities include:
 - Create, view and maintain a client profile.
 - Automatic sequential client number/reference generation.
 - Client status and service-location assignment.
+- Private client profile-picture upload, replacement and removal with directory thumbnails.
 - First name and internal reference use to reduce unnecessary personal-data exposure.
 - Next-of-kin/contact details.
 - Links from a client profile to assessments, care-plan reviews, incidents and evidence.
@@ -280,10 +281,13 @@ The Action Tracker is the cross-system improvement and accountability workflow.
 
 Capabilities include:
 
-- Create actions manually or from audits, complaints, incidents, safeguarding, risks, meetings and policy reviews.
+- Create actions manually or from audits, care plans, assessments, complaints, incidents, safeguarding, risks, meetings, policy reviews, inspection requirements, KPIs, evidence and workforce records including spot checks, supervision, appraisal, competency and training.
 - Automatic action reference.
 - Source type and source-record link.
-- Title, description, owner, priority, due date, status and evidence requirement.
+- Broad operational responsibility areas spanning care delivery, safety, workforce, premises, information governance, commissioning, notifications and business continuity.
+- Separate delivery owner and Registered Manager/senior oversight lead so delegation remains visible without transferring provider duties.
+- Optional controlled client link on every action, with source and location consistency checks.
+- Title, description, priority, due date, status and evidence requirement.
 - Priorities from low to critical.
 - Statuses for open, in progress, awaiting evidence, awaiting verification, completed, overdue and cancelled.
 - Action detail and edit pages.
@@ -296,6 +300,7 @@ Capabilities include:
 - Dashboard, calendar, Abi reminder and report integration.
 
 An action is not treated as fully evidenced merely because its status was changed.
+Registered Manager oversight does not mean the manager must personally complete every task; named competent staff may deliver work while management retains proportionate oversight, escalation and assurance.
 
 ### 4.10 Workforce Compliance — `/workforce`
 
@@ -305,7 +310,7 @@ Capabilities include:
 
 - Create and maintain a staff profile.
 - Automatic sequential staff number/reference.
-- Profile photograph upload to private storage.
+- Private profile-picture upload, replacement and removal with directory thumbnails.
 - Role, location, employment status and key employment dates.
 - Next-of-kin/emergency-contact information.
 - Restricted staff-document upload and linked Evidence Library records.

@@ -6,31 +6,44 @@ import { syncFindingFromAction, syncStructuredClosure } from "@/lib/assurance-im
 import { ACTION_CATEGORIES, ACTION_PRIORITIES, ACTION_SOURCE_TYPES, ACTION_STATUSES, actionScopeWhere, makeActionReference } from "@/lib/actions";
 import { lifecycleForAction, MEDICATION_ISSUE_TYPES, normaliseIssueKey, suggestActionMatches, validateVerifiedClosure } from "@/lib/closure-loop";
 import { createDb } from "@/lib/db";
+import { clientScopeWhere } from "@/lib/clients";
 import { evidenceScopeWhere } from "@/lib/evidence";
-import { PERMISSIONS } from "@/lib/permissions";
+import { PERMISSIONS, ROLE_KEYS } from "@/lib/permissions";
 import { parseOptionalDate } from "@/lib/policies";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.ACTIONS_MANAGE), form = await request.formData(), db = createDb();
   try {
-    const title = text(form, "title"), description = text(form, "description"), ownerId = text(form, "ownerId");
+    const title = text(form, "title"), description = text(form, "description"), ownerId = text(form, "ownerId"), oversightOwnerId = text(form, "oversightOwnerId");
     const locationId = text(form, "locationId") || null, category = text(form, "category") || ACTION_CATEGORIES[0];
     const priority = text(form, "priority") || "MEDIUM", status = text(form, "status") || "OPEN";
     const dueDate = parseOptionalDate(form.get("dueDate")), reviewDate = parseOptionalDate(form.get("reviewDate"));
     const progressPercent = number(form, "progressPercent", 0), expectedOutcome = text(form, "expectedOutcome"), successMeasure = text(form, "successMeasure");
     if (title.length < 3 || description.length < 3) throw new Error("Describe the action and the work required.");
     if (!expectedOutcome || !successMeasure) throw new Error("Add the expected outcome and how success will be measured.");
-    if (!ownerId || !dueDate) throw new Error("Choose an accountable owner and due date.");
+    if (!ownerId || !oversightOwnerId || !dueDate) throw new Error("Choose a delivery owner, Registered Manager or senior oversight lead, and due date.");
     if (!ACTION_CATEGORIES.includes(category as never) || !ACTION_PRIORITIES.includes(priority as never) || !ACTION_STATUSES.filter((item) => !["OVERDUE", "ARCHIVED"].includes(item)).includes(status as never)) throw new Error("Choose valid action values.");
     if (progressPercent < 0 || progressPercent > 100) throw new Error("Progress must be between 0 and 100%.");
     if (locationId && !context.locations.some(({ id }) => id === locationId)) throw new Error("Choose an authorised location.");
-    if (!(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: ownerId, status: "ACTIVE" } }))) throw new Error("Choose an active owner.");
+    const [deliveryOwner, oversightOwner] = await Promise.all([
+      db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: ownerId, status: "ACTIVE" } }),
+      db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: oversightOwnerId, status: "ACTIVE" }, include: { role: { select: { key: true } } } }),
+    ]);
+    if (!deliveryOwner) throw new Error("Choose an active delivery owner.");
+    if (!oversightOwner || ![ROLE_KEYS.REGISTERED_MANAGER, ROLE_KEYS.OWNER, ROLE_KEYS.NOMINATED_INDIVIDUAL, ROLE_KEYS.QUALITY_MANAGER].includes(oversightOwner.role.key as never)) throw new Error("Choose an active Registered Manager or authorised senior oversight lead.");
 
     const [sourceType, rawId] = String(form.get("source") ?? "MANUAL:").split(":", 2);
     if (!ACTION_SOURCE_TYPES.includes(sourceType as never)) throw new Error("Choose a valid source.");
     const source = await resolveActionSource(db, context, sourceType, rawId || null);
     if (source.locationId && locationId !== source.locationId) throw new Error("The action location must match its source record.");
-    const clientId = source.clientId, staffMemberId = source.staffMemberId;
+    const requestedClientId = text(form, "clientId") || null;
+    if (source.clientId && requestedClientId && source.clientId !== requestedClientId) throw new Error("The person selected must match the source record.");
+    const clientId = source.clientId ?? requestedClientId, staffMemberId = source.staffMemberId;
+    if (clientId) {
+      const client = await db.client.findFirst({ where: { id: clientId, ...clientScopeWhere(context) }, select: { locationId: true } });
+      if (!client) throw new Error("Choose an authorised client record.");
+      if (client.locationId && client.locationId !== locationId) throw new Error("The action service or branch must match the selected client.");
+    }
     const medicationIssueType = text(form, "medicationIssueType") || null;
     if (medicationIssueType && !MEDICATION_ISSUE_TYPES.includes(medicationIssueType as never)) throw new Error("Choose a valid medication issue type.");
     const issueKey = text(form, "issueKey") || normaliseIssueKey(`${category} ${title}`) || null;
@@ -84,12 +97,12 @@ export async function POST(request: Request) {
     const lifecycleStatus = lifecycleForAction({ actionStatus: status, managementResponse, evidenceCount, verified: Boolean(verifiedById && verificationDate), monitoringUntil });
     const reference = text(form, "reference") || makeActionReference();
     const action = await db.$transaction(async (tx) => {
-      const created = await tx.action.create({ data: { organisationId: context.organisation.id, locationId, clientId, staffMemberId, reference, title, description, category, rootCause: text(form, "rootCause") || null, expectedOutcome, successMeasure, sourceType: sourceType as never, sourceRecordId: rawId || null, sourceReference: source.reference, sourceUrl: source.url, lifecycleStatus: lifecycleStatus as never, issueKey, medicationIssueType: medicationIssueType as never, firstSeenAt: source.occurredAt, lastSeenAt: source.occurredAt, monitoringUntil, managementResponse, managementResponseById: managementResponse ? context.user.id : null, managementResponseAt: managementResponse ? new Date() : null, ownerId, priority: priority as never, dueDate, reviewDate, status: status as never, progressPercent, progressNote: text(form, "progressNote") || null, escalationRequired, escalationReason, evidenceRequired: true, evidenceWaiverExplanation: null, completionDate: parseOptionalDate(form.get("completionDate")), verifiedById, verificationDate, closureNote, completedActionSummary, evidenceReviewedSummary, ...checks, verificationRationale, nextRecurrenceReviewDate, createdById: context.user.id, evidenceLinks: { create: evidenceIds.map((evidenceId) => ({ evidenceId })) }, occurrences: { create: occurrenceData({ organisationId: context.organisation.id, sourceType, rawId, source, locationId, clientId, staffMemberId, category, issueKey, medicationIssueType, description, actorId: context.user.id, decision: rejectedMatch ? "MATCH_REJECTED" : "ORIGINAL", score: rejectedMatch?.score, rationale: rejectedMatch?.rationale.join("; ") }) } } });
+      const created = await tx.action.create({ data: { organisationId: context.organisation.id, locationId, clientId, staffMemberId, reference, title, description, category, rootCause: text(form, "rootCause") || null, expectedOutcome, successMeasure, sourceType: sourceType as never, sourceRecordId: rawId || null, sourceReference: source.reference, sourceUrl: source.url, lifecycleStatus: lifecycleStatus as never, issueKey, medicationIssueType: medicationIssueType as never, firstSeenAt: source.occurredAt, lastSeenAt: source.occurredAt, monitoringUntil, managementResponse, managementResponseById: managementResponse ? context.user.id : null, managementResponseAt: managementResponse ? new Date() : null, ownerId, oversightOwnerId, priority: priority as never, dueDate, reviewDate, status: status as never, progressPercent, progressNote: text(form, "progressNote") || null, escalationRequired, escalationReason, evidenceRequired: true, evidenceWaiverExplanation: null, completionDate: parseOptionalDate(form.get("completionDate")), verifiedById, verificationDate, closureNote, completedActionSummary, evidenceReviewedSummary, ...checks, verificationRationale, nextRecurrenceReviewDate, createdById: context.user.id, evidenceLinks: { create: evidenceIds.map((evidenceId) => ({ evidenceId })) }, occurrences: { create: occurrenceData({ organisationId: context.organisation.id, sourceType, rawId, source, locationId, clientId, staffMemberId, category, issueKey, medicationIssueType, description, actorId: context.user.id, decision: rejectedMatch ? "MATCH_REJECTED" : "ORIGINAL", score: rejectedMatch?.score, rationale: rejectedMatch?.rationale.join("; ") }) } } });
       await syncFindingFromAction(tx, created);
       await syncStructuredClosure(tx, { actionId: created.id, organisationId: created.organisationId, locationId, ownerId, priority, status, rootCause: created.rootCause, completedWork: completedActionSummary, evidenceSummary: evidenceReviewedSummary, evidenceIds, successMeasureResult: closureNote, rationale: verificationRationale, verifierId: verifiedById, verifiedAt: verificationDate });
       await tx.actionUpdate.create({ data: { actionId: created.id, userId: context.user.id, note: "Action created and connected to the improvement record.", status: created.status, progressPercent } });
       await syncActionEvidence(tx, { actionId: created.id, organisationId: created.organisationId, locationId, reference, title, description, category, sourceType, sourceReference: source.reference, ownerId, actorId: context.user.id, dueDate, reviewDate, status, priority, progressPercent, expectedOutcome, successMeasure, archived: false });
-      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE", recordType: "Action", recordId: created.id, summary: `Created action: ${reference} — ${title}`, afterValue: { status, lifecycleStatus, priority, dueDate, sourceType, progressPercent, rejectedMatch: rejectedId } } });
+      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE", recordType: "Action", recordId: created.id, summary: `Created action: ${reference} — ${title}`, afterValue: { status, lifecycleStatus, priority, dueDate, sourceType, progressPercent, ownerId, oversightOwnerId, clientId, rejectedMatch: rejectedId } } });
       return created;
     });
     return NextResponse.json({ id: action.id }, { status: 201 });

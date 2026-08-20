@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -126,6 +127,11 @@ export default async function WorkforcePage() {
                     return (
                       <tr key={person.id} className="hover:bg-slate-50">
                         <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-emerald-100 text-xs font-bold text-emerald-800">
+                              {person.profilePhotoKey ? <Image unoptimized fill className="object-cover" sizes="44px" src={`/api/workforce/${person.id}/photo?v=${person.updatedAt.getTime()}`} alt="" /> : <span>{person.firstName[0]}{person.lastName[0]}</span>}
+                            </div>
+                            <div>
                           <Link
                             href={`/workforce/${person.id}`}
                             className="font-bold text-emerald-800 hover:underline"
@@ -135,6 +141,8 @@ export default async function WorkforcePage() {
                           <p className="mt-1 font-mono text-xs text-slate-500">
                             Staff {person.staffNumber} · {person.employeeReference}
                           </p>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-4 py-4">
                           <p className="font-medium">{person.jobTitle}</p>

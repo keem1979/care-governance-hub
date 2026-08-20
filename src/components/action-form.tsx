@@ -10,7 +10,7 @@ type Source = { type: string; id: string; label: string };
 type Match = { actionId: string; reference: string; title: string; score: number; kind: string; rationale: string[]; lifecycleStatus: string };
 type Initial = Record<string, string | number | boolean | null | string[] | undefined> & { id: string; evidenceIds: string[] };
 
-export function ActionForm({ locations, owners, evidence, sources, initial, preselectedSource }: { locations: Option[]; owners: Option[]; evidence: Option[]; sources: Source[]; initial?: Initial; preselectedSource?: string }) {
+export function ActionForm({ locations, owners, oversightOwners, clients, evidence, sources, initial, preselectedSource }: { locations: Option[]; owners: Option[]; oversightOwners: Option[]; clients: Option[]; evidence: Option[]; sources: Source[]; initial?: Initial; preselectedSource?: string }) {
   const router = useRouter(), [error, setError] = useState(""), [busy, setBusy] = useState(false), [matches, setMatches] = useState<Match[]>([]), [pending, setPending] = useState<FormData | null>(null);
   const cls = "mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100";
   const value = (key: string) => initial?.[key] as string | undefined;
@@ -33,7 +33,7 @@ export function ActionForm({ locations, owners, evidence, sources, initial, pres
 
     <Section number="1" title="Outcome and success" copy="Make the required improvement and its benefit measurable."><div className="grid gap-4 md:grid-cols-2">
       <Field label="Action reference" hint="created automatically if blank"><input className={cls} name="reference" defaultValue={value("reference")} readOnly={Boolean(initial)} /></Field>
-      <Field label="Improvement category"><select className={cls} name="category" defaultValue={value("category") ?? ACTION_CATEGORIES[0]}>{ACTION_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></Field>
+      <Field label="Operational responsibility area"><select className={cls} name="category" defaultValue={value("category") ?? ACTION_CATEGORIES[0]}>{ACTION_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></Field>
       <Field label="What must be achieved?" wide><input className={cls} name="title" required minLength={3} defaultValue={value("title")} /></Field>
       <Field label="Work required" wide><textarea className={`${cls} min-h-24`} name="description" required defaultValue={value("description")} /></Field>
       <Field label="Root cause or contributing factors" wide><textarea className={`${cls} min-h-20`} name="rootCause" defaultValue={value("rootCause")} /></Field>
@@ -45,12 +45,14 @@ export function ActionForm({ locations, owners, evidence, sources, initial, pres
 
     <Section number="2" title="Source, ownership and milestones" copy="Connect the source so every repeat remains traceable on one canonical record."><div className="grid gap-4 md:grid-cols-2">
       <Field label="Source record" wide><select className={cls} name="source" defaultValue={initial ? `${value("sourceType")}:${value("sourceRecordId") ?? ""}` : preselectedSource ?? "MANUAL:"}><option value="MANUAL:">Manual improvement action</option>{sources.map((item) => <option key={`${item.type}:${item.id}`} value={`${item.type}:${item.id}`}>{actionLabel(item.type)} · {item.label}</option>)}</select></Field>
-      <Field label="Accountable owner"><select className={cls} name="ownerId" required defaultValue={value("ownerId") ?? ""}><option value="">Choose owner</option>{owners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+      <Field label="Delivery owner" hint="person completing or coordinating the work"><select className={cls} name="ownerId" required defaultValue={value("ownerId") ?? ""}><option value="">Choose delivery owner</option>{owners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+      <Field label="Registered Manager / senior oversight" hint="retains oversight while work may be delegated"><select className={cls} name="oversightOwnerId" required defaultValue={value("oversightOwnerId") ?? ""}><option value="">Choose oversight lead</option>{oversightOwners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+      <Field label="Person affected" hint="optional for service-wide or workforce actions"><select className={cls} name="clientId" defaultValue={value("clientId") ?? ""}><option value="">No specific client</option>{clients.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
       <Field label="Service or branch"><select className={cls} name="locationId" defaultValue={value("locationId") ?? ""}><option value="">Organisation-wide</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
       <Field label="Priority"><select className={cls} name="priority" defaultValue={value("priority") ?? "MEDIUM"}>{ACTION_PRIORITIES.map((item) => <option key={item} value={item}>{actionLabel(item)}</option>)}</select></Field>
       <Field label="Due date"><input className={cls} type="date" name="dueDate" required defaultValue={value("dueDate") ?? future(30)} /></Field>
       <Field label="Checkpoint / review date"><input className={cls} type="date" name="reviewDate" defaultValue={value("reviewDate") ?? future(14)} /></Field>
-    </div></Section>
+    </div><div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950"><strong>Accountability and delegation:</strong> choose the person who will deliver the work and the manager who will oversee progress, escalation and assurance. Linking the Registered Manager does not mean they personally complete every task, and it does not transfer the registered provider’s duties.</div></Section>
 
     <Section number="3" title="Management response and progress" copy="A response records what management says has happened; it does not close the finding."><div className="grid gap-4 md:grid-cols-2">
       <Field label="Status"><select className={cls} name="status" defaultValue={value("status") ?? "OPEN"}>{ACTION_STATUSES.filter((item) => !["OVERDUE", "ARCHIVED"].includes(item)).map((item) => <option key={item} value={item}>{actionLabel(item)}</option>)}</select></Field>
