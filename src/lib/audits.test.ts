@@ -1,5 +1,5 @@
 import { describe,expect,it } from "vitest";
-import { AUDIT_EVIDENCE_SOURCE_OPTIONS, auditEvidenceSourceLabel, auditStatusLabel, calculateAuditScore, hasTraceableAuditEvidence, scoreAnswer } from "./audits";
+import { AUDIT_EVIDENCE_SOURCE_OPTIONS, auditEvidenceSourceLabel, auditQuickStartSample, auditStatusLabel, calculateAuditScore, hasTraceableAuditEvidence, scoreAnswer } from "./audits";
 import { auditEvidenceRequirementKeys, auditKeyFromEvidenceTags } from "./audit-evidence";
 describe("audit scoring", () => {
   it("scores compliance answers", () => { expect(scoreAnswer("COMPLIANT")).toBe(100); expect(scoreAnswer("PARTIALLY_COMPLIANT")).toBe(50); expect(scoreAnswer("NON_COMPLIANT")).toBe(0); expect(scoreAnswer("NOT_APPLICABLE")).toBeNull(); });
@@ -17,6 +17,14 @@ describe("audit evidence sources", () => {
     expect(hasTraceableAuditEvidence({ evidenceSourceType: "BUSINESS_CONTINUITY", evidenceSourceReference: "BCP exercise 2026-08" })).toBe(true);
     expect(hasTraceableAuditEvidence({ evidenceSourceType: "BUSINESS_CONTINUITY", evidenceSourceReference: "" })).toBe(false);
     expect(auditEvidenceSourceLabel("BUSINESS_CONTINUITY")).toContain("BCP");
+  });
+});
+describe("audit quick start", () => {
+  it("uses a whole-plan review for business continuity without asking the RM to configure sampling", () => {
+    expect(auditQuickStartSample("business-continuity-audit")).toEqual({ method: "FULL_POPULATION", size: 1 });
+  });
+  it("uses a safe representative default for record-sampling audits", () => {
+    expect(auditQuickStartSample("care-record-audit")).toEqual({ method: "RISK_AND_RANDOM", size: 5 });
   });
 });
 describe("audit evidence mapping", () => {

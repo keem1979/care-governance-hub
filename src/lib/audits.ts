@@ -1,6 +1,10 @@
 export const AUDIT_STATUSES = ["DRAFT","IN_PROGRESS","AWAITING_REVIEW","COMPLETED","CLOSED","ARCHIVED"] as const;
 export const COMPLIANCE_ANSWERS = ["COMPLIANT","PARTIALLY_COMPLIANT","NON_COMPLIANT","NOT_APPLICABLE"] as const;
 
+export function auditQuickStartSample(templateKey: string): { method: string; size: number } {
+  return templateKey === "business-continuity-audit" ? { method: "FULL_POPULATION", size: 1 } : { method: "RISK_AND_RANDOM", size: 5 };
+}
+
 export const AUDIT_EVIDENCE_SOURCE_OPTIONS = [
   { group: "Controlled governance", value: "EVIDENCE_LIBRARY", label: "Evidence Library controlled record" },
   { group: "Controlled governance", value: "POLICY_PROCEDURE", label: "Policy, procedure or controlled document" },
