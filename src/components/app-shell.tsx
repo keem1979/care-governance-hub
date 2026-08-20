@@ -55,14 +55,13 @@ const navigationGroups = [
   {
     key: "care",
     label: "People & Care",
-    description: "People, plans and workforce",
+    description: "People, plans, assessments and staff",
     icon: HeartPulse,
     items: [
       { href: "/clients", label: "Client Directory", icon: ContactRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
       { href: "/care-plans", label: "Care Plans", icon: HeartPulse, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-      { href: "/care-assurance", label: "Care Assurance", icon: ShieldCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
-      { href: "/workforce", label: "Workforce Compliance", icon: UserRoundCheck, anyOf: [PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE] },
-      { href: "/quality", label: "Care Quality", icon: HeartPulse, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+      { href: "/assessments", label: "Assessments", icon: ClipboardPenLine, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/workforce", label: "Workforce", icon: UserRoundCheck, anyOf: [PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE] },
     ],
   },
   {
@@ -72,15 +71,12 @@ const navigationGroups = [
     icon: ShieldCheck,
     items: [
       { href: "/policies", label: "Policies", icon: BookOpenCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-      { href: "/evidence", label: "Evidence Library", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
-      { href: "/evidence-assurance", label: "Evidence Assurance", icon: FileCheck2, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+      { href: "/evidence", label: "Evidence & Assurance", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
       { href: "/audits", label: "Audit Centre", icon: ClipboardCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE] },
-      { href: "/assessments", label: "Assessment Centre", icon: ClipboardPenLine, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
       { href: "/registers", label: "Registers", icon: NotebookTabs, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
       { href: "/risks", label: "Risk Register", icon: ShieldEllipsis, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-      { href: "/actions", label: "Action Tracker", icon: ListChecks, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
-      { href: "/improvement", label: "Improvement Assurance", icon: Workflow, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE] },
-      { href: "/governance-control", label: "Governance Control", icon: Landmark, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/actions", label: "Actions & Improvement", icon: ListChecks, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+      { href: "/meetings", label: "Governance Meetings", icon: UsersRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
     ],
   },
   {
@@ -89,40 +85,45 @@ const navigationGroups = [
     description: "Reviews, deadlines and outputs",
     icon: ChartNoAxesCombined,
     items: [
-      { href: "/meetings", label: "Governance Meetings", icon: UsersRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/quality", label: "Quality Overview", icon: HeartPulse, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
       { href: "/calendar", label: "Compliance Calendar", icon: CalendarDays, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
       { href: "/kpis", label: "KPI Suite", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
       { href: "/inspection", label: "Inspection Centre", icon: FileCheck2, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-      { href: "/templates", label: "Templates", icon: FileStack, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
       { href: "/reports", label: "Reports", icon: ScrollText, anyOf: [PERMISSIONS.REPORTS_EXPORT] },
-      { href: "/activity", label: "Activity Log", icon: Activity, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
-    ],
-  },
-  {
-    key: "intelligence",
-    label: "Data & Intelligence",
-    description: "Quality, connections and guidance",
-    icon: PlugZap,
-    items: [
-      { href: "/data-quality", label: "Data Quality", icon: ScanSearch, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-      { href: "/connected-governance", label: "Connected Governance", icon: PlugZap, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ORGANISATION_MANAGE] },
-      { href: "/abi-assurance", label: "Abi Assurance", icon: Bot, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
     ],
   },
   {
     key: "administration",
-    label: "Administration",
-    description: "Security, setup and launch",
-    icon: Settings,
+    label: "Setup & Data",
+    description: "Connections and organisation settings",
+    icon: PlugZap,
     items: [
-      { href: "/security", label: "My Security", icon: KeyRound, anyOf: Object.values(PERMISSIONS) },
-      { href: "/assurance", label: "Security & Integrations", icon: PlugZap, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
-      { href: "/implementation", label: "Implementation Centre", icon: SlidersHorizontal, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
-      { href: "/launch-readiness", label: "Launch Assurance", icon: FlaskConical, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
+      { href: "/connected-governance", label: "Connections & Data", icon: PlugZap, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ORGANISATION_MANAGE] },
       { href: "/settings", label: "Organisation Settings", icon: Settings, anyOf: [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE] },
     ],
   },
 ] as const;
+
+const specialistNavigationGroup = {
+  key: "specialist",
+  label: "Specialist tools",
+  description: "Advanced assurance, review and setup",
+  icon: SlidersHorizontal,
+  items: [
+    { href: "/care-assurance", label: "Care Assurance · Staff", icon: ShieldCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+    { href: "/evidence-assurance", label: "Evidence Assurance · Verification", icon: FileCheck2, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+    { href: "/improvement", label: "Improvement Assurance · Verification", icon: Workflow, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE] },
+    { href: "/governance-control", label: "Governance Control · Decisions", icon: Landmark, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+    { href: "/templates", label: "Template Library", icon: FileStack, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+    { href: "/activity", label: "Activity Log", icon: Activity, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+    { href: "/data-quality", label: "Data Quality · Review", icon: ScanSearch, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+    { href: "/abi-assurance", label: "Abi Assurance · Escalations", icon: Bot, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+    { href: "/security", label: "My Security", icon: KeyRound, anyOf: Object.values(PERMISSIONS) },
+    { href: "/assurance", label: "Security & Integration Assurance", icon: PlugZap, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
+    { href: "/implementation", label: "Implementation Centre", icon: SlidersHorizontal, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
+    { href: "/launch-readiness", label: "Launch Assurance · Pilots", icon: FlaskConical, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
+  ],
+} as const;
 
 const moduleConnections: Record<string, {
   source: string;
@@ -132,35 +133,35 @@ const moduleConnections: Record<string, {
   "care-plans": { source: "Live person-centred care instructions, controlled versions, review proposals, evidence, actions and staff acknowledgement", links: [{ href: "/registers/care-plan-reviews", label: "Care-plan reviews" }, { href: "/actions", label: "Follow-up actions" }, { href: "/evidence", label: "Linked evidence" }] },
   "care-assurance": { source: "Approved current care instructions, assigned staff, acknowledgements, understanding checks and verified workforce records", links: [{ href: "/care-plans", label: "Controlled care plans" }, { href: "/workforce", label: "Workforce evidence" }, { href: "/activity?recordType=CarePlan", label: "Care-plan history" }] },
   policies: { source: "Controlled policy records, approvals, review dates and document versions", links: [{ href: "/reports/policy-compliance", label: "Policy report" }, { href: "/inspection", label: "Inspection evidence" }, { href: "/activity?recordType=Policy", label: "Policy activity" }] },
-  evidence: { source: "Uploaded evidence, template copies and linked module records", links: [{ href: "/reports/evidence-index", label: "Evidence report" }, { href: "/inspection", label: "Inspection links" }, { href: "/audits", label: "Audit evidence" }] },
+  evidence: { source: "Uploaded evidence, template copies and linked module records", links: [{ href: "/evidence-assurance", label: "Verify evidence" }, { href: "/templates", label: "Templates" }, { href: "/inspection", label: "Inspection mapping" }] },
   "evidence-assurance": { source: "Evidence provenance, current-version verification, suitability mappings, controlled framework changes and mock-inspection samples", links: [{ href: "/evidence", label: "Evidence Library" }, { href: "/inspection", label: "Inspection Centre" }, { href: "/activity?recordType=EvidenceVerification", label: "Verification history" }] },
   audits: { source: "Completed audit forms, responses, findings and scores", links: [{ href: "/reports/audit", label: "Audit report" }, { href: "/actions", label: "Improvement actions" }, { href: "/inspection", label: "Inspection evidence" }] },
   assessments: { source: "Initial, consent, person-centred and service-impact assessment records", links: [{ href: "/evidence", label: "Assessment evidence" }, { href: "/risks", label: "Escalated risks" }, { href: "/quality", label: "Care quality" }] },
   registers: { source: "Operational events entered by managers and authorised staff", links: [{ href: "/kpis", label: "Synced KPIs" }, { href: "/actions", label: "Follow-up actions" }, { href: "/reports", label: "Register reports" }] },
   risks: { source: "Scored risks, controls, owners and review history", links: [{ href: "/reports/risk", label: "Risk report" }, { href: "/actions", label: "Risk actions" }, { href: "/dashboard", label: "Dashboard alerts" }] },
-  actions: { source: "Actions raised from audits, risks, registers, meetings and manual entry", links: [{ href: "/reports/action-status", label: "Action report" }, { href: "/calendar", label: "Due dates" }, { href: "/dashboard", label: "Dashboard alerts" }] },
+  actions: { source: "Actions raised from audits, risks, registers, meetings and manual entry", links: [{ href: "/improvement", label: "Verify improvement" }, { href: "/my-work", label: "My assigned work" }, { href: "/reports/action-status", label: "Action report" }] },
   improvement: { source: "Canonical findings, causes, actions, evidence, independent verification, effectiveness and recurrence", links: [{ href: "/actions", label: "Action Tracker" }, { href: "/evidence", label: "Evidence" }, { href: "/reports/action-status", label: "Improvement report" }] },
   "governance-control": { source: "Approved meeting decisions, commissioner obligations, external responses, evidence and linked action delays", links: [{ href: "/meetings", label: "Source meetings" }, { href: "/calendar", label: "Unified deadlines" }, { href: "/activity?recordType=GovernanceObligation", label: "Obligation history" }] },
   workforce: { source: "Staff records, checks, training, supervision and competency outcomes", links: [{ href: "/calendar", label: "Expiry calendar" }, { href: "/kpis", label: "Workforce KPIs" }, { href: "/inspection", label: "Inspection evidence" }] },
-  quality: { source: "Live oversight drawn from assessments, operational registers, KPIs and improvement actions—without duplicate entry", links: [{ href: "/kpis", label: "Quality KPIs" }, { href: "/inspection", label: "Inspection evidence" }, { href: "/reports/quality-assurance", label: "Quality report" }] },
+  quality: { source: "Live oversight drawn from assessments, operational registers, KPIs and improvement actions—without duplicate entry", links: [{ href: "/assessments", label: "Assessments" }, { href: "/care-assurance", label: "Care-plan assurance" }, { href: "/reports/quality-assurance", label: "Quality report" }] },
   "data-quality": { source: "Potential identity matches and material-change dependencies requiring human review", links: [{ href: "/clients", label: "Client records" }, { href: "/care-plans", label: "Care plans" }, { href: "/activity?recordType=DataQuality", label: "Review history" }] },
-  "connected-governance": { source: "Approved integrations, staged imports, explicit source authority, quarantined events and reviewed offline observations", links: [{ href: "/data-quality", label: "Reconciliation queue" }, { href: "/offline-capture", label: "Offline capture" }, { href: "/activity?recordType=IntegrationConnection", label: "Connection history" }] },
+  "connected-governance": { source: "Approved integrations, staged imports, explicit source authority, quarantined events and reviewed offline observations", links: [{ href: "/data-quality", label: "Data quality review" }, { href: "/assurance", label: "Connection assurance" }, { href: "/offline-capture", label: "Offline capture" }] },
   "abi-assurance": { source: "Audited Abi classifications, cited sources, feedback and management escalations", links: [{ href: "/activity?recordType=AssistantEscalation", label: "Escalation history" }, { href: "/assurance", label: "Security assurance" }, { href: "/inspection", label: "Inspection guidance" }] },
-  implementation: { source: "Versioned tenant configuration, onboarding evidence, notification preferences and privacy-safe adoption metadata", links: [{ href: "/settings", label: "Organisation settings" }, { href: "/activity?recordType=ConfigurationPromotion", label: "Promotion history" }, { href: "/assurance", label: "Security assurance" }] },
+  implementation: { source: "Versioned tenant configuration, onboarding evidence, notification preferences and privacy-safe adoption metadata", links: [{ href: "/settings", label: "Organisation settings" }, { href: "/launch-readiness", label: "Pilot and launch evidence" }, { href: "/activity?recordType=ConfigurationPromotion", label: "Promotion history" }] },
   "launch-readiness": { source: "Controlled internal and external pilots, independently verified outcomes, service operations, commercial intent and benchmark consent", links: [{ href: "/implementation", label: "Implementation Centre" }, { href: "/assurance", label: "Security assurance" }, { href: "/activity?recordType=LaunchPilot", label: "Pilot history" }] },
-  meetings: { source: "Agendas, attendance, decisions, approved minutes and linked actions", links: [{ href: "/actions", label: "Meeting actions" }, { href: "/calendar", label: "Meeting dates" }, { href: "/reports/monthly-governance", label: "Governance report" }] },
+  meetings: { source: "Agendas, attendance, decisions, approved minutes and linked actions", links: [{ href: "/governance-control", label: "Decisions and obligations" }, { href: "/actions", label: "Meeting actions" }, { href: "/calendar", label: "Meeting dates" }] },
   calendar: { source: "Manual deadlines plus policy, workforce and governance due dates", links: [{ href: "/policies", label: "Policy reviews" }, { href: "/workforce", label: "Workforce checks" }, { href: "/dashboard", label: "Upcoming deadlines" }] },
   kpis: { source: "Registers, actions, workforce, audits, policies and verified manager figures", links: [{ href: "/kpis/returns", label: "Return history" }, { href: "/reports/kpi", label: "KPI report" }, { href: "/dashboard", label: "Dashboard summary" }] },
-  inspection: { source: "Evidence, policies, audits, actions and operational register links", links: [{ href: "/inspection/pack", label: "Inspection pack" }, { href: "/reports/inspection-readiness", label: "Readiness report" }, { href: "/evidence", label: "Evidence Library" }] },
+  inspection: { source: "Evidence, policies, audits, actions and operational register links", links: [{ href: "/inspection/pack", label: "Inspection pack" }, { href: "/evidence-assurance?view=mock", label: "Mock inspections" }, { href: "/evidence", label: "Evidence and assurance" }] },
   templates: { source: "Published starter templates and organisation-owned controlled templates", links: [{ href: "/evidence", label: "Create evidence" }, { href: "/audits", label: "Audit forms" }, { href: "/activity?recordType=Template", label: "Template activity" }] },
-  reports: { source: "Live authorised records from every governance module", links: [{ href: "/dashboard", label: "Dashboard" }, { href: "/activity", label: "Audit trail" }] },
+  reports: { source: "Live authorised records from every governance module", links: [{ href: "/dashboard", label: "Dashboard" }, { href: "/activity", label: "Activity audit trail" }] },
   activity: { source: "Immutable create, update, approval, export and access events", links: [{ href: "/reports", label: "Reports" }, { href: "/assurance", label: "Security assurance" }] },
   security: { source: "Multi-factor authentication, recovery codes and active-session control", links: [{ href: "/activity", label: "Account activity" }, { href: "/assurance", label: "Security assurance" }] },
   assurance: { source: "Settings, access controls, audit history and security evidence", links: [{ href: "/settings", label: "Access settings" }, { href: "/activity", label: "Audit trail" }, { href: "/evidence", label: "Security evidence" }] },
-  settings: { source: "Organisation structure, locations, licences, users and permissions", links: [{ href: "/activity", label: "Permission history" }, { href: "/assurance", label: "Security readiness" }] },
-  dashboard: { source: "Live alerts and summaries from all QCGMS modules", links: [{ href: "/reports/monthly-governance", label: "Governance report" }, { href: "/activity", label: "Recent activity" }] },
+  settings: { source: "Organisation structure, locations, licences, users and permissions", links: [{ href: "/security", label: "My security" }, { href: "/implementation", label: "Implementation setup" }, { href: "/activity", label: "Permission history" }] },
+  dashboard: { source: "Live alerts and summaries from all QCGMS modules", links: [{ href: "/quality", label: "Quality overview" }, { href: "/reports/monthly-governance", label: "Governance report" }, { href: "/activity", label: "Recent activity" }] },
   "my-work": { source: "Live records assigned to the signed-in user, ordered by target date and urgency", links: [{ href: "/actions", label: "Action Tracker" }, { href: "/calendar", label: "Compliance Calendar" }] },
-  management: { source: "Live actions, risks, external dependencies and assurance decisions within your authorised scope", links: [{ href: "/actions", label: "Action Tracker" }, { href: "/improvement", label: "Improvement Assurance" }, { href: "/activity?recordType=ManagementDelegation", label: "Delegation history" }] },
+  management: { source: "Live actions, risks, external dependencies and assurance decisions within your authorised scope", links: [{ href: "/governance-control", label: "Decisions and obligations" }, { href: "/actions", label: "Actions and improvement" }, { href: "/activity?recordType=ManagementDelegation", label: "Delegation history" }] },
 };
 
 export function AppShell({
@@ -175,16 +176,21 @@ export function AppShell({
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [navQuery, setNavQuery] = useState("");
+  const [showSpecialistTools, setShowSpecialistTools] = useState(false);
   const location = context.locations[0];
   const moduleKey = pathname.split("/").filter(Boolean)[0] ?? "dashboard";
   const connections = moduleConnections[moduleKey];
   const canOpen = (anyOf: readonly string[]) => anyOf.some((permission) => context.permissions.includes(permission));
   const visiblePrimary = primaryNavigation.filter(({ anyOf }) => canOpen(anyOf));
   const visibleGroups = navigationGroups.map((group) => ({ ...group, items: group.items.filter(({ anyOf }) => canOpen(anyOf)) })).filter((group) => group.items.length > 0);
-  const activeGroupKey = visibleGroups.find((group) => group.items.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`)))?.key;
+  const visibleSpecialistGroup = { ...specialistNavigationGroup, items: specialistNavigationGroup.items.filter(({ anyOf }) => canOpen(anyOf)) };
+  const specialistContainsActive = visibleSpecialistGroup.items.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`));
+  const allVisibleGroups = visibleSpecialistGroup.items.length ? [...visibleGroups, visibleSpecialistGroup] : visibleGroups;
+  const activeGroupKey = allVisibleGroups.find((group) => group.items.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`)))?.key;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set([activeGroupKey ?? "care"]));
   const cleanNavQuery = navQuery.trim().toLowerCase();
-  const displayedGroups = visibleGroups.map((group) => ({ ...group, items: cleanNavQuery ? group.items.filter((item) => `${item.label} ${group.label} ${group.description}`.toLowerCase().includes(cleanNavQuery)) : group.items })).filter((group) => group.items.length > 0);
+  const groupsInMenu = showSpecialistTools || cleanNavQuery || specialistContainsActive ? allVisibleGroups : visibleGroups;
+  const displayedGroups = groupsInMenu.map((group) => ({ ...group, items: cleanNavQuery ? group.items.filter((item) => `${item.label} ${group.label} ${group.description}`.toLowerCase().includes(cleanNavQuery)) : group.items })).filter((group) => group.items.length > 0);
 
   function toggleGroup(key: string) {
     setExpandedGroups((current) => {
@@ -292,6 +298,7 @@ export function AppShell({
               </section>;
             })}
           </div>
+          {!cleanNavQuery && visibleSpecialistGroup.items.length ? <button type="button" onClick={() => { const next = !showSpecialistTools; setShowSpecialistTools(next); if (next) setExpandedGroups((current) => { const expanded = new Set(current); expanded.add("specialist"); return expanded; }); }} className="mt-4 flex w-full items-center justify-between rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-left text-xs font-bold text-emerald-100/70 transition hover:border-emerald-300/40 hover:bg-white/7 hover:text-white"><span>{showSpecialistTools ? "Hide specialist tools" : "Show specialist tools"}</span><span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px]">{visibleSpecialistGroup.items.length}</span></button> : null}
           {cleanNavQuery && displayedGroups.length === 0 && !visiblePrimary.some((item) => item.label.toLowerCase().includes(cleanNavQuery)) ? <p className="mt-4 rounded-xl border border-dashed border-white/15 p-4 text-center text-xs text-emerald-100/60">No accessible feature matches “{navQuery.trim()}”.</p> : null}
         </nav>
         <div className="border-t border-white/10 bg-white/[.025] p-4">
@@ -300,8 +307,9 @@ export function AppShell({
             {context.role.name}
             {context.accessMode === "READ_ONLY" ? " · Read only" : ""}
           </p>
+          <Link href="/security" className="mt-3 block w-full rounded-lg border border-white/10 px-3 py-2 text-center text-xs font-bold text-emerald-100 transition hover:bg-white/10 hover:text-white">My security</Link>
           <button
-            className="mt-3 w-full rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+            className="mt-2 w-full rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
             onClick={signOut}
             disabled={signingOut}
           >
