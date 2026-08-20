@@ -17,7 +17,7 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
   const selectedLocation = filters.locationId ? { locationId: filters.locationId } : {};
 
   try {
-    const [actions, risks, dependencies, savedViews, delegations, members] = await Promise.all([
+    const [actions, risks, dependencies, delegations, members] = await Promise.all([
       db.action.findMany({
         where: {
           organisationId: context.organisation.id,
@@ -27,7 +27,7 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
           ...locationScope,
           ...selectedLocation,
         },
-        select: { id: true, reference: true, title: true, locationId: true, priority: true, status: true, lifecycleStatus: true, dueDate: true, owner: { select: { name: true } }, location: { select: { name: true } } },
+        select: { id: true, reference: true, title: true, category: true, sourceType: true, locationId: true, priority: true, status: true, lifecycleStatus: true, dueDate: true, progressPercent: true, ownerId: true, oversightOwnerId: true, owner: { select: { id: true, name: true } }, oversightOwner: { select: { id: true, name: true } }, location: { select: { name: true } }, client: { select: { firstName: true, lastName: true, preferredName: true } } },
         orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
         take: 250,
       }),
@@ -54,14 +54,10 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
         orderBy: { dueDate: "asc" },
         take: 250,
       }),
-      db.managementSavedView.findMany({
-        where: { organisationId: context.organisation.id, userId: context.user.id },
-        include: { location: { select: { name: true } } },
-        orderBy: [{ isDefault: "desc" }, { name: "asc" }],
-      }),
       db.managementDelegation.findMany({
         where: {
           organisationId: context.organisation.id,
+          ...selectedLocation,
           OR: hasPermission(context.permissions, PERMISSIONS.MEMBERS_MANAGE)
             ? undefined
             : [{ delegatorId: context.membershipId }, { delegateId: context.membershipId }],
@@ -145,6 +141,21 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
     ];
 
     const filteredQueue = filterManagementQueue(queue, filters).sort(compareQueue);
+    const assignments = actions.map((item) => ({
+      ...item,
+      overdue: item.dueDate < now && item.status !== "COMPLETED",
+      dueSoon: item.dueDate >= now && item.dueDate <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+      clientName: item.client ? `${item.client.preferredName?.trim() || item.client.firstName} ${item.client.lastName}` : null,
+    }));
+    const teamSummaries = [...assignments.reduce((groups, item) => {
+      const current = groups.get(item.ownerId) ?? { id: item.ownerId, name: item.owner.name, total: 0, overdue: 0, critical: 0, awaitingAssurance: 0 };
+      current.total += 1;
+      if (item.overdue) current.overdue += 1;
+      if (item.priority === "CRITICAL" || item.priority === "HIGH") current.critical += 1;
+      if (["AWAITING_EVIDENCE", "MANAGEMENT_RESPONSE_RECORDED", "AWAITING_VERIFICATION"].includes(item.lifecycleStatus)) current.awaitingAssurance += 1;
+      groups.set(item.ownerId, current);
+      return groups;
+    }, new Map<string, { id: string; name: string; total: number; overdue: number; critical: number; awaitingAssurance: number }>()).values()].sort((a, b) => b.overdue - a.overdue || b.critical - a.critical || a.name.localeCompare(b.name));
     const locationSummaries = context.locations.map((location) => {
       const locationItems = queue.filter((item) => item.locationId === location.id);
       return { id: location.id, name: location.name, total: locationItems.length, critical: locationItems.filter((item) => item.severity === "CRITICAL").length, overdue: locationItems.filter((item) => item.overdue).length, unverified: locationItems.filter((item) => item.unverified).length };
@@ -153,9 +164,20 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
     return {
       queue: filteredQueue,
       totals: { all: queue.length, critical: queue.filter((item) => item.severity === "CRITICAL").length, overdue: queue.filter((item) => item.overdue).length, unverified: queue.filter((item) => item.unverified).length, external: queue.filter((item) => item.source === "EXTERNAL").length },
+      assignments,
+      assignmentTotals: {
+        all: assignments.length,
+        delegatedToTeam: assignments.filter((item) => item.ownerId !== context.user.id).length,
+        personallyOwned: assignments.filter((item) => item.ownerId === context.user.id).length,
+        overseenByMe: assignments.filter((item) => item.oversightOwnerId === context.user.id).length,
+        overdue: assignments.filter((item) => item.overdue).length,
+        dueSoon: assignments.filter((item) => item.dueSoon).length,
+        awaitingAssurance: assignments.filter((item) => ["AWAITING_EVIDENCE", "MANAGEMENT_RESPONSE_RECORDED", "AWAITING_VERIFICATION"].includes(item.lifecycleStatus)).length,
+        missingOversight: assignments.filter((item) => !item.oversightOwnerId).length,
+      },
+      teamSummaries,
       locationSummaries,
-      savedViews,
-      delegations: delegations.map((item) => ({ ...item, effectiveStatus: item.status === "REVOKED" ? "REVOKED" : item.endsAt < now ? "EXPIRED" : item.startsAt > now ? "SCHEDULED" : "ACTIVE" })),
+      delegations: delegations.map((item) => ({ ...item, effectiveStatus: item.status === "REVOKED" ? "REVOKED" : item.endsAt < now ? "EXPIRED" : item.startsAt > now ? "SCHEDULED" : "ACTIVE", canEnd: item.delegatorId === context.membershipId || hasPermission(context.permissions, PERMISSIONS.MEMBERS_MANAGE) })),
       members: members.filter((member) => member.id !== context.membershipId && (context.allLocations || member.allLocations || member.locations.some(({ locationId }) => authorisedLocationIds.includes(locationId)))),
     };
   } finally {

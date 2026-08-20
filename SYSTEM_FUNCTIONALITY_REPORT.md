@@ -77,7 +77,11 @@ The dashboard is the management overview and uses live, tenant-scoped records ra
 
 #### My Work — `/my-work`
 
-My Work is a separate personal execution workspace rather than a management dashboard. It brings together open records assigned to the signed-in user, including actions, risks, audits, policy and evidence reviews, meetings, governance decisions and obligations, external follow-up, inspection assurance, scheduled tasks, open register records and management escalations. Work is ordered by overdue status, seven-day urgency, priority and target date. Missing targets are identified explicitly. Temporary management delegations are shown separately because a broad responsibility area does not replace a specific deliverable, owner and measurable target.
+My Work is a separate personal execution workspace rather than a management dashboard. It brings together open records personally owned by the signed-in user, including actions, risks, audits, policy and evidence reviews, meetings, governance decisions and obligations, external follow-up, inspection assurance, scheduled tasks, open register records and management escalations. Work is ordered by overdue status, seven-day urgency, priority and target date. Missing targets are identified explicitly. Work assigned to other people and broad management delegation records remain in Management Command.
+
+#### Management Command — `/management`
+
+Management Command deliberately separates three governance purposes. Owner Overview is an organisation-wide assurance mirror of material exceptions, oversight gaps, delivery pressure and management delegations. Registered Manager is the assignment and delegation control centre for creating governance actions, setting owners and targets, allocating independent oversight and monitoring team accountability. Location Command shows the action owners, target position, delegated responsibility cover and assurance exceptions for one authorised service. These controls do not provide rostering, visit scheduling, medication rounds or routine care-task management.
 
 Capabilities include:
 

@@ -11,6 +11,7 @@ describe("management intelligence", () => {
     expect(defaultManagementView("organisation-owner", true)).toBe("OWNER");
     expect(defaultManagementView("staff-contributor", false)).toBe("REGISTERED_MANAGER");
     expect(allowedManagementViews("staff-contributor", false)).not.toContain("MY_WORK");
+    expect(allowedManagementViews("organisation-owner", true)).toEqual(["OWNER", "REGISTERED_MANAGER", "LOCATION"]);
   });
 
   it("rejects views and locations outside the user's scope", () => {

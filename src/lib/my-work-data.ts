@@ -8,13 +8,12 @@ const CLOSED_ACTION_LIFECYCLES = ["CLOSED_VERIFIED", "NO_ACTION_REQUIRED", "SUST
 
 export async function getMyWorkData(context: AuthorisedContext) {
   const db = createDb();
-  const now = new Date();
   const authorisedLocationIds = context.locations.map(({ id }) => id);
   const locationScope = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: authorisedLocationIds } }] };
   const strictLocationScope = context.allLocations ? {} : { locationId: { in: authorisedLocationIds } };
 
   try {
-    const [actions, risks, audits, policies, evidence, meetings, decisions, obligations, dependencies, inspection, calendar, registers, escalations, delegations] = await Promise.all([
+    const [actions, risks, audits, policies, evidence, meetings, decisions, obligations, dependencies, inspection, calendar, registers, escalations] = await Promise.all([
       db.action.findMany({
         where: { organisationId: context.organisation.id, ownerId: context.user.id, archivedAt: null, status: { notIn: ["CANCELLED", "ARCHIVED"] }, lifecycleStatus: { notIn: [...CLOSED_ACTION_LIFECYCLES] }, ...locationScope },
         select: { id: true, reference: true, title: true, description: true, dueDate: true, priority: true, status: true, lifecycleStatus: true, location: { select: { name: true } }, client: { select: { firstName: true, lastName: true, preferredName: true } } },
@@ -67,11 +66,6 @@ export async function getMyWorkData(context: AuthorisedContext) {
         where: { organisationId: context.organisation.id, assignedToId: context.user.id, status: { in: ["OPEN", "ACKNOWLEDGED"] } },
         select: { id: true, reference: true, questionRedacted: true, priority: true, reasonCode: true, status: true },
       }),
-      db.managementDelegation.findMany({
-        where: { organisationId: context.organisation.id, delegateId: context.membershipId, status: "ACTIVE", endsAt: { gte: now } },
-        select: { id: true, title: true, responsibilities: true, startsAt: true, endsAt: true, reason: true, location: { select: { name: true } }, delegator: { select: { user: { select: { name: true } } } } },
-        orderBy: { endsAt: "asc" },
-      }),
     ]);
 
     const items: MyWorkItem[] = [
@@ -90,7 +84,7 @@ export async function getMyWorkData(context: AuthorisedContext) {
       ...escalations.map((item) => work({ key: `ESCALATION:${item.id}`, source: "Management escalation", reference: item.reference, title: item.questionRedacted, detail: label(item.reasonCode), href: "/abi-assurance", targetAt: null, priority: item.priority === "IMMEDIATE" ? "CRITICAL" : item.priority === "HIGH" ? "HIGH" : "MEDIUM", state: item.status, locationName: "Organisation-wide" })),
     ];
 
-    return { items, delegations };
+    return { items };
   } finally {
     await db.$disconnect();
   }

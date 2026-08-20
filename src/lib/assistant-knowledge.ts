@@ -189,6 +189,11 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
     link("Show overdue work", "/my-work?view=OVERDUE", ["overdue", "late"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT]),
     link("Show work without targets", "/my-work?view=NEEDS_TARGET", ["missing target", "no date"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT]),
   ]),
+  topic("Management Command", "/management", ["management command", "owner overview", "registered manager view", "location command", "delegate", "delegation", "oversight"], "Management Command separates provider assurance, Registered Manager assignment control and location accountability so the same queue is not repeated under different labels.", "Use Owner Overview for organisation-wide exceptions and oversight gaps. Use Registered Manager to assign governance actions and record responsibility cover. Use Location Command to examine owners, targets, delegations and exceptions for one service. Personal delivery belongs in My Work. These are governance controls, not rota, visit or routine care-task management.", [PERMISSIONS.GOVERNANCE_VIEW], [
+    link("Open Owner Overview", "/management?view=OWNER&focus=ALL", ["owner", "provider", "overview"], [PERMISSIONS.GOVERNANCE_VIEW]),
+    link("Open Registered Manager control", "/management?view=REGISTERED_MANAGER&focus=ALL", ["registered manager", "assign", "delegate"], [PERMISSIONS.GOVERNANCE_VIEW]),
+    link("Open Location Command", "/management?view=LOCATION&focus=ALL", ["location", "service"], [PERMISSIONS.GOVERNANCE_VIEW]),
+  ]),
   topic("Action Tracker", "/actions", ["action", "actions", "task", "tasks", "due", "overdue", "closure"], "Action Tracker manages accountable improvement actions through evidence-based closure.", "Create or assign an action, add progress updates, change status, attach evidence, obtain verification and use the action report for oversight.", [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT], [
     link("Open Action Tracker", "/actions", ["view", "list", "assigned"], [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT]),
     link("Create an action", "/actions/new", ["add", "create", "new", "assign"], [PERMISSIONS.ACTIONS_MANAGE]),
@@ -317,6 +322,10 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/my-work": {
     hsc: "a personal worklist helps each authorised worker see the care, safety and governance work assigned to them, with clear priorities, targets and direct access to the source record.",
     cqc: "clear ownership, timely follow-up and evidence-backed completion can support well-led assurance, but a worklist is only useful when assignments are proportionate, staff are competent and managers verify outcomes rather than relying on task status alone.",
+  },
+  "/management": {
+    hsc: "clear separation between provider oversight, Registered Manager assignment control, location accountability and personal delivery helps governance work remain visible without confusing it with daily care delivery.",
+    cqc: "defined ownership, proportionate delegation, escalation, evidence and verified closure can support well-led assurance. The command view itself is not proof of effective governance unless actions are completed and improve outcomes for people.",
   },
   "/workforce": {
     hsc: "safer recruitment, current training, observed competence, supervision and appraisal help services ensure that staff are suitable, supported and able to deliver safe care.",

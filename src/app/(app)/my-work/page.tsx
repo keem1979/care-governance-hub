@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, Flag, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, Flag } from "lucide-react";
 import { requireAnyPermission } from "@/lib/auth/dal";
-import { responsibilityLabel } from "@/lib/management-intelligence";
 import { filterMyWork, MY_WORK_VIEWS, myWorkUrgency, myWorkView, myWorkViewLabel, type MyWorkPriority, type MyWorkUrgency } from "@/lib/my-work";
 import { getMyWorkData } from "@/lib/my-work-data";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -11,7 +10,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
   const query = await searchParams;
   const view = myWorkView(query.view);
   const now = new Date();
-  const { items, delegations } = await getMyWorkData(context);
+  const { items } = await getMyWorkData(context);
   const visible = filterMyWork(items, view, now);
   const counts = Object.fromEntries(MY_WORK_VIEWS.map((value) => [value, value === "ALL" ? items.length : items.filter((item) => myWorkUrgency(item.targetAt, now) === value).length])) as Record<(typeof MY_WORK_VIEWS)[number], number>;
 
@@ -19,7 +18,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
     <header className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800 p-6 text-white shadow-lg sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="max-w-3xl"><p className="text-xs font-black uppercase tracking-[.2em] text-emerald-200">Personal execution workspace</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">My Work</h1><p className="mt-3 leading-7 text-emerald-50">Everything assigned to {context.user.name}, ordered by urgency and target date. Open the source record to update progress, add evidence or complete the work.</p></div>
-        <div className="min-w-56 rounded-2xl border border-white/15 bg-white/10 p-4"><p className="text-xs uppercase tracking-wide text-emerald-200">Accountable role</p><p className="mt-1 font-bold">{context.role.name}</p><p className="mt-2 text-sm text-emerald-100">{delegations.length ? `${delegations.length} active delegated responsibility record${delegations.length === 1 ? "" : "s"}` : "No temporary responsibility cover recorded"}</p></div>
+        <div className="min-w-56 rounded-2xl border border-white/15 bg-white/10 p-4"><p className="text-xs uppercase tracking-wide text-emerald-200">Accountable role</p><p className="mt-1 font-bold">{context.role.name}</p><p className="mt-2 text-sm text-emerald-100">Only work personally owned by this login appears here.</p></div>
       </div>
     </header>
 
@@ -48,7 +47,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
       </div>
     </section>
 
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800"><ShieldCheck size={20}/></span><div><h2 className="text-xl font-black">Temporary responsibility cover</h2><p className="mt-1 text-sm leading-6 text-slate-600">This records areas you are covering for a manager. It does not create a deliverable by itself; each specific job should also be assigned above with a measurable target date.</p></div></div><div className="mt-5 grid gap-3 md:grid-cols-2">{delegations.length ? delegations.map((item) => <article key={item.id} className="rounded-2xl border border-slate-200 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-black">{item.title}</h3><p className="text-sm text-slate-600">Assigned by {item.delegator.user.name}</p></div><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-800">Active cover</span></div><p className="mt-3 text-sm">{item.reason}</p><p className="mt-2 text-xs text-slate-500">{item.location?.name ?? "Organisation-wide"} · {date(item.startsAt)} to {date(item.endsAt)}</p><div className="mt-3 flex flex-wrap gap-1.5">{item.responsibilities.map((value) => <span key={value} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold">{responsibilityLabel(value)}</span>)}</div></article>) : <p className="rounded-2xl border border-dashed p-5 text-sm text-slate-500">No temporary management responsibilities are currently delegated to you.</p>}</div></section>
   </main>;
 }
 
