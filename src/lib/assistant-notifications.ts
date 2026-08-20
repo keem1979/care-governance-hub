@@ -16,6 +16,7 @@ export type PendingActionNotification = {
   status: string;
   dueDate: string;
   isOverdue: boolean;
+  requiresManagementEscalation?: boolean;
   href: string;
 };
 
@@ -32,6 +33,13 @@ export type WorkforceNotification = {
 };
 
 export const ATOM_UPDATES = [
+  {
+    id: "configurable-delivery",
+    title: "Controlled implementation and configuration",
+    summary:
+      "Test organisation settings in a sandbox, evidence onboarding readiness and require independent approval before live promotion.",
+    href: "/implementation",
+  },
   {
     id: "workforce-quality",
     title: "Workforce competency and care-quality controls",

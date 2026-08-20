@@ -8,6 +8,7 @@ import {
   PENDING_ACTION_STATUSES,
   type PendingActionNotification,
 } from "@/lib/assistant-notifications";
+import { DEFAULT_CONFIGURATION, effectiveNotificationPreferences, parseConfigurationSettings, type NotificationCategoryKey, type NotificationCadenceKey } from "@/lib/configurable-delivery";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 const priorities = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
@@ -23,11 +24,18 @@ export async function GET() {
       archivedAt: null,
     };
     const now = new Date();
-    const inThirtyDays = new Date(now.getTime() + 30 * 86_400_000);
-    const canSeeActions = canReceiveActionNotifications(context.permissions);
+    const [savedPreferences, publishedConfiguration] = await Promise.all([
+      db.notificationPreference.findMany({ where: { organisationId: context.organisation.id, membershipId: context.membershipId }, select: { category: true, enabled: true, cadence: true } }),
+      db.tenantConfigurationVersion.findFirst({ where: { organisationId: context.organisation.id, status: "PUBLISHED" }, orderBy: { versionNumber: "desc" }, select: { settings: true } }),
+    ]);
+    const configuration = publishedConfiguration ? parseConfigurationSettings(publishedConfiguration.settings) : DEFAULT_CONFIGURATION;
+    const reviewHorizon = new Date(now.getTime() + configuration.reviewLeadDays * 86_400_000);
+    const managementEscalationThreshold = new Date(now.getTime() - configuration.actionEscalationDays * 86_400_000);
+    const preferenceMap = new Map(effectiveNotificationPreferences(savedPreferences as Array<{ category: NotificationCategoryKey; enabled: boolean; cadence: NotificationCadenceKey }>, configuration.defaultDigestCadence).map((item) => [item.category, item]));
+    const canSeeActions = canReceiveActionNotifications(context.permissions) && Boolean(preferenceMap.get("ACTION_REMINDERS")?.enabled);
     const canSeeWorkforce =
-      hasPermission(context.permissions, PERMISSIONS.WORKFORCE_VIEW) ||
-      hasPermission(context.permissions, PERMISSIONS.WORKFORCE_MANAGE);
+      (hasPermission(context.permissions, PERMISSIONS.WORKFORCE_VIEW) ||
+      hasPermission(context.permissions, PERMISSIONS.WORKFORCE_MANAGE)) && Boolean(preferenceMap.get("WORKFORCE_EXPIRY")?.enabled);
     const actionResult = canSeeActions
       ? await Promise.all([
           db.action.count({ where: actionWhere }),
@@ -41,6 +49,7 @@ export async function GET() {
                 priority: true,
                 status: true,
                 dueDate: true,
+                escalationRequired: true,
               },
               orderBy: { dueDate: "asc" },
               take: 8,
@@ -62,6 +71,7 @@ export async function GET() {
             action.status === "OVERDUE" ||
             (action.dueDate < now &&
               !["COMPLETED", "CANCELLED", "ARCHIVED"].includes(action.status)),
+          requiresManagementEscalation: action.escalationRequired || action.dueDate <= managementEscalationThreshold,
           href: `/actions/${action.id}`,
         }),
       ),
@@ -69,8 +79,8 @@ export async function GET() {
     const workforceWhere = {
       organisationId: context.organisation.id,
       OR: [
-        { expiryDate: { lte: inThirtyDays } },
-        { nextDueDate: { lte: inThirtyDays } },
+        { expiryDate: { lte: reviewHorizon } },
+        { nextDueDate: { lte: reviewHorizon } },
         { outcome: { in: ["PENDING", "DEVELOPMENT_REQUIRED"] as never[] } },
       ],
       staffMember: {
@@ -138,7 +148,7 @@ export async function GET() {
         actions,
         workforceAlertCount,
         workforceAlerts,
-        updates: ATOM_UPDATES,
+        updates: preferenceMap.get("PRODUCT_UPDATES")?.enabled ? ATOM_UPDATES : [],
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );

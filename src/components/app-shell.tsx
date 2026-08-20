@@ -22,6 +22,7 @@ import {
   NotebookTabs,
   ScrollText,
   Settings,
+  SlidersHorizontal,
   ShieldEllipsis,
   SignpostBig,
   UsersRound,
@@ -71,6 +72,7 @@ const navigation = [
   { href: "/activity", label: "Activity Log", icon: Activity, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
   { href: "/security", label: "My Security", icon: KeyRound, anyOf: Object.values(PERMISSIONS) },
   { href: "/assurance", label: "Security & Integrations", icon: PlugZap, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
+  { href: "/implementation", label: "Implementation Centre", icon: SlidersHorizontal, anyOf: [PERMISSIONS.ORGANISATION_MANAGE] },
   { href: "/settings", label: "Settings", icon: Settings, anyOf: [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE] },
 ] as const;
 
@@ -96,6 +98,7 @@ const moduleConnections: Record<string, {
   "data-quality": { source: "Potential identity matches and material-change dependencies requiring human review", links: [{ href: "/clients", label: "Client records" }, { href: "/care-plans", label: "Care plans" }, { href: "/activity?recordType=DataQuality", label: "Review history" }] },
   "connected-governance": { source: "Approved integrations, staged imports, explicit source authority, quarantined events and reviewed offline observations", links: [{ href: "/data-quality", label: "Reconciliation queue" }, { href: "/offline-capture", label: "Offline capture" }, { href: "/activity?recordType=IntegrationConnection", label: "Connection history" }] },
   "abi-assurance": { source: "Audited Abi classifications, cited sources, feedback and management escalations", links: [{ href: "/activity?recordType=AssistantEscalation", label: "Escalation history" }, { href: "/assurance", label: "Security assurance" }, { href: "/inspection", label: "Inspection guidance" }] },
+  implementation: { source: "Versioned tenant configuration, onboarding evidence, notification preferences and privacy-safe adoption metadata", links: [{ href: "/settings", label: "Organisation settings" }, { href: "/activity?recordType=ConfigurationPromotion", label: "Promotion history" }, { href: "/assurance", label: "Security assurance" }] },
   meetings: { source: "Agendas, attendance, decisions, approved minutes and linked actions", links: [{ href: "/actions", label: "Meeting actions" }, { href: "/calendar", label: "Meeting dates" }, { href: "/reports/monthly-governance", label: "Governance report" }] },
   calendar: { source: "Manual deadlines plus policy, workforce and governance due dates", links: [{ href: "/policies", label: "Policy reviews" }, { href: "/workforce", label: "Workforce checks" }, { href: "/dashboard", label: "Upcoming deadlines" }] },
   kpis: { source: "Registers, actions, workforce, audits, policies and verified manager figures", links: [{ href: "/kpis/returns", label: "Return history" }, { href: "/reports/kpi", label: "KPI report" }, { href: "/dashboard", label: "Dashboard summary" }] },

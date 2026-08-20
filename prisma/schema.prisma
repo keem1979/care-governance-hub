@@ -778,6 +778,56 @@ enum StaffLeaveStatus {
   CANCELLED
 }
 
+enum TenantConfigurationStatus {
+  DRAFT
+  SUBMITTED
+  PUBLISHED
+  SUPERSEDED
+  REJECTED
+}
+
+enum ConfigurationPromotionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationCategory {
+  CRITICAL_SAFETY
+  ACTION_REMINDERS
+  WORKFORCE_EXPIRY
+  GOVERNANCE_DEADLINES
+  ASSISTANT_ESCALATIONS
+  PRODUCT_UPDATES
+}
+
+enum NotificationCadence {
+  IMMEDIATE
+  DAILY
+  WEEKLY
+}
+
+enum ImplementationStage {
+  SETUP
+  SANDBOX
+  PILOT
+  READY
+  LIVE
+}
+
+enum ImplementationItemStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETE
+  BLOCKED
+}
+
+enum AdoptionEventOutcome {
+  SUCCESS
+  FAILURE
+  ABANDONED
+}
+
 model Organisation {
   id                       String    @id @default(uuid()) @db.Uuid
   name                     String
@@ -853,6 +903,11 @@ model Organisation {
   assistantInteractions AIInteractionLog[]
   assistantFeedback AssistantFeedback[]
   assistantEscalations AssistantEscalation[]
+  configurationVersions TenantConfigurationVersion[]
+  configurationPromotions ConfigurationPromotion[]
+  notificationPreferences NotificationPreference[]
+  implementationPlan ImplementationPlan?
+  adoptionEvents ProductAdoptionEvent[]
 }
 
 model ServiceLocation {
@@ -1002,6 +1057,15 @@ model User {
   assistantEscalationsRaised AssistantEscalation[] @relation("AssistantEscalationRaiser")
   assistantEscalationsAssigned AssistantEscalation[] @relation("AssistantEscalationAssignee")
   assistantEscalationsResolved AssistantEscalation[] @relation("AssistantEscalationResolver")
+  configurationVersionsCreated TenantConfigurationVersion[] @relation("TenantConfigurationCreator")
+  configurationVersionsApproved TenantConfigurationVersion[] @relation("TenantConfigurationApprover")
+  configurationPromotionsRequested ConfigurationPromotion[] @relation("ConfigurationPromotionRequester")
+  configurationPromotionsReviewed ConfigurationPromotion[] @relation("ConfigurationPromotionReviewer")
+  notificationPreferencesUpdated NotificationPreference[] @relation("NotificationPreferenceUpdater")
+  implementationPlansOwned ImplementationPlan[] @relation("ImplementationPlanOwner")
+  implementationPlansUpdated ImplementationPlan[] @relation("ImplementationPlanUpdater")
+  implementationItemsCompleted ImplementationChecklistItem[] @relation("ImplementationItemCompleter")
+  adoptionEvents ProductAdoptionEvent[]
 }
 
 model Policy {
@@ -2782,6 +2846,7 @@ model OrganisationMembership {
   permissions   MembershipPermission[]
   delegationsGiven    ManagementDelegation[] @relation("ManagementDelegator")
   delegationsReceived ManagementDelegation[] @relation("ManagementDelegate")
+  notificationPreferences NotificationPreference[]
 
   @@unique([organisationId, userId])
   @@index([userId, status])
@@ -2885,6 +2950,126 @@ model AuthRateLimit {
   updatedAt DateTime @updatedAt
 
   @@index([resetAt])
+}
+
+model TenantConfigurationVersion {
+  id             String                    @id @default(uuid()) @db.Uuid
+  organisationId String                    @db.Uuid
+  versionNumber  Int
+  status         TenantConfigurationStatus @default(DRAFT)
+  settings       Json
+  changeSummary  String
+  createdById    String                    @db.Uuid
+  submittedAt    DateTime?
+  approvedById   String?                   @db.Uuid
+  publishedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  organisation Organisation           @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  createdBy     User                   @relation("TenantConfigurationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy    User?                  @relation("TenantConfigurationApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  promotion     ConfigurationPromotion?
+
+  @@unique([organisationId, versionNumber])
+  @@index([organisationId, status, createdAt])
+}
+
+model ConfigurationPromotion {
+  id                     String                       @id @default(uuid()) @db.Uuid
+  organisationId         String                       @db.Uuid
+  configurationVersionId String                       @unique @db.Uuid
+  status                 ConfigurationPromotionStatus @default(PENDING)
+  readinessSnapshot      Json
+  requestedById          String                       @db.Uuid
+  reviewedById           String?                      @db.Uuid
+  requestedAt            DateTime                     @default(now())
+  reviewedAt             DateTime?
+  reviewComment          String?
+
+  organisation        Organisation              @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  configurationVersion TenantConfigurationVersion @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  requestedBy         User                      @relation("ConfigurationPromotionRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  reviewedBy          User?                     @relation("ConfigurationPromotionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, status, requestedAt])
+}
+
+model NotificationPreference {
+  id             String               @id @default(uuid()) @db.Uuid
+  organisationId String               @db.Uuid
+  membershipId   String               @db.Uuid
+  category       NotificationCategory
+  enabled        Boolean              @default(true)
+  cadence        NotificationCadence  @default(DAILY)
+  updatedById    String               @db.Uuid
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organisation Organisation          @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  membership   OrganisationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  updatedBy    User                  @relation("NotificationPreferenceUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@unique([membershipId, category])
+  @@index([organisationId, category, enabled])
+}
+
+model ImplementationPlan {
+  id             String              @id @default(uuid()) @db.Uuid
+  organisationId String              @unique @db.Uuid
+  stage          ImplementationStage @default(SETUP)
+  ownerId        String              @db.Uuid
+  targetLiveDate DateTime?
+  updatedById    String              @db.Uuid
+  startedAt      DateTime            @default(now())
+  readyAt        DateTime?
+  liveAt         DateTime?
+  updatedAt      DateTime            @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  owner        User         @relation("ImplementationPlanOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  updatedBy    User         @relation("ImplementationPlanUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  items        ImplementationChecklistItem[]
+
+  @@index([stage, targetLiveDate])
+}
+
+model ImplementationChecklistItem {
+  id              String                   @id @default(uuid()) @db.Uuid
+  planId          String                   @db.Uuid
+  key             String
+  title           String
+  description     String
+  required        Boolean                  @default(true)
+  status          ImplementationItemStatus @default(NOT_STARTED)
+  evidenceNote    String?
+  completedById   String?                  @db.Uuid
+  completedAt     DateTime?
+  updatedAt       DateTime                 @updatedAt
+
+  plan        ImplementationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  completedBy User?              @relation("ImplementationItemCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@unique([planId, key])
+  @@index([planId, required, status])
+}
+
+model ProductAdoptionEvent {
+  id             String               @id @default(uuid()) @db.Uuid
+  organisationId String               @db.Uuid
+  userId         String               @db.Uuid
+  moduleKey      String
+  eventName      String
+  outcome        AdoptionEventOutcome @default(SUCCESS)
+  durationMs     Int?
+  createdAt      DateTime             @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, createdAt])
+  @@index([organisationId, moduleKey, eventName, outcome, createdAt])
+  @@index([userId, createdAt])
 }
 
 model ActivityLog {

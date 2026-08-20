@@ -148,3 +148,12 @@ remain explicitly scoped; no evidence or decision is shared between tenants.
 - `AssistantFeedback` links helpful, not-helpful or unsafe feedback to the exact interaction and user. Feedback comments are redacted before storage.
 - `AssistantEscalation` is created automatically for uncertain and prohibited questions. It retains a controlled reference, priority, redacted question, raised-by and assigned management identities, decision response and chronology.
 - Raw questions are not persisted. The redaction layer removes email addresses, phone numbers, governed record references, UUIDs and long identifiers before the management audit record is written.
+
+# Phase 10 configurable-delivery extension
+
+- `TenantConfigurationVersion` is an immutable numbered configuration snapshot once submitted. Draft withdrawal is retained as rejected history rather than deleted.
+- `ConfigurationPromotion` separates the person requesting a live change from the authorised manager reviewing it and preserves the captured readiness evidence.
+- Safety settings are a validated part of every configuration snapshot. Tenant isolation, evidence-backed high-risk closure, independent verification, human promotion approval and Abi uncertainty escalation cannot be disabled.
+- `ImplementationPlan` and `ImplementationChecklistItem` retain accountable ownership, target date, status, completion evidence and go-live chronology.
+- `NotificationPreference` belongs to one organisation membership. Critical-safety notifications remain enabled and immediate regardless of saved input.
+- `ProductAdoptionEvent` contains only tenant-scoped workflow metadata: module, allow-listed event name, outcome, optional duration and attributable user. It must never contain form narrative, care content, document text or unnecessary personal data.

@@ -249,6 +249,9 @@ export const ASSISTANT_TOPICS: AssistantTopic[] = [
   topic("Abi Assurance", "/abi-assurance", ["abi", "assistant", "source", "citation", "confidence", "uncertain", "prohibited", "feedback", "escalation"], "Abi Assurance shows how every guidance answer is classified, cited, audited and escalated when QCGMS cannot support a safe answer.", "Review known, uncertain and prohibited answers, inspect the sources used, monitor user feedback and record management decisions for escalated questions.", view, [
     link("Open Abi Assurance", "/abi-assurance", ["open", "view", "review", "escalation"], view),
   ]),
+  topic("Implementation Centre", "/implementation", ["implementation", "onboarding", "sandbox", "configuration", "promotion", "go live", "notification preference", "adoption analytics"], "Implementation Centre controls versioned organisation settings, onboarding evidence, sandbox testing, independent live promotion and privacy-safe adoption measures.", "Start the controlled onboarding checklist, create a sandbox configuration and record evidence for every required item. A different authorised manager must approve a safe version before it becomes live.", [PERMISSIONS.ORGANISATION_MANAGE], [
+    link("Open Implementation Centre", "/implementation", ["open", "view", "configure", "onboarding"], [PERMISSIONS.ORGANISATION_MANAGE]),
+  ]),
   topic("Settings", "/settings", ["settings", "organisation", "location", "locations", "user", "users", "role", "roles", "permission", "access"], "Settings manages organisation details, service locations, users, roles and location access.", "Authorised administrators can add or archive locations, add users, change roles or account status and review central role permissions. Safeguards prevent self-lockout and removal of the last owner.", [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE], [
     link("Open Settings", "/settings", ["view", "manage", "open"], [PERMISSIONS.ORGANISATION_MANAGE, PERMISSIONS.MEMBERS_MANAGE, PERMISSIONS.LOCATIONS_MANAGE]),
   ]),
@@ -362,6 +365,10 @@ export const MODULE_CONTEXTS: Record<string, ModuleContext> = {
   "/settings": {
     hsc: "settings define organisational accountability, location scope and least-privilege access to sensitive governance information.",
     cqc: "clear responsibilities, controlled access and traceable permission changes can support well-led and good-governance evidence, including confidentiality and information security.",
+  },
+  "/implementation": {
+    hsc: "controlled implementation keeps organisation configuration, safety defaults, onboarding evidence and live promotion accountable and traceable.",
+    cqc: "clear governance, access control, evidence of staff preparation and managed change can support well-led assurance; configuration status does not prove compliance or predict a rating.",
   },
 };
 

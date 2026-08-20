@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-20 — Phase 10 configurable delivery
+
+- Added the Implementation Centre for controlled onboarding, sandbox configuration, independent promotion and go-live evidence.
+- Added versioned tenant configuration snapshots with server-enforced safety controls that cannot be disabled.
+- Added protected notification preferences and connected action, workforce and product-update visibility to the current user’s choices.
+- Added evidence-bearing onboarding checks, implementation ownership, target dates and staged readiness.
+- Added tenant-scoped adoption metadata and management measures without copying confidential narrative or personal care data.
+- Added complete audit history for configuration, promotion, notification and onboarding decisions.
+
 ## 2026-08-20 — Phase 9 trustworthy Abi
 
 - Added known, uncertain, prohibited, navigation, greeting and access-denied answer classes with visible confidence.
