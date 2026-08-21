@@ -8,7 +8,7 @@ export default async function ActionReportPage() {
   const context = await requirePermission(PERMISSIONS.REPORTS_EXPORT);
   const db = createDb();
   try {
-    const actions = await db.action.findMany({ where: actionScopeWhere(context), include: { owner: { select: { name: true } }, oversightOwner: { select: { name: true } }, client: { select: { firstName: true, lastName: true, clientReference: true } }, location: { select: { name: true } }, _count: { select: { evidenceLinks: true } } }, orderBy: [{ dueDate: "asc" }, { priority: "desc" }] });
+    const actions = await db.action.findMany({ where: actionScopeWhere(context), include: { owner: { select: { name: true } }, oversightOwner: { select: { name: true } }, client: { select: { firstName: true, lastName: true, clientReference: true } }, location: { select: { name: true } }, _count: { select: { evidenceLinks: { where: { retiredAt: null } } } } }, orderBy: [{ dueDate: "asc" }, { priority: "desc" }] });
     return <main className="mx-auto max-w-6xl bg-white p-8 text-slate-900 print:p-0">
       <header className="flex items-start justify-between border-b-4 border-emerald-800 pb-5"><div><OrganisationDocumentBrand name={context.organisation.name} hasLogo={Boolean(context.organisation.policyLogoStorageKey)} /><h1 className="mt-2 text-4xl font-bold">Improvement Action Report</h1><p className="mt-1 text-slate-600">Accountability, measurable outcomes and evidence-based closure.</p></div><p className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white print:hidden">Press Ctrl+P to save PDF</p></header>
       <p className="my-5 text-sm text-slate-500">{actions.length} actions · Generated {new Date().toLocaleDateString("en-GB")}</p>

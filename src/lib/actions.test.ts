@@ -10,7 +10,7 @@ describe("action workflow",()=>{
   it("calculates remaining days",()=>expect(actionDaysRemaining("2026-07-28",new Date("2026-07-25T00:00:00Z"))).toBe(3));
   it("sets completed progress to 100",()=>expect(actionProgressValue("COMPLETED",40)).toBe(100));
   it("identifies an evidence gap before closure",()=>expect(actionReadiness({status:"IN_PROGRESS",progressPercent:100,evidenceRequired:true,evidenceCount:0})).toBe("NEEDS_EVIDENCE"));
-  it("identifies independently verified readiness",()=>expect(actionReadiness({status:"AWAITING_VERIFICATION",progressPercent:100,evidenceRequired:true,evidenceCount:1,verifiedById:"manager",verificationDate:new Date()})).toBe("READY_TO_CLOSE"));
+  it("keeps verified work in assurance review until a separate closure decision",()=>expect(actionReadiness({status:"AWAITING_VERIFICATION",progressPercent:100,evidenceRequired:true,evidenceCount:1,verifiedById:"manager",verificationDate:new Date()})).toBe("ASSURANCE_REVIEW_REQUIRED"));
   it("covers care plans and observed workforce practice as action sources",()=>expect(ACTION_SOURCE_TYPES).toEqual(expect.arrayContaining(["CARE_PLAN","SPOT_CHECK","SUPERVISION","APPRAISAL","COMPETENCY","TRAINING"])));
   it("covers regulated and operational responsibility areas",()=>expect(ACTION_CATEGORIES).toEqual(expect.arrayContaining(["Care planning and reviews","Assessments and changing needs","Spot checks and observed practice","Audits and inspection readiness","Notifications and statutory reporting"])));
 });

@@ -1,6 +1,6 @@
 import { hash } from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient } from "../src/generated/prisma-node/client";
 import {
   PERMISSIONS,
   ROLE_KEYS,

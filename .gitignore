@@ -17,8 +17,10 @@
 
 # next.js
 /.next/
+/.next-release-gate*/
 /out/
 /src/generated/prisma/
+/src/generated/prisma-node/
 /dist/
 /.wrangler/
 

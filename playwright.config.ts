@@ -30,9 +30,10 @@ export default defineConfig({
     // Launch Next directly so Playwright owns the actual server process. On
     // Windows, launching through npm can orphan Next worker processes and leave
     // an otherwise completed E2E run hanging during shutdown.
-    command: `node node_modules/next/dist/bin/next dev -p ${port}`,
+    command: "node scripts/playwright-web-server.mjs",
     url: `${baseURL}/login`,
     reuseExistingServer: !process.env.CI,
+    gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
     env: {
       ...process.env,
       DATABASE_URL:

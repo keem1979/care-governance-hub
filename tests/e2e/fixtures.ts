@@ -4,6 +4,7 @@ export const E2E_USERS = {
   registeredManager: { name: "Blair Fictional RM", email: "e2e-rm@release-gate.invalid", password: "E2E-Blair-Only!2026", roleKey: "registered-manager", mfaSecret: "KRSXG5DSNFXGOIDBNZQW2ZLBNZQW2ZLB" },
   nominatedIndividual: { name: "Casey Fictional Nominated Individual", email: "e2e-ni@release-gate.invalid", password: "E2E-Casey-Only!2026", roleKey: "nominated-individual", mfaSecret: "MFRGGZDFMZTWQ2LKMFRGGZDFMZTWQ2LK" },
   viewer: { name: "Drew Fictional Viewer", email: "e2e-viewer@release-gate.invalid", password: "E2E-Drew-Only!2026", roleKey: "read-only-viewer", mfaSecret: "ONSWG4TFOQXW4ZJAN5XGK3LQN5XGK3LQ" },
+  actionAdministrator: { name: "Quinn Fictional Action Administrator", email: "e2e-action-admin@release-gate.invalid", password: "E2E-Quinn-Only!2026", roleKey: "auditor-consultant", mfaSecret: "KRUGS4ZANFZSAYJAKRUGS4ZANFZSAYJA" },
   locationRestricted: { name: "Ellis Fictional Location RM", email: "e2e-location-rm@release-gate.invalid", password: "E2E-Ellis-Only!2026", roleKey: "registered-manager", mfaSecret: "ORSXG5AAMV4GC3LQORSXG5AAMV4GC3LQ", allLocations: false },
   otherTenant: { name: "Finley Fictional Other Tenant RM", email: "e2e-other-rm@release-gate.invalid", password: "E2E-Finley-Only!2026", roleKey: "registered-manager", mfaSecret: "MZXW6YTBOIMZXW6YTBOIMZXW6YTBOIMZ", tenant: "other" },
 } as const;

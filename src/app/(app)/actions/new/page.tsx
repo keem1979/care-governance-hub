@@ -7,6 +7,7 @@ import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS, ROLE_KEYS } from "@/lib/permissions";
 import { riskActionPrefill } from "@/lib/risk-action-handoff";
+import { auditFindingActionPrefill } from "@/lib/audit-action-handoff";
 import { riskScopeWhere } from "@/lib/risks";
 
 const OVERSIGHT_ROLES = new Set<string>([
@@ -21,7 +22,7 @@ export default async function NewActionPage({ searchParams }: { searchParams: Pr
   const query = await searchParams;
   const db = createDb();
   try {
-    const [memberships, clients, evidence, sources, sourceRisk] = await Promise.all([
+    const [memberships, clients, evidence, sources, sourceRisk, sourceAuditFinding] = await Promise.all([
       db.organisationMembership.findMany({
         where: { organisationId: context.organisation.id, status: "ACTIVE" },
         select: { user: { select: { id: true, name: true } }, role: { select: { key: true, name: true } } },
@@ -36,12 +37,14 @@ export default async function NewActionPage({ searchParams }: { searchParams: Pr
       db.evidence.findMany({ where: { ...evidenceScopeWhere(context), status: "ACTIVE" }, select: { id: true, title: true }, orderBy: { title: "asc" } }),
       listActionSources(db, context),
       query.sourceType === "RISK" && query.sourceId ? db.risk.findFirst({ where: { id: query.sourceId, ...riskScopeWhere(context), archivedAt: null }, select: { reference: true, title: true, category: true, furtherControls: true, locationId: true, ownerId: true, targetDate: true, residualLevel: true, residualScore: true, targetScore: true, controlAssurance: true } }) : null,
+      query.sourceType === "AUDIT" && query.sourceId ? db.auditFinding.findFirst({ where: { id: query.sourceId, audit: auditScope(context) }, select: { id: true, severity: true, summary: true, recommendation: true, immediateControl: true, criterionKeySnapshot: true, actionId: true, audit: { select: { title: true, locationId: true, reviewDate: true, auditorId: true } } } }) : null,
     ]);
     const requested = query.sourceType && query.sourceId ? `${query.sourceType}:${query.sourceId}` : undefined;
     const preselected = requested && sources.some((item) => `${item.type}:${item.id}` === requested) ? requested : undefined;
     const oversight = memberships.filter((item) => OVERSIGHT_ROLES.has(item.role.key));
     const oversightOptions = (oversight.length ? oversight : memberships).map((item) => ({ id: item.user.id, name: `${item.user.name} · ${item.role.name}` }));
-    const prefill = sourceRisk ? riskActionPrefill(sourceRisk, context.user.id, new Set(oversightOptions.map(({ id }) => id))) : undefined;
+    const oversightIds = new Set(oversightOptions.map(({ id }) => id));
+    const prefill = sourceRisk ? riskActionPrefill(sourceRisk, context.user.id, oversightIds) : sourceAuditFinding ? auditFindingActionPrefill(sourceAuditFinding, context.user.id, oversightIds) : undefined;
 
     return <main className="mx-auto max-w-5xl space-y-5">
       <div><Link href="/actions" className="text-sm font-semibold text-emerald-700">← Action Tracker</Link><h1 className="mt-2 text-3xl font-bold">Create improvement action</h1><p className="mt-1 text-slate-600">Create one accountable record that remains connected to its source, delivery owner, Registered Manager oversight, evidence, calendar and reports.</p></div>
@@ -60,4 +63,8 @@ export default async function NewActionPage({ searchParams }: { searchParams: Pr
   } finally {
     await db.$disconnect();
   }
+}
+
+function auditScope(context: { organisation: { id: string }; allLocations: boolean; locations: { id: string }[] }) {
+  return { organisationId: context.organisation.id, ...(context.allLocations ? {} : { locationId: { in: context.locations.map(({ id }) => id) } }) };
 }

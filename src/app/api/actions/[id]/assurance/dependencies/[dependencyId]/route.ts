@@ -9,6 +9,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) } });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
+    if (action.closedAt) throw new Error("Closed Actions are read-only. Reopen the Action before changing a dependency.");
     const item = await db.externalDependency.findFirst({ where: { id: dependencyId, actionId: id, organisationId: context.organisation.id } });
     if (!item) return NextResponse.json({ error: "External dependency not found." }, { status: 404 });
     const intent = text(form, "intent"), summary = text(form, "summary");

@@ -9,44 +9,54 @@ export const runtime = "nodejs";
 
 function hasValidSetupRequest(request: Request) {
   const setupToken = process.env.E2E_SETUP_TOKEN;
+  const localReleaseGate = process.env.E2E_LOCAL_RELEASE_GATE === "1";
   return (
-    process.env.NODE_ENV !== "production" &&
+    (process.env.NODE_ENV !== "production" || localReleaseGate) &&
     Boolean(setupToken) &&
     request.headers.get("x-e2e-setup-token") === setupToken
   );
 }
 
 async function removeGeneratedFixtures(db: ReturnType<typeof createDb>, organisationId: string) {
+  const audits=await db.audit.findMany({where:{organisationId,title:{startsWith:"E2E-AUDIT-"}},select:{id:true,findings:{select:{actionId:true}}}}),auditIds=audits.map(item=>item.id),auditActionIds=audits.flatMap(item=>item.findings.map(finding=>finding.actionId).filter((id):id is string=>Boolean(id)));
   const risks = await db.risk.findMany({
     where: { organisationId, reference: { startsWith: "E2E-RSK-" } },
     select: { id: true },
   });
   const riskIds = risks.map(({ id }) => id);
-  if (riskIds.length === 0) return { risks: 0, actions: 0 };
 
   const actions = await db.action.findMany({
     where: {
       organisationId,
-      sourceType: "RISK",
-      sourceRecordId: { in: riskIds },
+      OR: [
+        { reference: { startsWith: "E2E-ACT-ASSURANCE-" } },
+        ...(riskIds.length ? [{ sourceType: "RISK" as const, sourceRecordId: { in: riskIds } }] : []),
+      ],
     },
     select: { id: true },
   });
-  const actionIds = actions.map(({ id }) => id);
-  const proposals=await db.riskClosureProposal.findMany({where:{organisationId,riskId:{in:riskIds}},select:{id:true}}),proposalIds=proposals.map(({id})=>id);
+  const actionIds = [...new Set([...actions.map(({ id }) => id),...auditActionIds])];
+  const proposals=riskIds.length?await db.riskClosureProposal.findMany({where:{organisationId,riskId:{in:riskIds}},select:{id:true}}):[],proposalIds=proposals.map(({id})=>id);
 
   await db.$transaction(async (transaction) => {
     await transaction.activityLog.deleteMany({
       where: {
         organisationId,
-        recordId: { in: [...riskIds, ...actionIds, ...proposalIds] },
+        recordId: { in: [...riskIds, ...actionIds, ...proposalIds,...auditIds] },
       },
     });
+    if(auditIds.length>0) {
+      // Re-audits are deliberately append-only and restrict parent deletion in the
+      // product. This test-only reset removes them explicitly before generated
+      // Audit fixtures; production code has no equivalent destructive route.
+      await transaction.auditReaudit.deleteMany({where:{finding:{auditId:{in:auditIds}}}});
+      await transaction.audit.deleteMany({where:{id:{in:auditIds},organisationId}});
+    }
     if (actionIds.length > 0) {
       await transaction.action.deleteMany({ where: { id: { in: actionIds }, organisationId } });
     }
     if(proposalIds.length){await transaction.riskClosureApproval.deleteMany({where:{proposalId:{in:proposalIds},organisationId}});await transaction.riskClosureProposalEvidence.deleteMany({where:{proposalId:{in:proposalIds}}});await transaction.riskClosureProposal.deleteMany({where:{id:{in:proposalIds},organisationId}})}
-    await transaction.risk.deleteMany({ where: { id: { in: riskIds }, organisationId } });
+    if (riskIds.length > 0) await transaction.risk.deleteMany({ where: { id: { in: riskIds }, organisationId } });
   });
 
   return { risks: riskIds.length, actions: actionIds.length };
@@ -74,7 +84,7 @@ export async function DELETE(request: Request) {
 
 export async function GET(request:Request){
   if(!hasValidSetupRequest(request))return NextResponse.json({error:"Not found."},{status:404});
-  const db=createDb();try{const risks=await db.risk.findMany({where:{reference:{startsWith:"E2E-RSK-SEC-"}},select:{id:true,reference:true,locationId:true},orderBy:{reference:"asc"}});return NextResponse.json({risks:Object.fromEntries(risks.map(risk=>[risk.reference,{id:risk.id,locationId:risk.locationId}]))})}finally{await db.$disconnect()}
+  const db=createDb();try{const [risks,actions,evidence,correctedEvidence,medicinesTemplate,guildford]=await Promise.all([db.risk.findMany({where:{reference:{startsWith:"E2E-RSK-SEC-"}},select:{id:true,reference:true,locationId:true,status:true,residualScore:true},orderBy:{reference:"asc"}}),db.action.findMany({where:{reference:{startsWith:"E2E-ACT-ASSURANCE-"}},select:{id:true,reference:true,locationId:true,status:true},orderBy:{reference:"asc"}}),db.evidence.findFirst({where:{sourceReference:"E2E-SRC-001"},select:{id:true}}),db.evidence.findFirst({where:{sourceReference:"E2E-CORRECTED-001"},select:{id:true}}),db.auditTemplate.findFirst({where:{key:"medicines-audit",isPublished:true},select:{id:true,key:true,name:true}}),db.serviceLocation.findFirst({where:{code:"GUILDFORD",organisation:{slug:"meadow-view-home-care"}},select:{id:true}})]);return NextResponse.json({risks:Object.fromEntries(risks.map(risk=>[risk.reference,{id:risk.id,locationId:risk.locationId,status:risk.status,residualScore:risk.residualScore}])),actions:Object.fromEntries(actions.map(action=>[action.reference,{id:action.id,locationId:action.locationId,status:action.status}])),evidenceId:evidence?.id??null,correctedEvidenceId:correctedEvidence?.id??null,audit:{template:medicinesTemplate,locationId:guildford?.id??null}})}finally{await db.$disconnect()}
 }
 
 export async function POST(request: Request) {
@@ -88,8 +98,9 @@ export async function POST(request: Request) {
   const e2eUsers=Array.isArray(configuredUsers)?configuredUsers:Object.values(configuredUsers);
 
   // This route is included in source so the real application runtime can create
-  // fixtures. It is unavailable unless Playwright explicitly enables it and is
-  // always unavailable in a production process.
+  // fixtures. It is unavailable unless Playwright explicitly enables it. A
+  // compiled local release gate additionally requires E2E_LOCAL_RELEASE_GATE,
+  // the setup token; deployments do not set either release-gate variable.
   if (
     !hasValidSetupRequest(request) ||
     !email ||
@@ -203,6 +214,10 @@ export async function POST(request: Request) {
     const existingUnverified=await db.evidence.findFirst({where:{organisationId:organisation.id,sourceReference:"E2E-UNVERIFIED-001"},select:{id:true}});
     const unverifiedEvidence=existingUnverified?await db.evidence.update({where:{id:existingUnverified.id},data:{title:"E2E unverified source",ownerId:user.id,uploadedById:user.id,status:"ACTIVE"},select:{id:true}}):await db.evidence.create({data:{organisationId:organisation.id,title:"E2E unverified source",description:"Fictional unverified Evidence for direct API security testing.",category:"Audits",evidenceType:"Record",ownerId:user.id,uploadedById:user.id,sourceType:"INTERNAL_RECORD",sourceName:"Release gate",sourceReference:"E2E-UNVERIFIED-001"},select:{id:true}});
     await db.evidenceVerification.deleteMany({where:{evidenceId:unverifiedEvidence.id}});
+    const existingCorrected=await db.evidence.findFirst({where:{organisationId:organisation.id,sourceReference:"E2E-CORRECTED-001"},select:{id:true}});
+    const correctedEvidence=existingCorrected?await db.evidence.update({where:{id:existingCorrected.id},data:{title:"E2E corrected completion evidence",description:"Fictional corrected record added after a rejected verification.",category:"Audits",evidenceType:"Record",taxonomyFamilyKey:"MEDICINES",taxonomyTypeKey:"MEDICATION_AUDIT",taxonomyFamilySnapshot:"Medicines",taxonomyTypeSnapshot:"Medication audit",currentnessMode:"HISTORICAL_NON_EXPIRING",currentnessStatus:"CURRENT",ownerId:user.id,uploadedById:user.id,status:"ACTIVE",archivedAt:null},select:{id:true}}):await db.evidence.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,title:"E2E corrected completion evidence",description:"Fictional corrected record added after a rejected verification.",category:"Audits",evidenceType:"Record",taxonomyFamilyKey:"MEDICINES",taxonomyTypeKey:"MEDICATION_AUDIT",taxonomyFamilySnapshot:"Medicines",taxonomyTypeSnapshot:"Medication audit",currentnessMode:"HISTORICAL_NON_EXPIRING",currentnessStatus:"CURRENT",ownerId:user.id,uploadedById:user.id,sourceType:"INTERNAL_RECORD",sourceName:"Release gate",sourceReference:"E2E-CORRECTED-001",provenanceNote:"Created only for the rejected-then-corrected verification scenario."},select:{id:true}});
+    await db.evidenceVerification.deleteMany({where:{evidenceId:correctedEvidence.id}});
+    await db.evidenceVerification.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,evidenceId:correctedEvidence.id,outcome:"VERIFIED",relevance:"Supports corrected fictional completion evidence.",currencyAssessment:"Current for this test run.",authenticityCheck:"Provisioned by guarded demo-only E2E setup.",verifiedById:user.id}});
     const scenarioDefinitions=[
       {reference:"E2E-RSK-SEC-MISSING-EVIDENCE",score:2,evidenceId:null,effective:true,openAction:false},
       {reference:"E2E-RSK-SEC-MISSING-VERIFICATION",score:2,evidenceId:unverifiedEvidence.id,effective:true,openAction:false},
@@ -215,6 +230,17 @@ export async function POST(request: Request) {
     for(const scenario of scenarioDefinitions){const residualLikelihood=scenario.score===6?2:1,residualImpact=scenario.score===6?3:2;const scenarioRisk=await db.risk.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,reference:scenario.reference,title:scenario.reference.replaceAll("E2E-RSK-SEC-","").replaceAll("-"," "),description:"Fictional direct API release-gate scenario.",category:"Medicines",cause:"A required assurance condition is absent.",riskEvent:"Closure may be attempted prematurely.",consequence:"Governance assurance could be overstated.",existingControls:"Release-gate test control.",likelihood:5,impact:5,initialScore:25,initialLevel:"CRITICAL",residualLikelihood,residualImpact,residualScore:scenario.score,residualLevel:scenario.score>=20?"CRITICAL":scenario.score>=10?"HIGH":scenario.score>=5?"MODERATE":"LOW",appetite:"LOW",toleranceScore:4,reviewFrequency:"Monthly",nextReviewDate:new Date("2026-10-01T00:00:00.000Z"),ownerId:user.id,createdById:user.id,evidenceLinks:scenario.evidenceId?{create:{evidenceId:scenario.evidenceId}}:undefined}});if(scenario.effective)await db.riskReview.create({data:{riskId:scenarioRisk.id,reviewedById:user.id,reviewDate:new Date(),notes:"Fictional effectiveness review for the direct API release gate.",likelihood:residualLikelihood,impact:residualImpact,score:scenario.score,level:scenario.score>=5?"MODERATE":"LOW",controlsEffective:true,assuranceChecked:"Fictional evidence checked.",nextReviewDate:new Date("2026-10-01T00:00:00.000Z")}});if(scenario.openAction)await db.action.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,reference:`E2E-ACT-${scenarioRisk.id.slice(0,8)}`,title:"Unresolved fictional treatment",description:"Must block closure.",sourceType:"RISK",sourceRecordId:scenarioRisk.id,sourceReference:scenario.reference,ownerId:user.id,dueDate:new Date("2026-10-01T00:00:00.000Z"),createdById:user.id}});if("policyChanged" in scenario&&scenario.policyChanged){await db.riskClosureProposal.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,riskId:scenarioRisk.id,policyVersionId:null,previousRiskStatus:"OPEN",residualScoreSnapshot:2,toleranceScoreSnapshot:4,appetiteSnapshot:"LOW",rationale:"Fictional proposal raised under a prior policy position.",proposedById:user.id,proposedRoleKeySnapshot:ROLE_KEYS.QUALITY_MANAGER,evidenceLinks:{create:{evidenceId:evidence.id}}}});await db.risk.update({where:{id:scenarioRisk.id},data:{status:"CLOSURE_PROPOSED"}})}}
     const oldFramework=await db.riskFrameworkVersion.findFirst({where:{organisationId:organisation.id,status:"SUPERSEDED"},include:{rules:{where:{categoryKey:"MEDICINES"}}},orderBy:{versionNumber:"asc"}});
     if(oldFramework){for(const legacy of [{reference:"E2E-RSK-SEC-FRAMEWORK-CHANGE",withFramework:true},{reference:"E2E-RSK-SEC-LEGACY",withFramework:false}])await db.risk.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,reference:legacy.reference,title:legacy.withFramework?"Framework change exception":"Legacy Risk-level position",description:"Fictional historical Risk for provenance validation.",category:"Medicines",cause:"Historical exposure was assessed under an earlier governance position.",riskEvent:"The organisation may later change its tolerance.",consequence:"The Risk may become outside current tolerance without worsening.",existingControls:"Historical monitoring control.",likelihood:4,impact:4,initialScore:16,initialLevel:"HIGH",residualLikelihood:2,residualImpact:4,residualScore:8,residualLevel:"HIGH",appetite:"LOW",toleranceScore:9,reviewFrequency:"Monthly",nextReviewDate:new Date("2026-10-01T00:00:00.000Z"),ownerId:user.id,createdById:user.id,riskFrameworkVersionId:legacy.withFramework?oldFramework.id:null,riskFrameworkRuleId:legacy.withFramework?oldFramework.rules[0]?.id:null,frameworkAppetiteSnapshot:legacy.withFramework?"LOW":null,frameworkToleranceSnapshot:legacy.withFramework?9:null,frameworkInheritedAppetiteSnapshot:legacy.withFramework?"LOW":null,frameworkInheritedToleranceSnapshot:legacy.withFramework?9:null,frameworkAppliedAt:legacy.withFramework?new Date("2025-06-01T00:00:00.000Z"):null}})}
+
+    const readyRisk=await db.risk.findFirstOrThrow({where:{organisationId:organisation.id,reference:"E2E-RSK-SEC-READY"},select:{id:true,reference:true}});
+    const registeredManagerFixture=usersToProvision.find(item=>item.roleKey===ROLE_KEYS.REGISTERED_MANAGER),registeredManagerId=registeredManagerFixture?provisionedUsers.get(registeredManagerFixture.email)?.id:user.id;
+    const ownerFixture=usersToProvision.find(item=>item.roleKey===ROLE_KEYS.OWNER),organisationOwnerId=ownerFixture?provisionedUsers.get(ownerFixture.email)?.id:user.id;
+    const now=new Date(),dueDate=new Date(Date.now()+30*86_400_000);
+    const highAction=await db.action.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,reference:"E2E-ACT-ASSURANCE-HIGH",title:"High Medicines assurance Action",description:"Implement and test the medicines control identified by the fictional Risk.",category:"Medicines",expectedOutcome:"The medicines control operates without repeat exception.",successMeasure:"A subsequent audit sample demonstrates no repeat exception.",sourceType:"RISK",sourceRecordId:readyRisk.id,sourceReference:readyRisk.reference,ownerId:user.id,oversightOwnerId:registeredManagerId,priority:"HIGH",dueDate,status:"AWAITING_VERIFICATION",lifecycleStatus:"AWAITING_VERIFICATION",progressPercent:100,completionDate:now,createdById:user.id,evidenceLinks:{create:{evidenceId:evidence.id,role:"COMPLETION",linkedById:user.id}},rootCauseReview:{create:{organisationId:organisation.id,locationId:guildfordLocation.id,method:"FIVE_WHYS",problemStatement:"The previous medicines control did not reliably detect the fictional exception.",immediateCauses:["Review step was missed"],contributingFactors:["No exception prompt"],systemCauses:["Control design gap"],lessons:"Exception monitoring must be explicit and attributable.",preventiveControls:"Use a defined audit sample followed by management review.",status:"APPROVED",reviewedById:registeredManagerId!,approvedById:registeredManagerId,approvedAt:now}}}});
+    const ineffectiveAction=await db.action.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,reference:"E2E-ACT-ASSURANCE-INEFFECTIVE",title:"Ineffective Medicines assurance Action",description:"Test that an ineffective outcome reopens the improvement path.",category:"Medicines",expectedOutcome:"No recurring documentation exception.",successMeasure:"Follow-up audit shows no repeat exception.",sourceType:"RISK",sourceRecordId:readyRisk.id,sourceReference:readyRisk.reference,ownerId:user.id,oversightOwnerId:registeredManagerId,priority:"HIGH",dueDate,status:"AWAITING_VERIFICATION",lifecycleStatus:"AWAITING_EFFECTIVENESS",progressPercent:100,completionDate:now,verifiedById:registeredManagerId,verificationDate:now,completedActionSummary:"The planned control was implemented.",evidenceReviewedSummary:"The fictional completion record was checked.",verificationRationale:"Completion evidence supports that the activity occurred.",createdById:user.id,evidenceLinks:{create:[{evidenceId:evidence.id,role:"COMPLETION",linkedById:user.id},{evidenceId:evidence.id,role:"VERIFICATION",linkedById:registeredManagerId}]},verifications:{create:{organisationId:organisation.id,locationId:guildfordLocation.id,verificationType:"CLOSURE",outcome:"VERIFIED",completedWork:"The planned control was implemented.",evidenceSummary:"The fictional completion record was checked.",evidenceIds:[evidence.id],successMeasureResult:"Implementation was confirmed; effectiveness remains to be tested.",independenceConfirmed:true,rationale:"Completion evidence supports that the activity occurred.",verifierId:registeredManagerId!,verifiedAt:now}}}});
+    const lowAction=await db.action.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,reference:"E2E-ACT-ASSURANCE-LOW",title:"Low administration Action",description:"Update a non-material internal index entry.",category:"Governance",expectedOutcome:"The index entry is current.",successMeasure:"The revised entry is present.",sourceType:"MANUAL",ownerId:user.id,oversightOwnerId:organisationOwnerId,priority:"LOW",dueDate,status:"AWAITING_EVIDENCE",lifecycleStatus:"READY_FOR_CLOSURE",progressPercent:100,completionDate:now,createdById:user.id,evidenceLinks:{create:{evidenceId:evidence.id,role:"COMPLETION",linkedById:user.id}}}});
+    const rejectedAction=await db.action.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,reference:"E2E-ACT-ASSURANCE-REJECTED",title:"Rejected then corrected verification Action",description:"Demonstrate that a rejected verification remains historical while a later decision governs current assurance.",category:"Medicines",expectedOutcome:"Corrective work is evidenced and accepted by a separate verifier.",successMeasure:"The corrected record satisfies the defined verification check.",sourceType:"RISK",sourceRecordId:readyRisk.id,sourceReference:readyRisk.reference,ownerId:user.id,oversightOwnerId:registeredManagerId,priority:"HIGH",dueDate,status:"AWAITING_VERIFICATION",lifecycleStatus:"AWAITING_VERIFICATION",progressPercent:100,completionDate:now,createdById:user.id,evidenceLinks:{create:{evidenceId:evidence.id,role:"COMPLETION",linkedById:user.id}},rootCauseReview:{create:{organisationId:organisation.id,locationId:guildfordLocation.id,method:"SYSTEMS_REVIEW",problemStatement:"The first completion claim needs a controlled verification decision.",immediateCauses:["Initial completion evidence was insufficient"],contributingFactors:["Verification criteria were not met"],systemCauses:["Corrective evidence required"],lessons:"Rejected verification must remain attributable.",preventiveControls:"Record corrected evidence and a new verification decision.",status:"APPROVED",reviewedById:registeredManagerId!,approvedById:registeredManagerId,approvedAt:now}}}});
+    const dependencyAction=await db.action.create({data:{organisationId:organisation.id,locationId:guildfordLocation.id,reference:"E2E-ACT-ASSURANCE-DEPENDENCY",title:"External professional outcome Action",description:"Provider work is complete but a fictional professional outcome remains outstanding.",category:"Governance",expectedOutcome:"The external outcome is received and reviewed.",successMeasure:"A controlled response is recorded.",sourceType:"MANUAL",ownerId:user.id,oversightOwnerId:organisationOwnerId,priority:"LOW",dueDate,status:"AWAITING_EVIDENCE",lifecycleStatus:"READY_FOR_CLOSURE",progressPercent:100,completionDate:now,createdById:user.id,evidenceLinks:{create:{evidenceId:evidence.id,role:"COMPLETION",linkedById:user.id}},externalDependencies:{create:{organisationId:organisation.id,locationId:guildfordLocation.id,partyName:"Fictional Specialist Service",contactEmail:"specialist@example.invalid",request:"Provide the fictional professional outcome.",requestedAt:now,dueDate,interimControl:"Registered Manager maintains the interim control while awaiting the response.",escalationRoute:"Escalate through provider governance if the response is overdue.",ownerId:user.id}}}});
+    await db.activityLog.createMany({data:[highAction,ineffectiveAction,lowAction,rejectedAction,dependencyAction].map(action=>({organisationId:organisation.id,locationId:action.locationId,userId:user.id,action:"CREATE",recordType:"E2EActionFixture",recordId:action.id,summary:`Created ${action.reference} for the Action assurance release gate.`}))});
 
     return NextResponse.json({ ok: true });
   } finally {

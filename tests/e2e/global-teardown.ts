@@ -1,6 +1,11 @@
+import { writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 export default async function globalTeardown() {
-  // The guarded global setup removes prior fictional fixtures before every run.
-  // Avoid a teardown HTTP request because Playwright may already be stopping the
-  // development server on Windows, which can leave fetch waiting on a dying
-  // worker. Disposable CI databases are dropped by the CI environment itself.
+  // Signal the owning wrapper instead of issuing an HTTP request to a Next
+  // worker that may already be shutting down. The wrapper terminates the whole
+  // Windows process tree, including compiler workers, and removes the sentinel.
+  const port = Number(process.env.PLAYWRIGHT_PORT ?? 3000);
+  await writeFile(join(tmpdir(), `qcgms-playwright-${port}.stop`), "test run complete", "utf8").catch(() => undefined);
 }

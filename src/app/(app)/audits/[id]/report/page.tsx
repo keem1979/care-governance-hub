@@ -13,9 +13,9 @@ export default async function AuditReportPage({ params }: { params: Promise<{ id
     where: { id, ...auditScopeWhere(context) },
     include: {
       template: { include: { sections: { include: { questions: { orderBy: { sortOrder: "asc" } } }, orderBy: { sortOrder: "asc" } } } },
-      auditor: { select: { name: true } }, location: { select: { name: true } }, signedOffBy: { select: { name: true } },
+      auditor: { select: { name: true } }, location: { select: { name: true } }, signedOffBy: { select: { name: true } }, fieldworkCompletedBy: { select: { name: true } }, governanceAssuredBy: { select: { name: true } },
       responses: { include: { evidence: { select: { title: true, category: true, evidenceType: true, sourceReference: true } } } },
-      findings: { orderBy: [{ severity: "desc" }, { createdAt: "asc" }] },
+      findings: { include: { action: { select: { reference: true, status: true, closedAt: true } }, evidenceLinks: { where: { retiredAt: null }, include: { evidence: { select: { title: true } } } }, reaudits: { include: { reviewer: { select: { name: true } } }, orderBy: { reviewDate: "desc" } } }, orderBy: [{ severity: "desc" }, { createdAt: "asc" }] },
     },
   }).finally(() => db.$disconnect());
   if (!audit) notFound();
@@ -25,6 +25,7 @@ export default async function AuditReportPage({ params }: { params: Promise<{ id
   const compliant = audit.responses.filter((item) => ["COMPLIANT", "YES"].includes(item.answer ?? "")).length;
   const partial = audit.responses.filter((item) => item.answer === "PARTIALLY_COMPLIANT").length;
   const nonCompliant = audit.responses.filter((item) => ["NON_COMPLIANT", "NO"].includes(item.answer ?? "")).length;
+  const criticalOpen=audit.findings.some(item=>item.severity==="CRITICAL"&&!item.resolvedAt);
 
   return <main className="audit-print-document mx-auto max-w-6xl bg-white text-slate-900 print:max-w-none">
     <div className="print:hidden mb-4 flex justify-end p-4"><p className="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white">Press Ctrl+P to print or save as PDF</p></div>
@@ -43,6 +44,7 @@ export default async function AuditReportPage({ params }: { params: Promise<{ id
         <SectionHeading number="01" title="Document control and assurance position"/>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4"><ScoreCard label="Internal assurance score" value={audit.overallScore === null ? "Not scored" : `${audit.overallScore}%`} tone="emerald"/><ScoreCard label="Compliant controls" value={String(compliant)}/><ScoreCard label="Partial controls" value={String(partial)} tone={partial ? "amber" : "slate"}/><ScoreCard label="Non-compliant controls" value={String(nonCompliant)} tone={nonCompliant ? "red" : "slate"}/></div>
         <table className="audit-control-table mt-4 text-sm"><tbody><ControlRow left={["Document status", auditStatusLabel(audit.status)]} right={["Form and frequency", `${audit.template.name} · ${audit.template.frequency ?? "As scheduled"}`]}/><ControlRow left={["Audit lead", audit.auditor.name]} right={["Audit date", date(audit.auditDate)]}/><ControlRow left={["Period reviewed", `${date(audit.periodStart)} – ${date(audit.periodEnd)}`]} right={["Follow-up review", date(audit.reviewDate)]}/><ControlRow left={["Signed off by", audit.signedOffBy?.name ?? "Awaiting management sign-off"]} right={["Sign-off date", date(audit.signedOffAt)]}/></tbody></table>
+        {criticalOpen?<p className="mt-4 rounded-xl border-2 border-red-600 bg-red-50 p-4 text-sm font-black text-red-950">CRITICAL FINDING OVERRIDES THE PERCENTAGE SCORE — governance assurance is not ready.</p>:null}
       </section>
 
       <section className="audit-print-section mt-8">
@@ -65,12 +67,12 @@ export default async function AuditReportPage({ params }: { params: Promise<{ id
       <section className="audit-print-section mt-8">
         <SectionHeading number="04" title="Management conclusion and improvement priorities"/>
         <div className="mt-3 grid gap-3 sm:grid-cols-3"><Conclusion title="Strengths and reliable controls" value={audit.strengths}/><Conclusion title="Risks, gaps and limitations" value={audit.risks}/><Conclusion title="Recommendations and next steps" value={audit.recommendations}/></div>
-        {audit.findings.length ? <table className="audit-assessment-table mt-5 text-xs"><thead><tr><th>Finding requiring action</th><th className="w-24">Severity</th><th>Required improvement</th><th className="w-24">Position</th></tr></thead><tbody>{audit.findings.map((finding) => <tr key={finding.id}><td className="font-semibold">{finding.summary}</td><td>{label(finding.severity)}</td><td>{finding.recommendation ?? "Create and complete a corrective action."}</td><td>{finding.resolvedAt ? `Resolved ${date(finding.resolvedAt)}` : "Open"}</td></tr>)}</tbody></table> : <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-950">No partial or non-compliant findings are currently recorded.</p>}
+        {audit.findings.length ? <table className="audit-assessment-table mt-5 text-xs"><thead><tr><th>Finding and criterion</th><th className="w-20">Severity</th><th>Closed-loop assurance trail</th><th className="w-24">Position</th></tr></thead><tbody>{audit.findings.map((finding) => <tr key={finding.id}><td className="font-semibold">{finding.summary}<p className="mt-1 text-[10px] font-normal text-slate-500">{finding.criterionKeySnapshot}</p></td><td>{label(finding.severity)}</td><td><p><strong>Improvement:</strong> {finding.recommendation ?? "Not recorded"}</p><p className="mt-1"><strong>Immediate control:</strong> {finding.immediateControl??"Not recorded"}</p><p className="mt-1"><strong>Action:</strong> {finding.action?`${finding.action.reference} · ${label(finding.action.status)}${finding.action.closedAt?` · closed ${date(finding.action.closedAt)}`:""}`:"Not linked"}</p><p className="mt-1"><strong>Evidence:</strong> {finding.evidenceLinks.map(link=>`${label(link.role)} · ${link.evidence.title}`).join("; ")||"Not linked"}</p><p className="mt-1"><strong>Targeted re-audit:</strong> {finding.reaudits[0]?`${label(finding.reaudits[0].outcome)} · ${date(finding.reaudits[0].reviewDate)} · ${finding.reaudits[0].reviewer.name}`:"Not recorded"}</p></td><td>{finding.resolvedAt ? `Resolved ${date(finding.resolvedAt)}` : "Open"}</td></tr>)}</tbody></table> : <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-950">No partial or non-compliant findings are currently recorded.</p>}
       </section>
 
       <section className="audit-print-section mt-8">
         <SectionHeading number="05" title="Approval and controlled distribution"/>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2"><Signature label="Audit completed by" name={audit.auditor.name} signedDate={audit.auditDate}/><Signature label="Management sign-off" name={audit.signedOffBy?.name ?? "Pending"} signedDate={audit.signedOffAt}/></div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2"><Signature label="Fieldwork completed by" name={audit.fieldworkCompletedBy?.name??audit.signedOffBy?.name??"Pending"} signedDate={audit.fieldworkCompletedAt??audit.signedOffAt}/><Signature label="Governance assurance decision" name={audit.governanceAssuredBy?.name??"Pending"} signedDate={audit.governanceAssuredAt}/></div>{audit.governanceAssuranceRationale?<p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong>Management assurance rationale:</strong> {audit.governanceAssuranceRationale}</p>:null}
         <p className="mt-4 rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-600"><strong>Controlled-copy note:</strong> This document is generated from the live QCGMS audit record. Printed or downloaded copies should be checked against the system before use. Personal names and sensitive care information should remain in their controlled source records and should not be duplicated unnecessarily.</p>
       </section>
     </div>

@@ -5,6 +5,7 @@ import { AUDIT_EVIDENCE_SOURCE_OPTIONS, auditScopeWhere, calculateAuditScore, ha
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
+import { auditCriterionKey } from "@/lib/audit-assurance";
 
 type SubmittedResponse = { questionId:string;answer:string;comment:string;evidenceId:string;evidenceSourceType:string;evidenceSourceReference:string };
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}) {
@@ -18,6 +19,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
       if(!audit) return NextResponse.json({error:"Audit not found."},{status:404});
       if(["COMPLETED","CLOSED","ARCHIVED"].includes(audit.status)) return NextResponse.json({error:"This audit is no longer editable."},{status:409});
       const questions=audit.template.sections.flatMap((section)=>section.questions);
+      const criterionKeys=new Map(audit.template.sections.flatMap((section)=>section.questions.map((question)=>[question.id,auditCriterionKey(audit.template.key,section.sortOrder,question.sortOrder)] as const)));
       const responseByQuestion=new Map(submitted.map((item)=>[item.questionId,item]));
       if(body.intent==="submit") {
         for(const question of questions) {
@@ -36,8 +38,16 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
         if(evidenceSourceReference && evidenceSourceReference.length>220) throw new Error("Keep the supporting evidence reference within 220 characters.");
         if(item.evidenceId && !(await db.evidence.findFirst({where:{id:item.evidenceId,...evidenceScopeWhere(context)},select:{id:true}}))) throw new Error("Linked evidence could not be found.");
         const response=await db.auditResponse.upsert({where:{auditId_questionId:{auditId:id,questionId:item.questionId}},create:{auditId:id,questionId:item.questionId,answer:item.answer||null,comment:item.comment.trim()||null,evidenceId:item.evidenceId||null,evidenceSourceType,evidenceSourceReference,score:scoreAnswer(item.answer)},update:{answer:item.answer||null,comment:item.comment.trim()||null,evidenceId:item.evidenceId||null,evidenceSourceType,evidenceSourceReference,score:scoreAnswer(item.answer)}});
-        if(item.answer==="NON_COMPLIANT" || item.answer==="PARTIALLY_COMPLIANT") await db.auditFinding.upsert({where:{responseId:response.id},create:{auditId:id,responseId:response.id,severity:item.answer==="NON_COMPLIANT"?"HIGH":"MEDIUM",summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true},update:{severity:item.answer==="NON_COMPLIANT"?"HIGH":"MEDIUM",summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true,resolvedAt:null}});
-        else await db.auditFinding.deleteMany({where:{responseId:response.id}});
+        if(item.answer==="NON_COMPLIANT" || item.answer==="PARTIALLY_COMPLIANT") {
+          const finding=await db.auditFinding.upsert({where:{responseId:response.id},create:{auditId:id,responseId:response.id,criterionKeySnapshot:criterionKeys.get(question.id)!,severity:item.answer==="NON_COMPLIANT"?"HIGH":"MEDIUM",summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true},update:{summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true}});
+          if(item.evidenceId && !(await db.auditFindingEvidence.findFirst({where:{auditFindingId:finding.id,evidenceId:item.evidenceId,role:"RESPONSE",retiredAt:null},select:{id:true}}))) {
+            const evidence=await db.evidence.findUnique({where:{id:item.evidenceId},select:{title:true,currentVersionId:true,taxonomyFamilyKey:true,taxonomyTypeKey:true,category:true,evidenceType:true}});
+            await db.auditFindingEvidence.create({data:{auditFindingId:finding.id,evidenceId:item.evidenceId,role:"RESPONSE",linkedById:context.user.id,evidenceSnapshot:evidence??undefined}});
+          }
+        } else {
+          const existing=await db.auditFinding.findUnique({where:{responseId:response.id},select:{id:true,actionId:true,_count:{select:{evidenceLinks:true,reaudits:true}}}});
+          if(existing && !existing.actionId && existing._count.evidenceLinks===0 && existing._count.reaudits===0) await db.auditFinding.delete({where:{id:existing.id}});
+        }
       }
       const saved=await db.auditResponse.findMany({where:{auditId:id},include:{question:{select:{weighting:true}}}});
       const overallScore=calculateAuditScore(saved.map((item)=>({score:item.score,weighting:item.question.weighting})));

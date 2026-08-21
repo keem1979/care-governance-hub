@@ -11,8 +11,8 @@ export async function listActionSources(db: PrismaClient, context: SourceContext
   const ids = context.locations.map(({ id }) => id);
   const scoped = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: ids } }] };
   const strict = context.allLocations ? {} : { locationId: { in: ids } };
-  const [audits, carePlans, registers, risks, policies, meetings, inspection, kpis, staff, workforceRecords, evidence] = await Promise.all([
-    db.audit.findMany({ where: { organisationId: context.organisation.id, ...strict }, select: { id: true, title: true }, orderBy: { auditDate: "desc" }, take: 100 }),
+  const [auditFindings, carePlans, registers, risks, policies, meetings, inspection, kpis, staff, workforceRecords, evidence] = await Promise.all([
+    db.auditFinding.findMany({ where: { audit: { organisationId: context.organisation.id, ...strict }, resolvedAt: null }, select: { id: true, severity: true, summary: true, audit: { select: { title: true } } }, orderBy: { createdAt: "desc" }, take: 150 }),
     db.carePlan.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, ...scoped }, select: { id: true, reference: true }, orderBy: { updatedAt: "desc" }, take: 100 }),
     db.registerEntry.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, ...scoped }, select: { id: true, reference: true, title: true, definition: { select: { key: true, name: true } } }, orderBy: { eventDate: "desc" }, take: 200 }),
     db.risk.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, ...scoped }, select: { id: true, reference: true, title: true }, orderBy: { updatedAt: "desc" }, take: 100 }),
@@ -25,7 +25,7 @@ export async function listActionSources(db: PrismaClient, context: SourceContext
     db.evidence.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, status: "ACTIVE", ...scoped }, select: { id: true, title: true, category: true }, orderBy: { updatedAt: "desc" }, take: 150 }),
   ]);
   return [
-    ...audits.map((item) => ({ type: "AUDIT", id: item.id, label: item.title })),
+    ...auditFindings.map((item) => ({ type: "AUDIT", id: item.id, label: `${item.severity} finding · ${item.audit.title} — ${item.summary}` })),
     ...carePlans.map((item) => ({ type: "CARE_PLAN", id: item.id, label: item.reference })),
     ...registers.map((item) => ({ type: isAssessmentKey(item.definition.key) ? "ASSESSMENT" : registerSourceType(item.definition.key), id: item.id, label: `${item.definition.name} · ${item.reference} — ${item.title}` })),
     ...risks.map((item) => ({ type: "RISK", id: item.id, label: `${item.reference} — ${item.title}` })),
@@ -43,7 +43,13 @@ export async function resolveActionSource(db: PrismaClient, context: SourceConte
   const organisationId=context.organisation.id, ids=context.locations.map(({id:locationId})=>locationId), scoped=context.allLocations?{}:{OR:[{locationId:null},{locationId:{in:ids}}]}, strict=context.allLocations?{}:{locationId:{in:ids}};
   if (type === "MANUAL") { if (id) throw new Error("Manual actions cannot have a source record."); return sourceMeta({ reference: null, title: "Manual entry", locationId: null, url: null }); }
   if (!id) throw new Error("Choose a source record.");
-  if (type === "AUDIT") { const item = await db.audit.findFirst({ where: { id, organisationId,...strict }, select: { title: true, locationId: true, auditDate: true } }); if (item) return sourceMeta({ reference: item.title, title: item.title, locationId: item.locationId, url: `/audits/${id}`, occurredAt: item.auditDate }); }
+  if (type === "AUDIT") {
+    const finding = await db.auditFinding.findFirst({ where: { id, audit: { organisationId, ...strict } }, select: { summary: true, severity: true, createdAt: true, audit: { select: { id: true, title: true, locationId: true, auditDate: true } } } });
+    if (finding) return sourceMeta({ reference: `${finding.audit.title} · ${finding.severity} finding`, title: finding.summary, locationId: finding.audit.locationId, url: `/audits/${finding.audit.id}#finding-${id}`, occurredAt: finding.createdAt });
+    // Backwards compatibility for Actions created before finding-level handoff.
+    const audit = await db.audit.findFirst({ where: { id, organisationId,...strict }, select: { title: true, locationId: true, auditDate: true } });
+    if (audit) return sourceMeta({ reference: audit.title, title: audit.title, locationId: audit.locationId, url: `/audits/${id}`, occurredAt: audit.auditDate });
+  }
   if (type === "CARE_PLAN") { const item = await db.carePlan.findFirst({ where: { id, organisationId, archivedAt: null,...scoped }, select: { reference: true, locationId: true, clientId: true, effectiveDate: true, updatedAt: true } }); if (item) return sourceMeta({ reference: item.reference, title: `Care plan ${item.reference}`, locationId: item.locationId, clientId: item.clientId, url: `/care-plans/${id}`, occurredAt: item.effectiveDate ?? item.updatedAt }); }
   if (["COMPLAINT", "INCIDENT", "SAFEGUARDING", "REGISTER", "ASSESSMENT"].includes(type)) { const item = await db.registerEntry.findFirst({ where: { id, organisationId,...scoped }, select: { reference: true, title: true, locationId: true, clientId: true, staffMemberId: true, eventDate: true, definition: { select: { key: true } } } }); if (item) return sourceMeta({ reference: item.reference, title: item.title, locationId: item.locationId, clientId: item.clientId, staffMemberId: item.staffMemberId, occurredAt: item.eventDate, url: `/registers/${item.definition.key}/${id}` }); }
   if (type === "RISK") { const item = await db.risk.findFirst({ where: { id, organisationId,...scoped }, select: { reference: true, title: true, locationId: true } }); if (item) return sourceMeta({ reference: item.reference, title: item.title, locationId: item.locationId, url: `/risks/${id}` }); }

@@ -14,7 +14,7 @@ export async function GET(request: Request) {
       oversightOwner: { select: { name: true } },
       client: { select: { firstName: true, lastName: true, clientReference: true } },
       location: { select: { name: true } },
-      _count: { select: { evidenceLinks: true, updates: true } },
+      _count: { select: { evidenceLinks: { where: { retiredAt: null } }, updates: true } },
     },
     orderBy: { dueDate: "asc" },
   }).finally(() => db.$disconnect());

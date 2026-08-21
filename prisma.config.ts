@@ -4,7 +4,10 @@ import { defineConfig } from "prisma/config";
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
-    path: "prisma/migrations",
+    // The release-gate runner supplies a guarded, disposable migration copy
+    // when proving the immediately preceding-schema upgrade path. Normal
+    // development and deployment continue to use the canonical directory.
+    path: process.env.QCGMS_E2E_MIGRATIONS_PATH || "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
