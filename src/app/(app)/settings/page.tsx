@@ -6,6 +6,7 @@ import {
   NewMemberForm,
   OrganisationForm,
 } from "@/components/settings-forms";
+import Link from "next/link";
 import { requireAnyPermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import {
@@ -146,6 +147,8 @@ export default async function SettingsPage() {
             </p>
           )}
         </section>
+
+        {canOrganisation ? <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6"><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Governed settings</p><h2 className="mt-1 text-xl font-bold">Organisation Risk Framework</h2><p className="mt-2 max-w-3xl text-sm text-slate-700">Control versioned appetite, tolerance and proportionate closure authority. Historical Risk decisions are preserved when a new framework becomes effective.</p><Link href="/settings/risk-framework" className="mt-4 inline-flex rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">Manage Risk Framework</Link></section> : null}
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <div>

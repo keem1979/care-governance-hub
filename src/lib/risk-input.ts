@@ -1,7 +1,7 @@
 import { parseOptionalDate } from "@/lib/policies";
 import { CONTROL_EFFECTIVENESS, REVIEW_FREQUENCIES, RISK_APPETITES, RISK_CATEGORIES, RISK_SOURCES, RISK_STATUSES, TREATMENT_STRATEGIES, isOutsideTolerance, riskLevel, riskScore, validateRiskPlan } from "@/lib/risks";
 
-export function parseRiskInput(form:FormData){
+export function parseRiskInput(form:FormData, governed?:{appetite:string;toleranceScore:number|null}){
   const cause=text(form,"cause"),riskEvent=text(form,"riskEvent"),consequence=text(form,"consequence"),peopleAffected=text(form,"peopleAffected");
   if(cause.length<3||riskEvent.length<3||consequence.length<3||peopleAffected.length<2)throw new Error("Complete the cause, uncertain event, potential consequences and who may be affected.");
   const title=text(form,"title"),description=`Because ${cause}, there is a risk that ${riskEvent}, resulting in ${consequence}.`;
@@ -10,7 +10,7 @@ export function parseRiskInput(form:FormData){
   const likelihood=number(form,"likelihood"),impact=number(form,"impact"),initialScore=riskScore(likelihood,impact);
   const residualLikelihood=number(form,"residualLikelihood"),residualImpact=number(form,"residualImpact"),residualScore=riskScore(residualLikelihood,residualImpact);
   const targetLikelihood=number(form,"targetLikelihood"),targetImpact=number(form,"targetImpact"),targetScore=riskScore(targetLikelihood,targetImpact);
-  const treatmentStrategy=text(form,"treatmentStrategy"),furtherControls=text(form,"furtherControls")||null,appetite=text(form,"appetite"),toleranceScore=number(form,"toleranceScore"),acceptanceRationale=text(form,"acceptanceRationale")||null;
+  const treatmentStrategy=text(form,"treatmentStrategy"),furtherControls=text(form,"furtherControls")||null,appetite=governed?.appetite??text(form,"appetite"),toleranceScore=governed?.toleranceScore??number(form,"toleranceScore"),acceptanceRationale=text(form,"acceptanceRationale")||null;
   const ownerId=text(form,"ownerId")||null,locationId=text(form,"locationId")||null,status=text(form,"status")||"OPEN",reviewFrequency=text(form,"reviewFrequency")||"Quarterly",nextReviewDate=parseOptionalDate(form.get("nextReviewDate")),targetDate=parseOptionalDate(form.get("targetDate"));
   if(title.length<3||existingControls.length<3)throw new Error("Enter a clear risk title and the controls already in place.");
   if(!RISK_CATEGORIES.includes(category as never)||!RISK_SOURCES.includes(sourceType as never)||!CONTROL_EFFECTIVENESS.includes(controlEffectiveness as never)||!TREATMENT_STRATEGIES.includes(treatmentStrategy as never)||!RISK_APPETITES.includes(appetite as never)||!RISK_STATUSES.includes(status as never)||!REVIEW_FREQUENCIES.includes(reviewFrequency as never))throw new Error("Choose valid risk, control, treatment and review values.");

@@ -1,11 +1,11 @@
-export const RISK_STATUSES = ["OPEN", "MONITORING", "TREATMENT_IN_PROGRESS", "ACCEPTED", "CLOSED", "ARCHIVED"] as const;
+export const RISK_STATUSES = ["OPEN", "MONITORING", "TREATMENT_IN_PROGRESS", "ACCEPTED", "CLOSURE_PROPOSED", "CLOSED", "ARCHIVED"] as const;
 export const RISK_LEVELS = ["LOW", "MODERATE", "HIGH", "CRITICAL"] as const;
 export const RISK_CATEGORIES = ["Care quality", "Clinical", "Safeguarding", "Medicines", "Workforce", "Operational", "Business continuity", "Financial", "Information governance", "Cyber security", "Health and safety", "Compliance", "Commissioner contract", "Reputational", "Strategic", "Other"] as const;
 export const REVIEW_FREQUENCIES = ["Weekly", "Monthly", "Quarterly", "Six-monthly", "Annually"] as const;
 export const RISK_SOURCES = ["Incident or near miss", "Audit finding", "Complaint or feedback", "Safeguarding concern", "Staff concern", "KPI or data trend", "Inspection or commissioner", "Change assessment", "Business continuity exercise", "Manual identification", "Other"] as const;
 export const CONTROL_EFFECTIVENESS = ["NOT_TESTED", "INEFFECTIVE", "PARTIALLY_EFFECTIVE", "EFFECTIVE"] as const;
 export const TREATMENT_STRATEGIES = ["AVOID", "REDUCE", "TRANSFER_OR_SHARE", "ACCEPT"] as const;
-export const RISK_APPETITES = ["ZERO_TOLERANCE", "LOW", "MODERATE", "OPEN"] as const;
+export const RISK_APPETITES = ["ZERO_TOLERANCE", "VERY_LOW", "LOW", "MODERATE", "OPEN"] as const;
 export type RiskLevel = (typeof RISK_LEVELS)[number];
 
 export function riskScore(likelihood: number, impact: number): number {
@@ -65,6 +65,11 @@ export function validateRiskClosure(input: { status: string; level: string; resi
   if (["HIGH", "CRITICAL"].includes(input.level) && input.ownerId && input.approverId === input.ownerId) throw new Error("High and critical Risk closure cannot be self-approved by the Risk owner.");
   if ((input.unresolvedActionCount ?? 0) > 0) throw new Error("Resolve, transfer or formally account for linked treatment actions before closing this risk.");
   if (typeof input.residualScore === "number" && typeof input.toleranceScore === "number" && input.residualScore > input.toleranceScore) throw new Error("Complete a formal risk review before closure: the current residual risk remains outside the recorded tolerance.");
+}
+
+export function assertRiskGeneralMutationAllowed(requestedStatus:string,currentStatus?:string){
+  if(["CLOSED","CLOSURE_PROPOSED"].includes(requestedStatus))throw new Error("Use the governed closure proposal workflow; direct status closure is not permitted.");
+  if(currentStatus&&["CLOSED","CLOSURE_PROPOSED"].includes(currentStatus))throw new Error("This Risk is governed by the closure workflow and cannot be edited through the general assessment form.");
 }
 
 export function levelClasses(level: string): string {

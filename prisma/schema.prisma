@@ -392,6 +392,7 @@ enum RiskStatus {
   MONITORING
   TREATMENT_IN_PROGRESS
   ACCEPTED
+  CLOSURE_PROPOSED
   CLOSED
   ARCHIVED
 }
@@ -401,6 +402,27 @@ enum RiskLevel {
   MODERATE
   HIGH
   CRITICAL
+}
+
+enum RiskFrameworkStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  EFFECTIVE
+  SUPERSEDED
+  RETIRED
+}
+
+enum RiskClosureProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum RiskClosureApprovalDecision {
+  APPROVED
+  REJECTED
 }
 
 enum ActionStatus {
@@ -924,6 +946,12 @@ model Organisation {
   registerDefinitions    RegisterDefinition[]
   registerEntries        RegisterEntry[]
   risks                  Risk[]
+  riskFrameworkVersions  RiskFrameworkVersion[]
+  riskFrameworkRules     RiskFrameworkRule[]
+  riskClosurePolicies    RiskClosurePolicyVersion[]
+  riskClosureAuthorityRules RiskClosureAuthorityRule[]
+  riskClosureProposals   RiskClosureProposal[]
+  riskClosureApprovals   RiskClosureApproval[]
   actions                Action[]
   actionOccurrences      ActionOccurrence[]
   meetings               GovernanceMeeting[]
@@ -999,6 +1027,8 @@ model ServiceLocation {
   audits                 Audit[]
   registerEntries        RegisterEntry[]
   risks                  Risk[]
+  riskClosureProposals   RiskClosureProposal[]
+  riskClosureApprovals   RiskClosureApproval[]
   actions                Action[]
   actionOccurrences      ActionOccurrence[]
   meetings               GovernanceMeeting[]
@@ -1063,6 +1093,16 @@ model User {
   risksCreated            Risk[]                   @relation("RiskCreator")
   risksApproved           Risk[]                   @relation("RiskClosureApprover")
   riskReviews             RiskReview[]
+  riskFrameworksCreated   RiskFrameworkVersion[]    @relation("RiskFrameworkCreator")
+  riskFrameworksSubmitted RiskFrameworkVersion[]    @relation("RiskFrameworkSubmitter")
+  riskFrameworksApproved  RiskFrameworkVersion[]    @relation("RiskFrameworkApprover")
+  riskClosurePoliciesCreated RiskClosurePolicyVersion[] @relation("RiskClosurePolicyCreator")
+  riskClosurePoliciesSubmitted RiskClosurePolicyVersion[] @relation("RiskClosurePolicySubmitter")
+  riskClosurePoliciesApproved RiskClosurePolicyVersion[] @relation("RiskClosurePolicyApprover")
+  riskFrameworkOverrides  Risk[]                    @relation("RiskFrameworkOverrideActor")
+  riskClosureProposalsMade RiskClosureProposal[]     @relation("RiskClosureProposer")
+  riskClosureProposalsWithdrawn RiskClosureProposal[] @relation("RiskClosureWithdrawer")
+  riskClosureApprovalsMade RiskClosureApproval[]     @relation("RiskClosureApprovalActor")
   actionsOwned            Action[]                 @relation("ActionOwner")
   actionsOverseen         Action[]                 @relation("ActionOversightOwner")
   actionsCreated          Action[]                 @relation("ActionCreator")
@@ -1252,6 +1292,7 @@ model Evidence {
   auditResponses         AuditResponse[]
   registerLinks          RegisterEntryEvidence[]
   riskLinks              RiskEvidence[]
+  riskClosureProposalLinks RiskClosureProposalEvidence[]
   actionLinks            ActionEvidence[]
   meetingLinks           MeetingEvidence[]
   kpiLinks               KpiEvidence[]
@@ -1553,12 +1594,32 @@ model Risk {
   createdById          String     @db.Uuid
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
+  categoryKey                    String?
+  riskFrameworkVersionId         String?    @db.Uuid
+  riskFrameworkRuleId            String?    @db.Uuid
+  frameworkAppetiteSnapshot      String?
+  frameworkToleranceSnapshot     Int?
+  frameworkInheritedAppetiteSnapshot String?
+  frameworkInheritedToleranceSnapshot Int?
+  frameworkAppliedAt             DateTime?
+  frameworkOverrideRationale     String?
+  frameworkOverrideById          String?    @db.Uuid
+  frameworkOverrideAt            DateTime?
+  closurePolicyVersionId         String?    @db.Uuid
+  closureToleranceSnapshot       Int?
+  closureAppetiteSnapshot        String?
 
   organisation      Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
   location          ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
   owner             User?            @relation("RiskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   createdBy         User             @relation("RiskCreator", fields: [createdById], references: [id], onDelete: Restrict)
   closureApprovedBy User?            @relation("RiskClosureApprover", fields: [closureApprovedById], references: [id], onDelete: SetNull)
+  frameworkOverrideBy User?          @relation("RiskFrameworkOverrideActor", fields: [frameworkOverrideById], references: [id], onDelete: SetNull)
+  riskFrameworkVersion RiskFrameworkVersion? @relation(fields: [riskFrameworkVersionId], references: [id], onDelete: SetNull)
+  riskFrameworkRule RiskFrameworkRule? @relation(fields: [riskFrameworkRuleId], references: [id], onDelete: SetNull)
+  closurePolicyVersion RiskClosurePolicyVersion? @relation(fields: [closurePolicyVersionId], references: [id], onDelete: SetNull)
+  closureProposals RiskClosureProposal[]
+  closureApprovals RiskClosureApproval[]
   evidenceLinks     RiskEvidence[]
   reviews           RiskReview[]
 
@@ -1566,6 +1627,8 @@ model Risk {
   @@index([organisationId, status, residualLevel])
   @@index([organisationId, nextReviewDate])
   @@index([locationId])
+  @@index([organisationId, categoryKey, status])
+  @@index([riskFrameworkVersionId])
 }
 
 model RiskEvidence {
@@ -1597,11 +1660,202 @@ model RiskReview {
   escalated         Boolean   @default(false)
   nextReviewDate    DateTime
   createdAt         DateTime  @default(now())
+  categoryKeySnapshot        String?
+  riskFrameworkVersionId     String? @db.Uuid
+  riskFrameworkRuleId        String? @db.Uuid
+  frameworkAppetiteSnapshot  String?
+  frameworkToleranceSnapshot Int?
+  frameworkInheritedAppetiteSnapshot String?
+  frameworkInheritedToleranceSnapshot Int?
+  frameworkOverrideRationale String?
 
   risk       Risk @relation(fields: [riskId], references: [id], onDelete: Cascade)
   reviewedBy User @relation(fields: [reviewedById], references: [id], onDelete: Restrict)
+  riskFrameworkVersion RiskFrameworkVersion? @relation(fields: [riskFrameworkVersionId], references: [id], onDelete: SetNull)
+  riskFrameworkRule RiskFrameworkRule? @relation(fields: [riskFrameworkRuleId], references: [id], onDelete: SetNull)
 
   @@index([riskId, reviewDate])
+  @@index([riskFrameworkVersionId])
+}
+
+model RiskFrameworkVersion {
+  id                     String              @id @default(uuid()) @db.Uuid
+  organisationId         String              @db.Uuid
+  versionNumber          Int
+  status                 RiskFrameworkStatus @default(DRAFT)
+  effectiveFrom          DateTime?
+  effectiveTo            DateTime?
+  defaultAppetite        String
+  defaultToleranceScore  Int
+  defaultEscalation      String?
+  changeRationale        String
+  closurePolicyVersionId String              @unique @db.Uuid
+  createdById            String              @db.Uuid
+  submittedById          String?             @db.Uuid
+  approvedById           String?             @db.Uuid
+  submittedAt            DateTime?
+  approvedAt             DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  closurePolicyVersion RiskClosurePolicyVersion @relation(fields: [closurePolicyVersionId], references: [id], onDelete: Restrict)
+  createdBy User @relation("RiskFrameworkCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  submittedBy User? @relation("RiskFrameworkSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  approvedBy User? @relation("RiskFrameworkApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  rules RiskFrameworkRule[]
+  risks Risk[]
+  reviews RiskReview[]
+  closureProposals RiskClosureProposal[]
+
+  @@unique([organisationId, versionNumber])
+  @@index([organisationId, status, effectiveFrom])
+}
+
+model RiskFrameworkRule {
+  id                  String @id @default(uuid()) @db.Uuid
+  organisationId      String @db.Uuid
+  frameworkVersionId  String @db.Uuid
+  categoryKey         String
+  categoryLabel       String
+  appetite            String
+  toleranceScore      Int
+  escalationIndicator String?
+  createdAt           DateTime @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  frameworkVersion RiskFrameworkVersion @relation(fields: [frameworkVersionId], references: [id], onDelete: Cascade)
+  risks Risk[]
+  reviews RiskReview[]
+
+  @@unique([frameworkVersionId, categoryKey])
+  @@index([organisationId, categoryKey])
+}
+
+model RiskClosurePolicyVersion {
+  id             String              @id @default(uuid()) @db.Uuid
+  organisationId String              @db.Uuid
+  versionNumber  Int
+  status         RiskFrameworkStatus @default(DRAFT)
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
+  changeRationale String
+  createdById    String              @db.Uuid
+  submittedById  String?             @db.Uuid
+  approvedById   String?             @db.Uuid
+  submittedAt    DateTime?
+  approvedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  createdBy User @relation("RiskClosurePolicyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  submittedBy User? @relation("RiskClosurePolicySubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  approvedBy User? @relation("RiskClosurePolicyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  framework RiskFrameworkVersion?
+  rules RiskClosureAuthorityRule[]
+  risks Risk[]
+  proposals RiskClosureProposal[]
+  approvals RiskClosureApproval[]
+
+  @@unique([organisationId, versionNumber])
+  @@index([organisationId, status, effectiveFrom])
+}
+
+model RiskClosureAuthorityRule {
+  id                            String    @id @default(uuid()) @db.Uuid
+  organisationId                String    @db.Uuid
+  policyVersionId               String    @db.Uuid
+  riskLevel                     RiskLevel
+  categoryKey                   String    @default("*")
+  proposerRoleKeys              String[]
+  approverRoleKeys              String[]
+  selfApprovalAllowed           Boolean   @default(false)
+  requiredApprovalCount         Int       @default(1)
+  verifiedEvidenceRequired      Boolean   @default(false)
+  effectivenessEvidenceRequired Boolean   @default(false)
+  escalationRequirement         String?
+  createdAt                     DateTime  @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  policyVersion RiskClosurePolicyVersion @relation(fields: [policyVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([policyVersionId, riskLevel, categoryKey])
+  @@index([organisationId, riskLevel, categoryKey])
+}
+
+model RiskClosureProposal {
+  id                        String                    @id @default(uuid()) @db.Uuid
+  organisationId            String                    @db.Uuid
+  locationId                String?                   @db.Uuid
+  riskId                    String                    @db.Uuid
+  frameworkVersionId        String?                   @db.Uuid
+  policyVersionId           String?                   @db.Uuid
+  status                    RiskClosureProposalStatus @default(PENDING)
+  previousRiskStatus        RiskStatus
+  residualScoreSnapshot     Int
+  toleranceScoreSnapshot    Int?
+  appetiteSnapshot          String?
+  linkedActionReferences    String[]                  @default([])
+  rationale                 String
+  proposedById              String                    @db.Uuid
+  proposedRoleKeySnapshot   String
+  proposedAt                DateTime                  @default(now())
+  resolvedAt                DateTime?
+  withdrawnById             String?                   @db.Uuid
+  withdrawnAt               DateTime?
+  withdrawalReason          String?
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  risk Risk @relation(fields: [riskId], references: [id], onDelete: Restrict)
+  frameworkVersion RiskFrameworkVersion? @relation(fields: [frameworkVersionId], references: [id], onDelete: SetNull)
+  policyVersion RiskClosurePolicyVersion? @relation(fields: [policyVersionId], references: [id], onDelete: SetNull)
+  proposedBy User @relation("RiskClosureProposer", fields: [proposedById], references: [id], onDelete: Restrict)
+  withdrawnBy User? @relation("RiskClosureWithdrawer", fields: [withdrawnById], references: [id], onDelete: Restrict)
+  approvals RiskClosureApproval[]
+  evidenceLinks RiskClosureProposalEvidence[]
+
+  @@index([organisationId, status, proposedAt])
+  @@index([riskId, status])
+}
+
+model RiskClosureProposalEvidence {
+  proposalId String @db.Uuid
+  evidenceId String @db.Uuid
+
+  proposal RiskClosureProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@id([proposalId, evidenceId])
+  @@index([evidenceId])
+}
+
+model RiskClosureApproval {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  organisationId      String                      @db.Uuid
+  locationId          String?                     @db.Uuid
+  riskId              String                      @db.Uuid
+  proposalId          String                      @db.Uuid
+  approverId          String                      @db.Uuid
+  membershipId        String                      @db.Uuid
+  policyVersionId     String?                     @db.Uuid
+  decision            RiskClosureApprovalDecision
+  roleKeySnapshot     String
+  authoritySnapshot   String
+  rationale           String?
+  createdAt           DateTime                    @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  risk Risk @relation(fields: [riskId], references: [id], onDelete: Restrict)
+  proposal RiskClosureProposal @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  approver User @relation("RiskClosureApprovalActor", fields: [approverId], references: [id], onDelete: Restrict)
+  membership OrganisationMembership @relation(fields: [membershipId], references: [id], onDelete: Restrict)
+  policyVersion RiskClosurePolicyVersion? @relation(fields: [policyVersionId], references: [id], onDelete: SetNull)
+
+  @@unique([proposalId, approverId])
+  @@index([organisationId, riskId, createdAt])
 }
 
 model Action {
@@ -2934,6 +3188,7 @@ model OrganisationMembership {
   delegationsGiven    ManagementDelegation[] @relation("ManagementDelegator")
   delegationsReceived ManagementDelegation[] @relation("ManagementDelegate")
   notificationPreferences NotificationPreference[]
+  riskClosureApprovals RiskClosureApproval[]
 
   @@unique([organisationId, userId])
   @@index([userId, status])

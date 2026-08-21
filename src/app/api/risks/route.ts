@@ -3,25 +3,24 @@ import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
-import { makeRiskReference, validateRiskClosure } from "@/lib/risks";
+import { assertRiskGeneralMutationAllowed, makeRiskReference } from "@/lib/risks";
 import { parseRiskInput } from "@/lib/risk-input";
 import { syncRiskEvidence } from "@/lib/risk-evidence";
-import { riskClosureEvidenceSummary } from "@/lib/risk-closure-evidence";
+import { resolveCurrentRiskFramework, stableRiskCategoryKey } from "@/lib/risk-framework";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
   const form = await request.formData(); const db = createDb();
   try {
-    const input=parseRiskInput(form);const{title,locationId,ownerId,closureApprovedById}=input;
+    const category=String(form.get("category")??"").trim();
+    const framework=await resolveCurrentRiskFramework(db,context.organisation.id,category);
+    const input=parseRiskInput(form,framework?{appetite:framework.appetite,toleranceScore:framework.toleranceScore}:undefined);const{title,locationId,ownerId}=input;
+    assertRiskGeneralMutationAllowed(input.status);
     if (locationId && !context.locations.some(({ id }) => id === locationId)) throw new Error("Choose an authorised location.");
     if (ownerId && !(await activeMember(db, context.organisation.id, ownerId))) throw new Error("Choose an active risk owner.");
-    if (closureApprovedById && !(await activeMember(db, context.organisation.id, closureApprovedById))) throw new Error("Choose an active closure approver.");
     const evidenceIds = form.getAll("evidenceIds").map(String).filter(Boolean);
     for (const evidenceId of evidenceIds) if (!(await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context) } }))) throw new Error("Linked evidence could not be found.");
-    const closureApproverId=input.status==="CLOSED"?(closureApprovedById??context.user.id):closureApprovedById,closureDate=input.status==="CLOSED"?(input.closureDate??new Date()):input.closureDate;
-    const closureEvidence=await riskClosureEvidenceSummary(db,context,evidenceIds);
-    validateRiskClosure({ status:input.status, level:input.residualLevel, residualScore:input.residualScore, toleranceScore:input.toleranceScore, rationale:input.closureRationale ?? undefined, ownerId, approverId: closureApproverId ?? undefined, actorId:context.user.id, closureDate, ...closureEvidence, unresolvedActionCount:0 });
-    const governedInput={...input,closureApprovedById:closureApproverId,closureDate};
+    const governedInput={...input,categoryKey:stableRiskCategoryKey(input.category),riskFrameworkVersionId:framework?.frameworkVersionId??null,riskFrameworkRuleId:framework?.ruleId??null,frameworkAppetiteSnapshot:framework?.appetite??null,frameworkToleranceSnapshot:framework?.toleranceScore??null,frameworkInheritedAppetiteSnapshot:framework?.appetite??null,frameworkInheritedToleranceSnapshot:framework?.toleranceScore??null,frameworkAppliedAt:framework?new Date():null};
     const reference = String(form.get("reference") ?? "").trim() || makeRiskReference();
     const risk = await db.$transaction(async (tx) => {
       const created = await tx.risk.create({ data: {
@@ -29,7 +28,7 @@ export async function POST(request: Request) {
         evidenceLinks: { create: evidenceIds.map((evidenceId) => ({ evidenceId })) },
       } });
       await syncRiskEvidence(tx,{riskId:created.id,organisationId:context.organisation.id,locationId,reference,title,description:input.description,category:input.category,ownerId,createdById:context.user.id,actorId:context.user.id,identifiedDate:input.identifiedDate,nextReviewDate:input.nextReviewDate,residualScore:input.residualScore,residualLevel:input.residualLevel,status:input.status,existingControls:input.existingControls,controlEffectiveness:input.controlEffectiveness});
-      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE", recordType: "Risk", recordId: created.id, summary: `Added risk: ${reference} — ${title}`, afterValue: { status:input.status, initialScore:input.initialScore, residualScore:input.residualScore,targetScore:input.targetScore } } });
+      await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE", recordType: "Risk", recordId: created.id, summary: `Added risk: ${reference} — ${title}`, afterValue: { status:input.status, initialScore:input.initialScore, residualScore:input.residualScore,targetScore:input.targetScore,frameworkVersion:framework?.frameworkVersionNumber??null,frameworkSource:framework?"Organisation Risk Framework":"Legacy/manual" } } });
       return created;
     });
     return NextResponse.json({ id: risk.id }, { status: 201 });

@@ -3,10 +3,10 @@ import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
-import { riskScopeWhere, validateRiskClosure } from "@/lib/risks";
+import { assertRiskGeneralMutationAllowed, riskScopeWhere } from "@/lib/risks";
 import { parseRiskInput } from "@/lib/risk-input";
 import { syncRiskEvidence } from "@/lib/risk-evidence";
-import { riskClosureEvidenceSummary } from "@/lib/risk-closure-evidence";
+import { stableRiskCategoryKey } from "@/lib/risk-framework";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT); const { id } = await params; const db = createDb();
@@ -16,22 +16,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (!risk) return NextResponse.json({ error: "Risk not found." }, { status: 404 });
       if (!["archive", "restore"].includes(body.intent ?? "")) throw new Error("Unknown risk action.");
       const archive = body.intent === "archive";
+      if(archive&&["CLOSED","CLOSURE_PROPOSED"].includes(risk.status))throw new Error("Closed Risks and Risks awaiting closure approval cannot be archived through the general record action.");
+      if(!archive&&risk.status!=="ARCHIVED")throw new Error("Only an archived Risk can be restored.");
       const status=archive?"ARCHIVED":"OPEN";
       await db.$transaction(async(tx)=>{await tx.risk.update({ where: { id }, data: { status, archivedAt: archive ? new Date() : null } });await syncRiskEvidence(tx,{riskId:id,organisationId:risk.organisationId,locationId:risk.locationId,reference:risk.reference,title:risk.title,description:risk.description,category:risk.category,ownerId:risk.ownerId,createdById:risk.createdById,actorId:context.user.id,identifiedDate:risk.identifiedDate,nextReviewDate:risk.nextReviewDate,residualScore:risk.residualScore,residualLevel:risk.residualLevel,status,existingControls:risk.existingControls,controlEffectiveness:risk.controlEffectiveness});await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId: risk.locationId, userId: context.user.id, action: archive ? "ARCHIVE" : "RESTORE", recordType: "Risk", recordId: id, summary: `${archive ? "Archived" : "Restored"} risk: ${risk.reference}` } })});
       return NextResponse.json({ ok: true });
     }
     const risk = await db.risk.findFirst({ where: { id, ...riskScopeWhere(context) }, include: { evidenceLinks: true } });
     if (!risk) return NextResponse.json({ error: "Risk not found." }, { status: 404 });
-    const form = await request.formData();const input=parseRiskInput(form);const{title,locationId,ownerId,closureApprovedById}=input;
+    const form = await request.formData();const input=parseRiskInput(form,risk.riskFrameworkVersionId&&risk.appetite&&risk.toleranceScore?{appetite:risk.appetite,toleranceScore:risk.toleranceScore}:undefined);const{title,locationId,ownerId,closureApprovedById}=input;
+    assertRiskGeneralMutationAllowed(input.status,risk.status);
+    if(risk.riskFrameworkVersionId&&input.category!==risk.category)throw new Error("Change a governed Risk category through a formal review so framework provenance remains explicit.");
     if (locationId && !context.locations.some(({ id }) => id === locationId)) throw new Error("Choose an authorised location.");
     for (const userId of [ownerId, closureApprovedById].filter(Boolean) as string[]) if (!(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId, status: "ACTIVE" } }))) throw new Error("Choose an active organisation member.");
     const evidenceIds = form.getAll("evidenceIds").map(String).filter(Boolean);
     for (const evidenceId of evidenceIds) if (!(await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context) } }))) throw new Error("Linked evidence could not be found.");
-    const unresolvedActionCount=input.status==="CLOSED"?await db.action.count({where:{organisationId:context.organisation.id,sourceType:"RISK",sourceRecordId:id,status:{notIn:["COMPLETED","CANCELLED","ARCHIVED"]}}}):0;
-    const closureApproverId=input.status==="CLOSED"?(closureApprovedById??context.user.id):closureApprovedById,closureDate=input.status==="CLOSED"?(input.closureDate??new Date()):input.closureDate;
-    const closureEvidence=await riskClosureEvidenceSummary(db,context,evidenceIds);
-    validateRiskClosure({ status:input.status, level:input.residualLevel, residualScore:input.residualScore, toleranceScore:input.toleranceScore, rationale:input.closureRationale ?? undefined, ownerId, approverId: closureApproverId ?? undefined, actorId:context.user.id, closureDate, ...closureEvidence, unresolvedActionCount });
-    const update = { ...input,closureApprovedById:closureApproverId,closureDate,status:input.status as never, archivedAt: input.status === "ARCHIVED" ? risk.archivedAt ?? new Date() : null };
+    const update = { ...input,categoryKey:stableRiskCategoryKey(input.category),closureApprovedById,status:input.status as never, archivedAt: input.status === "ARCHIVED" ? risk.archivedAt ?? new Date() : null };
     await db.$transaction(async (tx) => {
       await tx.risk.update({ where: { id }, data: { ...update, evidenceLinks: { deleteMany: {}, create: evidenceIds.map((evidenceId) => ({ evidenceId })) } } });
       await syncRiskEvidence(tx,{riskId:id,organisationId:context.organisation.id,locationId,reference:risk.reference,title,description:input.description,category:input.category,ownerId,createdById:risk.createdById,actorId:context.user.id,identifiedDate:input.identifiedDate,nextReviewDate:input.nextReviewDate,residualScore:input.residualScore,residualLevel:input.residualLevel,status:input.status,existingControls:input.existingControls,controlEffectiveness:input.controlEffectiveness});

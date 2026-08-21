@@ -61,6 +61,9 @@ ambiguous people or staff is prohibited.
 - `RootCauseReview` records structured causes and optional Five Whys steps.
 - `ImprovementPlan` groups related findings, objectives, measures, milestones and outcomes.
 - `ExternalDependency` records the party, request, chasing, interim control and ageing.
+- `RiskFrameworkVersion` and `RiskFrameworkRule` preserve the organisation's effective-dated qualitative appetite, numerical tolerance and category overrides. Existing Risks are not backfilled with invented provenance; adoption occurs only on a new assessment or explicit formal review.
+- `RiskClosurePolicyVersion` and `RiskClosureAuthorityRule` govern who may propose and approve closure, whether self-approval is proportionately permitted, how many approvals are required and what evidence/effectiveness conditions apply.
+- `RiskClosureProposal`, its governed Evidence links and append-only `RiskClosureApproval` records preserve the final Risk position, policy version, actual human decision-makers and authority-at-time snapshots. General Risk editing cannot close a Risk.
 
 ## Evidence and controlled content
 

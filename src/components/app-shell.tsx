@@ -230,7 +230,7 @@ export function AppShell({
         />
       ) : null}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[304px] max-w-[90vw] flex-col bg-brand-dark text-white shadow-2xl transition-transform lg:sticky lg:top-0 lg:h-screen lg:max-w-none lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-[304px] max-w-[90vw] flex-col overflow-hidden bg-brand-dark text-white shadow-2xl transition-transform lg:sticky lg:top-0 lg:h-screen lg:max-w-none lg:shadow-none ${
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -260,7 +260,7 @@ export function AppShell({
             <X aria-hidden="true" size={20} />
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
           <div className="relative mb-4">
             <Search aria-hidden="true" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-100/55" />
             <input
@@ -301,7 +301,7 @@ export function AppShell({
           {!cleanNavQuery && visibleSpecialistGroup.items.length ? <button type="button" onClick={() => { const next = !showSpecialistTools; setShowSpecialistTools(next); if (next) setExpandedGroups((current) => { const expanded = new Set(current); expanded.add("specialist"); return expanded; }); }} className="mt-4 flex w-full items-center justify-between rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-left text-xs font-bold text-emerald-100/70 transition hover:border-emerald-300/40 hover:bg-white/7 hover:text-white"><span>{showSpecialistTools ? "Hide specialist tools" : "Show specialist tools"}</span><span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px]">{visibleSpecialistGroup.items.length}</span></button> : null}
           {cleanNavQuery && displayedGroups.length === 0 && !visiblePrimary.some((item) => item.label.toLowerCase().includes(cleanNavQuery)) ? <p className="mt-4 rounded-xl border border-dashed border-white/15 p-4 text-center text-xs text-emerald-100/60">No accessible feature matches “{navQuery.trim()}”.</p> : null}
         </nav>
-        <div className="border-t border-white/10 bg-white/[.025] p-4">
+        <div className="shrink-0 border-t border-white/10 bg-white/[.025] p-4">
           <p className="truncate text-sm font-bold">{context.user.name}</p>
           <p className="mt-0.5 truncate text-xs text-emerald-100/65">
             {context.role.name}

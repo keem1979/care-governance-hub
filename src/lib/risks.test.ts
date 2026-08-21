@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addReviewFrequency, isOutsideTolerance, makeRiskReference, riskLevel, riskNeedsEscalation, riskScore, validateRiskClosure, validateRiskPlan } from "@/lib/risks";
+import { addReviewFrequency, assertRiskGeneralMutationAllowed, isOutsideTolerance, makeRiskReference, riskLevel, riskNeedsEscalation, riskScore, validateRiskClosure, validateRiskPlan } from "@/lib/risks";
 
 describe("risk scoring", () => {
   it.each([[1,1,1,"LOW"],[2,3,6,"MODERATE"],[4,4,16,"HIGH"],[5,5,25,"CRITICAL"]] as const)("scores %i x %i", (likelihood, impact, score, level) => {
@@ -21,4 +21,9 @@ describe("risk workflow", () => {
   it("blocks closure while the residual risk remains outside tolerance", () => expect(() => validateRiskClosure({ status: "CLOSED", level: "MODERATE", residualScore: 6, toleranceScore: 4, rationale: "Controlled", ownerId: "owner", approverId: "owner", actorId: "owner", closureDate: new Date(), supportingEvidenceCount: 1, unresolvedActionCount: 0 })).toThrow(/formal risk review/i));
   it("blocks high-risk self approval", () => expect(() => validateRiskClosure({ status: "CLOSED", level: "HIGH", rationale: "Controlled", ownerId: "owner", approverId: "owner", actorId: "owner", closureDate: new Date(), supportingEvidenceCount: 1, verifiedCurrentEvidenceCount: 1 })).toThrow(/self-approved/i));
   it("allows high-risk closure with current verified evidence and separate approval", () => expect(() => validateRiskClosure({ status: "CLOSED", level: "HIGH", rationale: "Controlled", ownerId: "owner", approverId: "approver", actorId: "approver", closureDate: new Date(), supportingEvidenceCount: 1, verifiedCurrentEvidenceCount: 1, unresolvedActionCount: 0 })).not.toThrow());
+  it("blocks direct API-style closure mutations outside the governed endpoint",()=>{
+    expect(()=>assertRiskGeneralMutationAllowed("CLOSED","OPEN")).toThrow(/closure proposal workflow/i);
+    expect(()=>assertRiskGeneralMutationAllowed("MONITORING","CLOSURE_PROPOSED")).toThrow(/cannot be edited/i);
+    expect(()=>assertRiskGeneralMutationAllowed("MONITORING","OPEN")).not.toThrow();
+  });
 });

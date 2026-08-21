@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_MFA_SECRET, E2E_SESSION_SECRET, E2E_SETUP_TOKEN, E2E_USER } from "./tests/e2e/fixtures";
+import { E2E_MFA_SECRET, E2E_SESSION_SECRET, E2E_SETUP_TOKEN, E2E_USER, E2E_USERS } from "./tests/e2e/fixtures";
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3000);
 const baseURL = `http://127.0.0.1:${port}`;
@@ -21,7 +21,10 @@ export default defineConfig({
     navigationTimeout: 60_000,
   },
   webServer: {
-    command: `npm run dev -- -p ${port}`,
+    // Launch Next directly so Playwright owns the actual server process. On
+    // Windows, launching through npm can orphan Next worker processes and leave
+    // an otherwise completed E2E run hanging during shutdown.
+    command: `node node_modules/next/dist/bin/next dev -p ${port}`,
     url: `${baseURL}/login`,
     reuseExistingServer: !process.env.CI,
     env: {
@@ -37,6 +40,7 @@ export default defineConfig({
       E2E_USER_EMAIL: E2E_USER.email,
       E2E_USER_NAME: E2E_USER.name,
       E2E_USER_PASSWORD: E2E_USER.password,
+      E2E_USERS_JSON: JSON.stringify(E2E_USERS),
     },
   },
   projects: [
