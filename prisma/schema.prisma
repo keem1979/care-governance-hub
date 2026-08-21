@@ -85,6 +85,65 @@ enum EvidenceMappingDecision {
   NOT_SUITABLE
 }
 
+enum EvidenceRole {
+  LEGACY_UNSPECIFIED
+  SOURCE
+  CONTROL
+  COMPLETION
+  VERIFICATION
+  EFFECTIVENESS
+  CLOSURE
+  PROFESSIONAL
+  REGULATORY
+  SUPPORTING
+}
+
+enum EvidenceCurrentnessMode {
+  HISTORICAL_NON_EXPIRING
+  EXPIRY_BASED
+  REVIEW_BASED
+  SUPERSESSION_BASED
+  CURRENT_SOURCE
+}
+
+enum EvidenceCurrentnessStatus {
+  CURRENT
+  SUPERSEDED
+  HISTORICAL
+}
+
+enum ProviderEvidenceTypeStatus {
+  ACTIVE
+  RETIRED
+}
+
+enum ProviderControlFamily {
+  PEOPLE
+  PROCESS
+  TECHNOLOGY
+  PROFESSIONAL_EXTERNAL
+  PHYSICAL_ENVIRONMENTAL
+  GOVERNANCE
+}
+
+enum ProviderControlVersionStatus {
+  DRAFT
+  EFFECTIVE
+  SUPERSEDED
+  RETIRED
+}
+
+enum ProviderControlScopeType {
+  ORGANISATION
+  SELECTED_LOCATIONS
+}
+
+enum RiskControlApplicationStatus {
+  APPLIED
+  REVIEW_REQUIRED
+  NO_LONGER_APPLICABLE
+}
+
 enum AuditQuestionType {
   COMPLIANCE
   YES_NO
@@ -532,6 +591,7 @@ enum EffectivenessOutcome {
   PARTIALLY_EFFECTIVE
   INEFFECTIVE
   TOO_EARLY
+  INSUFFICIENT_EVIDENCE
 }
 
 enum RecurrenceCaseStatus {
@@ -975,6 +1035,11 @@ model Organisation {
   understandingChecks    UnderstandingCheck[]
   careCompetencyRequirements CareCompetencyRequirement[]
   evidenceVerifications EvidenceVerification[]
+  providerEvidenceTypes ProviderEvidenceType[]
+  providerControls ProviderControl[]
+  providerControlVersions ProviderControlVersion[]
+  riskControlApplications RiskControlApplication[]
+  riskControlEffectivenessReviews RiskControlEffectivenessReview[]
   policyRequirementMappings PolicyRequirementMapping[]
   templateRequirementMappings TemplateRequirementMapping[]
   regulatoryFrameworkVersions RegulatoryFrameworkVersion[]
@@ -1044,6 +1109,7 @@ model ServiceLocation {
   understandingChecks    UnderstandingCheck[]
   careCompetencyRequirements CareCompetencyRequirement[]
   evidenceVerifications EvidenceVerification[]
+  providerControlScopes ProviderControlVersionLocation[]
   frameworkChangeReviews FrameworkChangeReview[]
   mockInspections MockInspection[]
   externalParties ExternalParty[]
@@ -1136,6 +1202,16 @@ model User {
   understandingAssessed  UnderstandingCheck[]      @relation("UnderstandingCheckAssessor")
   competencyRequirementsCreated CareCompetencyRequirement[] @relation("CareCompetencyRequirementCreator")
   evidenceVerified       EvidenceVerification[]       @relation("EvidenceVerifier")
+  providerEvidenceTypesOwned ProviderEvidenceType[]    @relation("ProviderEvidenceTypeOwner")
+  providerEvidenceTypesCreated ProviderEvidenceType[]  @relation("ProviderEvidenceTypeCreator")
+  providerEvidenceTypesRetired ProviderEvidenceType[]  @relation("ProviderEvidenceTypeRetirer")
+  providerControlsCreated ProviderControl[]            @relation("ProviderControlCreator")
+  providerControlVersionsOwned ProviderControlVersion[] @relation("ProviderControlVersionOwner")
+  providerControlVersionsCreated ProviderControlVersion[] @relation("ProviderControlVersionCreator")
+  providerControlVersionsApproved ProviderControlVersion[] @relation("ProviderControlVersionApprover")
+  providerControlApplicationsMade RiskControlApplication[] @relation("RiskControlApplicationActor")
+  providerControlEvidenceLinked RiskControlEvidence[]  @relation("RiskControlEvidenceLinker")
+  riskControlEffectivenessReviewed RiskControlEffectivenessReview[] @relation("RiskControlEffectivenessReviewer")
   evidenceMappingsCreated ComplianceRequirementEvidence[] @relation("EvidenceMappingCreator")
   policyMappingsCreated  PolicyRequirementMapping[]   @relation("PolicyRequirementMappingCreator")
   templateMappingsCreated TemplateRequirementMapping[] @relation("TemplateRequirementMappingCreator")
@@ -1259,6 +1335,13 @@ model Evidence {
   description                String?
   category                   String
   evidenceType               String
+  taxonomyFamilyKey          String?
+  taxonomyTypeKey            String?
+  taxonomyFamilySnapshot     String?
+  taxonomyTypeSnapshot       String?
+  providerEvidenceTypeId     String?                     @db.Uuid
+  currentnessMode            EvidenceCurrentnessMode?
+  currentnessStatus          EvidenceCurrentnessStatus?
   ownerId                    String                  @db.Uuid
   currentVersionId           String?                 @unique @db.Uuid
   evidenceDate               DateTime?
@@ -1302,6 +1385,8 @@ model Evidence {
   actionOccurrences      ActionOccurrence[]
   generatedPolicy        Policy?                         @relation("GeneratedPolicyEvidence", fields: [generatedPolicyId], references: [id], onDelete: Cascade)
   verifications          EvidenceVerification[]
+  providerEvidenceType   ProviderEvidenceType?              @relation(fields: [providerEvidenceTypeId], references: [id], onDelete: SetNull)
+  riskControlEvidence    RiskControlEvidence[]
   governanceDecisions    GovernanceDecision[]              @relation("GovernanceDecisionEvidence")
   governanceObligations  GovernanceObligation[]            @relation("GovernanceObligationEvidence")
   governanceObligationUpdates GovernanceObligationUpdate[] @relation("GovernanceObligationUpdateEvidence")
@@ -1311,7 +1396,105 @@ model Evidence {
   @@unique([organisationId, generatedPolicyTemplateKey])
   @@index([organisationId, status])
   @@index([organisationId, category])
+  @@index([organisationId, taxonomyFamilyKey, taxonomyTypeKey])
+  @@index([providerEvidenceTypeId])
   @@index([organisationId, reviewExpiryDate])
+  @@index([locationId])
+}
+
+model ProviderEvidenceType {
+  id                         String                     @id @default(uuid()) @db.Uuid
+  organisationId             String                     @db.Uuid
+  stableKey                  String
+  familyKey                  String
+  label                      String
+  description                String?
+  currentnessMode            EvidenceCurrentnessMode
+  applicableModules          String[]                   @default([])
+  applicableRiskCategoryKeys String[]                   @default([])
+  status                     ProviderEvidenceTypeStatus @default(ACTIVE)
+  ownerId                    String                     @db.Uuid
+  createdById                String                     @db.Uuid
+  retiredById                String?                    @db.Uuid
+  retiredAt                  DateTime?
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  owner        User         @relation("ProviderEvidenceTypeOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdBy    User         @relation("ProviderEvidenceTypeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  retiredBy    User?        @relation("ProviderEvidenceTypeRetirer", fields: [retiredById], references: [id], onDelete: SetNull)
+  evidence     Evidence[]
+
+  @@unique([organisationId, stableKey])
+  @@index([organisationId, familyKey, status])
+}
+
+model ProviderControl {
+  id               String   @id @default(uuid()) @db.Uuid
+  organisationId   String   @db.Uuid
+  stableKey        String
+  currentVersionId String?  @unique @db.Uuid
+  createdById      String   @db.Uuid
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organisation  Organisation            @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  createdBy     User                    @relation("ProviderControlCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  currentVersion ProviderControlVersion? @relation("CurrentProviderControlVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions      ProviderControlVersion[] @relation("ProviderControlVersions")
+
+  @@unique([organisationId, stableKey])
+  @@index([organisationId, createdAt])
+}
+
+model ProviderControlVersion {
+  id                              String                       @id @default(uuid()) @db.Uuid
+  organisationId                  String                       @db.Uuid
+  controlId                       String                       @db.Uuid
+  versionNumber                   Int
+  status                          ProviderControlVersionStatus @default(DRAFT)
+  title                           String
+  description                     String
+  family                          ProviderControlFamily
+  applicableRiskCategoryKeys      String[]                     @default([])
+  scopeType                       ProviderControlScopeType      @default(ORGANISATION)
+  accountableOwnerId              String?                      @db.Uuid
+  expectedEvidenceFamilyKeys      String[]                     @default([])
+  expectedEvidenceTypeKeys        String[]                     @default([])
+  expectedEffectivenessMethod     String?
+  effectiveFrom                   DateTime?
+  reviewDueAt                     DateTime?
+  changeRationale                 String
+  createdById                     String                       @db.Uuid
+  approvedById                    String?                      @db.Uuid
+  approvedAt                      DateTime?
+  createdAt                       DateTime                     @default(now())
+  updatedAt                       DateTime                     @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  control      ProviderControl @relation("ProviderControlVersions", fields: [controlId], references: [id], onDelete: Restrict)
+  currentFor   ProviderControl? @relation("CurrentProviderControlVersion")
+  accountableOwner User? @relation("ProviderControlVersionOwner", fields: [accountableOwnerId], references: [id], onDelete: SetNull)
+  createdBy    User @relation("ProviderControlVersionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy   User? @relation("ProviderControlVersionApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  locations    ProviderControlVersionLocation[]
+  applications RiskControlApplication[]
+
+  @@unique([controlId, versionNumber])
+  @@index([organisationId, status, family])
+  @@index([applicableRiskCategoryKeys], type: Gin)
+  @@index([reviewDueAt])
+}
+
+model ProviderControlVersionLocation {
+  controlVersionId String @db.Uuid
+  locationId       String @db.Uuid
+
+  controlVersion ProviderControlVersion @relation(fields: [controlVersionId], references: [id], onDelete: Cascade)
+  location       ServiceLocation       @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@id([controlVersionId, locationId])
   @@index([locationId])
 }
 
@@ -1621,6 +1804,7 @@ model Risk {
   closureProposals RiskClosureProposal[]
   closureApprovals RiskClosureApproval[]
   evidenceLinks     RiskEvidence[]
+  controlApplications RiskControlApplication[]
   reviews           RiskReview[]
 
   @@unique([organisationId, reference])
@@ -1634,12 +1818,79 @@ model Risk {
 model RiskEvidence {
   riskId     String @db.Uuid
   evidenceId String @db.Uuid
+  role       EvidenceRole @default(LEGACY_UNSPECIFIED)
 
   risk     Risk     @relation(fields: [riskId], references: [id], onDelete: Cascade)
   evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
 
-  @@id([riskId, evidenceId])
+  @@id([riskId, evidenceId, role])
   @@index([evidenceId])
+}
+
+model RiskControlApplication {
+  id                         String                       @id @default(uuid()) @db.Uuid
+  organisationId             String                       @db.Uuid
+  riskId                     String                       @db.Uuid
+  controlVersionId           String                       @db.Uuid
+  status                     RiskControlApplicationStatus @default(APPLIED)
+  controlKeySnapshot         String
+  versionNumberSnapshot      Int
+  titleSnapshot              String
+  descriptionSnapshot        String
+  familySnapshot             ProviderControlFamily
+  expectedEvidenceSnapshot   Json?
+  effectivenessMethodSnapshot String?
+  appliedById                String                       @db.Uuid
+  appliedAt                  DateTime                     @default(now())
+  reviewRequiredAt           DateTime?
+  reviewReason               String?
+  updatedAt                  DateTime                     @updatedAt
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  risk         Risk @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  controlVersion ProviderControlVersion @relation(fields: [controlVersionId], references: [id], onDelete: Restrict)
+  appliedBy    User @relation("RiskControlApplicationActor", fields: [appliedById], references: [id], onDelete: Restrict)
+  evidenceLinks RiskControlEvidence[]
+  effectivenessReviews RiskControlEffectivenessReview[]
+
+  @@unique([riskId, controlVersionId])
+  @@index([organisationId, status, appliedAt])
+  @@index([controlVersionId, status])
+}
+
+model RiskControlEvidence {
+  applicationId String       @db.Uuid
+  evidenceId    String       @db.Uuid
+  role          EvidenceRole
+  linkedById    String       @db.Uuid
+  linkedAt      DateTime     @default(now())
+
+  application RiskControlApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  evidence    Evidence @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  linkedBy    User @relation("RiskControlEvidenceLinker", fields: [linkedById], references: [id], onDelete: Restrict)
+
+  @@id([applicationId, evidenceId, role])
+  @@index([evidenceId, role])
+}
+
+model RiskControlEffectivenessReview {
+  id             String               @id @default(uuid()) @db.Uuid
+  organisationId String               @db.Uuid
+  applicationId  String               @db.Uuid
+  outcome        EffectivenessOutcome
+  method         String
+  rationale      String
+  reviewDate     DateTime
+  nextReviewDate DateTime?
+  reviewerId     String               @db.Uuid
+  createdAt      DateTime             @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  application  RiskControlApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reviewer     User @relation("RiskControlEffectivenessReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, outcome, reviewDate])
+  @@index([applicationId, reviewDate])
 }
 
 model RiskReview {

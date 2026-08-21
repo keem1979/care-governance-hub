@@ -23,6 +23,8 @@ export async function listRiskEvidenceOptions(db: PrismaClient, context: Evidenc
       reviewExpiryDate: true,
       updatedAt: true,
       currentVersionId: true,
+      currentnessMode: true,
+      currentnessStatus: true,
       verifications: {
         orderBy: { verifiedAt: "desc" },
         take: 1,
@@ -30,7 +32,7 @@ export async function listRiskEvidenceOptions(db: PrismaClient, context: Evidenc
       },
     },
     orderBy: [{ updatedAt: "desc" }, { title: "asc" }],
-    take: 300,
+    take: 40,
   });
   return records.map((record) => ({
     id: record.id,
@@ -44,6 +46,8 @@ export async function listRiskEvidenceOptions(db: PrismaClient, context: Evidenc
       reviewExpiryDate: record.reviewExpiryDate,
       updatedAt: record.updatedAt,
       currentVersionId: record.currentVersionId,
+      currentnessMode:record.currentnessMode,
+      currentnessStatus:record.currentnessStatus,
       verification: record.verifications[0],
     }),
   }));

@@ -11,7 +11,7 @@ export default async function EditRiskPage({ params }: { params: Promise<{ id: s
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT); const { id } = await params; const db = createDb();
   try {
     const [risk,memberships,evidence] = await Promise.all([
-      db.risk.findFirst({ where: { id, ...riskScopeWhere(context) }, include: { evidenceLinks: true,riskFrameworkVersion:{select:{versionNumber:true}} } }),
+      db.risk.findFirst({ where: { id, ...riskScopeWhere(context) }, include: { evidenceLinks: {where:{role:{in:["SUPPORTING","LEGACY_UNSPECIFIED"]}}},riskFrameworkVersion:{select:{versionNumber:true}} } }),
       db.organisationMembership.findMany({ where: { organisationId: context.organisation.id, status: "ACTIVE" }, select: { user: { select: { id: true, name: true } } }, orderBy: { user: { name: "asc" } } }),
       listRiskEvidenceOptions(db, context, id),
     ]); if (!risk) notFound();

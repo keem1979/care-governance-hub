@@ -1,0 +1,9 @@
+import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth/dal";
+import { createDb } from "@/lib/db";
+import { evidenceAssuranceState } from "@/lib/evidence-assurance";
+import { evidenceScopeWhere } from "@/lib/evidence";
+import { PERMISSIONS } from "@/lib/permissions";
+import { riskScopeWhere } from "@/lib/risks";
+
+export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){const context=await requirePermission(PERMISSIONS.GOVERNANCE_EDIT),{id}=await params,url=new URL(request.url),q=url.searchParams.get("q")?.trim()??"",family=url.searchParams.get("family")??"",type=url.searchParams.get("type")??"",db=createDb();try{const risk=await db.risk.findFirst({where:{id,...riskScopeWhere(context)},select:{id:true}});if(!risk)return NextResponse.json({error:"Risk not found."},{status:404});const items=await db.evidence.findMany({where:{...evidenceScopeWhere(context),status:"ACTIVE",...(family?{taxonomyFamilyKey:family}:{}),...(type?{taxonomyTypeKey:type}:{}),...(q?{OR:[{title:{contains:q,mode:"insensitive"}},{sourceName:{contains:q,mode:"insensitive"}},{sourceReference:{contains:q,mode:"insensitive"}},{tags:{has:q}}]}:{})},select:{id:true,title:true,category:true,evidenceType:true,status:true,taxonomyFamilySnapshot:true,taxonomyTypeSnapshot:true,currentnessMode:true,currentnessStatus:true,reviewExpiryDate:true,updatedAt:true,currentVersionId:true,verifications:{orderBy:{verifiedAt:"desc"},take:1,select:{outcome:true,verifiedAt:true,evidenceVersionId:true,reviewDueAt:true}}},orderBy:{updatedAt:"desc"},take:20});return NextResponse.json({items:items.map(item=>({id:item.id,title:item.title,classification:item.taxonomyFamilySnapshot?`${item.taxonomyFamilySnapshot} · ${item.taxonomyTypeSnapshot}`:`${item.category} · ${item.evidenceType} · legacy`,assurance:evidenceAssuranceState({...item,verification:item.verifications[0]})}))})}finally{await db.$disconnect()}}

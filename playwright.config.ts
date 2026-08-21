@@ -7,6 +7,11 @@ const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Development compilation and the first tenant-scoped dashboard query can
+  // exceed Playwright's 30-second test default on Windows. Individual release
+  // gates still use tighter assertion timeouts, while the test itself is given
+  // enough time to report the real failing step instead of a cold-start race.
+  timeout: 120_000,
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
@@ -20,6 +25,7 @@ export default defineConfig({
     actionTimeout: 30_000,
     navigationTimeout: 60_000,
   },
+  expect: { timeout: 30_000 },
   webServer: {
     // Launch Next directly so Playwright owns the actual server process. On
     // Windows, launching through npm can orphan Next worker processes and leave

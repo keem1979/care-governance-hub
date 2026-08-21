@@ -69,16 +69,18 @@ test("three authenticated people complete the Critical Risk assurance lifecycle"
   await expect(page.getByLabel("Delivery owner")).toHaveValue(/.+/);
   await expect(page.getByLabel("Registered Manager / senior oversight")).toHaveValue(/.+/);
   await expect(page.getByLabel("Due date")).toHaveValue(targetDate);
-  let createActionResponse = page.waitForResponse((response) =>
-    response.url().endsWith("/api/actions") && response.request().method() === "POST",
+  let createActionResponse = page.waitForResponse(
+    (response) => response.url().endsWith("/api/actions") && response.request().method() === "POST",
+    { timeout: 120_000 },
   );
   await page.getByRole("button", { name: "Check and create action" }).click();
   let actionResponse = await createActionResponse;
   const possibleMatch = page.getByRole("heading", { name: "Review possible existing action" });
   if (actionResponse.status() === 409) {
     await expect(possibleMatch).toBeVisible();
-    createActionResponse = page.waitForResponse((response) =>
-      response.url().endsWith("/api/actions") && response.request().method() === "POST",
+    createActionResponse = page.waitForResponse(
+      (response) => response.url().endsWith("/api/actions") && response.request().method() === "POST",
+      { timeout: 120_000 },
     );
     await page.getByRole("button", { name: "Reject match" }).first().click();
     actionResponse = await createActionResponse;

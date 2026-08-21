@@ -23,10 +23,13 @@ export const ALLOWED_EVIDENCE_FILE_TYPES = new Set([
   "text/csv", "image/jpeg", "image/png",
 ]);
 
-export function evidenceDisplayStatus(status: string, expiry: Date | null, now = new Date()): string {
+export function evidenceDisplayStatus(status: string, expiry: Date | null, now = new Date(), currentness?: { mode?: string | null; status?: string | null }): string {
   if (status === "ARCHIVED") return "Archived";
+  if (currentness?.status === "SUPERSEDED") return "Superseded";
+  if (currentness?.status === "HISTORICAL") return "Historical";
+  if (currentness?.mode === "HISTORICAL_NON_EXPIRING") return "Historical";
   if (!expiry) return "Current";
-  if (expiry < now) return "Expired";
+  if (expiry < now) return ["REVIEW_BASED","CURRENT_SOURCE"].includes(currentness?.mode ?? "") ? "Review due" : "Expired";
   const soon = new Date(now); soon.setDate(soon.getDate() + 30);
   return expiry <= soon ? "Expiring soon" : "Current";
 }

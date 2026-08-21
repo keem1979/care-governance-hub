@@ -39,6 +39,7 @@ export function riskManagementAssurance(input: {
   };
   independentEvidence: { title: string; assuranceState: string }[];
   actions: { reference: string; status: string; dueDate: Date; evidenceCount: number; evidenceRequired: boolean; effectivenessCount?: number }[];
+  controlApplications?: { title: string; gaps: string[]; conflicts: string[] }[];
   now?: Date;
 }): ManagementAssuranceResult {
   const now = input.now ?? new Date();
@@ -48,10 +49,13 @@ export function riskManagementAssurance(input: {
   const completedAwaitingEffectiveness = input.actions.filter((action) => action.status === "COMPLETED" && !action.effectivenessCount);
   const reliableEvidence = input.independentEvidence.filter((item) => ["CURRENT_VERIFIED", "VERIFIED_WITH_LIMITATIONS", "EXPIRING_SOON"].includes(item.assuranceState));
   const closurePosition = ["CLOSED", "ARCHIVED"].includes(input.risk.status);
+  const controlGaps=(input.controlApplications??[]).flatMap(item=>item.gaps.map(gap=>`${item.title}: ${gap}`));
+  const controlConflicts=(input.controlApplications??[]).flatMap(item=>item.conflicts.map(conflict=>`${item.title}: ${conflict}`));
   const checks: AssuranceCheck[] = [
     { key: "defined", label: "Risk clearly defined", met: Boolean(input.risk.cause?.trim() && input.risk.riskEvent?.trim() && input.risk.consequence?.trim()), reason: "Record cause, uncertain event and consequence.", provenance: "Risk statement" },
     { key: "owner", label: "Accountable owner assigned", met: Boolean(input.risk.ownerId), reason: "Assign an accountable risk owner.", provenance: "Risk ownership" },
     { key: "controls", label: "Current controls identified", met: Boolean(input.risk.existingControls.trim()), reason: "Record controls operating now, not planned work.", provenance: "Control assessment" },
+    { key: "provider-control-assurance", label: "Applied Provider Controls have sufficient assurance", met: controlGaps.length===0, reason: controlGaps.join(" ")||"No calculated Provider Control gap.", provenance: "Provider Control applications, Evidence and effectiveness reviews" },
     { key: "evidence", label: "Suitable supporting evidence linked", met: reliableEvidence.length > 0, reason: input.independentEvidence.length ? "Linked evidence is unverified, stale, rejected or expired." : "Link supporting evidence from the Evidence Library; the live Risk record alone is not closure evidence.", provenance: "Evidence Library verification" },
     { key: "effectiveness", label: "Control effectiveness tested", met: input.risk.controlEffectiveness !== "NOT_TESTED" && Boolean(input.risk.controlAssurance?.trim()), reason: "Record how the controls were tested and the result.", provenance: "Control effectiveness assessment" },
     { key: "treatment", label: "Outside-tolerance exposure has an action", met: !outsideTolerance || unresolvedActions.length > 0, reason: "Create a linked Follow-Up Action or record authorised acceptance.", provenance: "Risk threshold and Action Tracker" },
@@ -65,5 +69,6 @@ export function riskManagementAssurance(input: {
   if (input.risk.controlEffectiveness === "EFFECTIVE" && overdueActions.length) conflicts.push("Controls are rated Effective while linked treatment actions remain overdue.");
   if (input.risk.controlEffectiveness === "EFFECTIVE" && completedAwaitingEffectiveness.length) conflicts.push("Controls are rated Effective while completed treatment Actions are still awaiting an effectiveness review.");
   if (closurePosition && unresolvedActions.length) conflicts.push("The risk is closed or archived while linked treatment actions remain unresolved.");
+  conflicts.push(...controlConflicts);
   return managementAssuranceTest(checks, conflicts);
 }

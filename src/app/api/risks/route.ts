@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const risk = await db.$transaction(async (tx) => {
       const created = await tx.risk.create({ data: {
         organisationId: context.organisation.id,reference,...governedInput,status:input.status as never,createdById: context.user.id,
-        evidenceLinks: { create: evidenceIds.map((evidenceId) => ({ evidenceId })) },
+        evidenceLinks: { create: evidenceIds.map((evidenceId) => ({ evidenceId, role: "SUPPORTING" as const })) },
       } });
       await syncRiskEvidence(tx,{riskId:created.id,organisationId:context.organisation.id,locationId,reference,title,description:input.description,category:input.category,ownerId,createdById:context.user.id,actorId:context.user.id,identifiedDate:input.identifiedDate,nextReviewDate:input.nextReviewDate,residualScore:input.residualScore,residualLevel:input.residualLevel,status:input.status,existingControls:input.existingControls,controlEffectiveness:input.controlEffectiveness});
       await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId, userId: context.user.id, action: "CREATE", recordType: "Risk", recordId: created.id, summary: `Added risk: ${reference} — ${title}`, afterValue: { status:input.status, initialScore:input.initialScore, residualScore:input.residualScore,targetScore:input.targetScore,frameworkVersion:framework?.frameworkVersionNumber??null,frameworkSource:framework?"Organisation Risk Framework":"Legacy/manual" } } });

@@ -28,7 +28,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
       resolveCurrentClosureRule(db,context.organisation.id,authorityLevel,stableRiskCategoryKey(risk.category)),
     ]);
     const toleranceScore=framework?.toleranceScore??risk.toleranceScore,appetite=framework?.appetite??risk.appetite;
-    const evidenceIds=risk.evidenceLinks.map(({evidenceId})=>evidenceId),evidence=await riskClosureEvidenceSummary(db,context,evidenceIds);
+    const evidenceIds=[...new Set(risk.evidenceLinks.map(({evidenceId})=>evidenceId))],evidence=await riskClosureEvidenceSummary(db,context,evidenceIds);
     const unresolvedActionCount=actions.filter(action=>!resolvedActionStatuses.includes(action.status as (typeof resolvedActionStatuses)[number])).length;
     const effectivenessReviewCount=actions.reduce((total,action)=>total+action._count.effectivenessReviews,0)+(risk.reviews[0]?.controlsEffective&&risk.reviews[0]?.assuranceChecked?1:0);
     const conditions={residualScore:risk.residualScore,toleranceScore,supportingEvidenceCount:evidence.supportingEvidenceCount,verifiedCurrentEvidenceCount:evidence.verifiedCurrentEvidenceCount,unresolvedActionCount,effectivenessReviewCount,ownerId:risk.ownerId};

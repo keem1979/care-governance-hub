@@ -42,5 +42,31 @@ test("mobile RM-critical Risk and Framework surfaces remain operable",async({pag
   await ownerContext.close();
 });
 
+test("mobile Evidence Library and Risk Control search remain operable",async({page,request},testInfo)=>{
+  test.skip(testInfo.project.name!=="mobile","Targeted mobile release check");
+  test.setTimeout(180_000);
+  const setup=await request.get("/api/test/e2e/setup",{headers:{"x-e2e-setup-token":E2E_SETUP_TOKEN}});
+  const scenarios=((await setup.json()) as {risks:Record<string,{id:string}>}).risks;
+  await signIn(page,E2E_USERS.riskOwner);
+
+  await page.goto("/evidence",{waitUntil:"domcontentloaded"});
+  await expect(page.getByRole("heading",{name:"Evidence Library"})).toBeVisible();
+  await expect(page.getByPlaceholder("Search title, source, reference or exact tag")).toBeVisible();
+  await expectMinimumTouchTarget(page.getByRole("button",{name:"Apply filters"}));
+  await expectNoPageOverflow(page);
+
+  await page.goto(`/risks/${scenarios["E2E-RSK-SEC-READY"].id}`,{waitUntil:"domcontentloaded"});
+  const search=page.locator("details").filter({hasText:"Search authorised Evidence"}).first();
+  await search.locator("summary").click();
+  await expect(search.getByLabel("Search Evidence")).toBeVisible();
+  await expectMinimumTouchTarget(search.getByRole("button",{name:"Search Evidence"}));
+  await expectNoPageOverflow(page);
+
+  await page.goto("/settings/provider-controls",{waitUntil:"domcontentloaded"});
+  await expect(page.getByRole("heading",{name:"Provider Control Library"})).toBeVisible();
+  await expectMinimumTouchTarget(page.getByText("Create a Provider Control draft",{exact:true}));
+  await expectNoPageOverflow(page);
+});
+
 async function expectNoPageOverflow(page:import("@playwright/test").Page){expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true)}
 async function expectMinimumTouchTarget(locator:import("@playwright/test").Locator){const box=await locator.boundingBox();expect(box).not.toBeNull();expect(box!.height).toBeGreaterThanOrEqual(44);expect(box!.width).toBeGreaterThanOrEqual(44)}
