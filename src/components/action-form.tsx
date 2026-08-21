@@ -8,12 +8,13 @@ import { FormPurpose } from "@/components/form-purpose";
 type Option = { id: string; name: string };
 type Source = { type: string; id: string; label: string };
 type Match = { actionId: string; reference: string; title: string; score: number; kind: string; rationale: string[]; lifecycleStatus: string };
-type Initial = Record<string, string | number | boolean | null | string[] | undefined> & { id: string; evidenceIds: string[] };
+type Values = Record<string, string | number | boolean | null | string[] | undefined>;
+type Initial = Values & { id: string; evidenceIds: string[] };
 
-export function ActionForm({ locations, owners, oversightOwners, clients, evidence, sources, initial, preselectedSource }: { locations: Option[]; owners: Option[]; oversightOwners: Option[]; clients: Option[]; evidence: Option[]; sources: Source[]; initial?: Initial; preselectedSource?: string }) {
+export function ActionForm({ locations, owners, oversightOwners, clients, evidence, sources, initial, preselectedSource, prefill, riskHandoff }: { locations: Option[]; owners: Option[]; oversightOwners: Option[]; clients: Option[]; evidence: Option[]; sources: Source[]; initial?: Initial; preselectedSource?: string; prefill?: Values; riskHandoff?: { reference: string; residualScore: number; targetScore: number } }) {
   const router = useRouter(), [error, setError] = useState(""), [busy, setBusy] = useState(false), [matches, setMatches] = useState<Match[]>([]), [pending, setPending] = useState<FormData | null>(null);
   const cls = "mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100";
-  const value = (key: string) => initial?.[key] as string | undefined;
+  const value = (key: string) => (initial?.[key] ?? prefill?.[key]) as string | undefined;
 
   async function save(payload: FormData) {
     setBusy(true); setError("");
@@ -28,6 +29,7 @@ export function ActionForm({ locations, owners, oversightOwners, clients, eviden
 
   return <form onSubmit={submit} className="space-y-7">
     <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-950 to-emerald-800 p-6 text-white"><FormPurpose title="Improvement action" description="Turn a finding into a measurable result, with one accountable owner, occurrence history, evidence and independent closure." steps={["Define the outcome", "Check for an existing action", "Track response and evidence", "Verify and monitor"]} /></div>
+    {riskHandoff?<section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950"><p className="text-xs font-black uppercase tracking-widest">Risk treatment handoff · {riskHandoff.reference}</p><h2 className="mt-1 text-lg font-bold">Review before creating the central Action</h2><p className="mt-1 text-sm leading-6">QCGMS has proposed wording, scope, ownership, due date and assurance from the Risk. Amend anything that is not appropriate. Completing this Action will not change the Risk automatically: current residual {riskHandoff.residualScore}; expected target {riskHandoff.targetScore}. Effectiveness and any score change require a formal Risk review.</p></section>:null}
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">{error}</p>}
     {matches.length > 0 && <section className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-6"><h2 className="text-lg font-black text-amber-950">Review possible existing action</h2><p className="mt-1 text-sm text-amber-900">Matching is advisory. A manager must confirm a link or reject it before creating a separate action.</p><div className="mt-4 space-y-3">{matches.map((match) => <div key={match.actionId} className="rounded-xl border border-amber-200 bg-white p-4"><p className="font-bold">{match.reference} — {match.title}</p><p className="text-sm text-slate-600">{actionLabel(match.kind)} · {match.score}% confidence · {actionLabel(match.lifecycleStatus)}</p><p className="mt-1 text-xs text-slate-500">{match.rationale.join(" · ")}</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => decide(`LINK:${match.actionId}`)} className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-bold text-white">Link occurrence</button><button type="button" onClick={() => decide(`REJECT:${match.actionId}`)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold">Reject match</button></div></div>)}</div></section>}
 
@@ -56,7 +58,7 @@ export function ActionForm({ locations, owners, oversightOwners, clients, eviden
 
     <Section number="3" title="Management response and progress" copy="A response records what management says has happened; it does not close the finding."><div className="grid gap-4 md:grid-cols-2">
       <Field label="Status"><select className={cls} name="status" defaultValue={value("status") ?? "OPEN"}>{ACTION_STATUSES.filter((item) => !["OVERDUE", "ARCHIVED"].includes(item)).map((item) => <option key={item} value={item}>{actionLabel(item)}</option>)}</select></Field>
-      <Field label="Progress completed (%)"><input className={cls} type="number" min="0" max="100" step="5" name="progressPercent" defaultValue={(initial?.progressPercent as number | undefined) ?? 0} /></Field>
+      <Field label="Progress completed (%)"><input className={cls} type="number" min="0" max="100" step="5" name="progressPercent" defaultValue={(initial?.progressPercent as number | undefined) ?? (prefill?.progressPercent as number | undefined) ?? 0} /></Field>
       <Field label="Management response" wide><textarea className={`${cls} min-h-24`} name="managementResponse" defaultValue={value("managementResponse")} placeholder="Record the response received, who provided it and the stated completion position." /></Field>
       <Field label="Current progress summary" wide><textarea className={`${cls} min-h-20`} name="progressNote" defaultValue={value("progressNote")} /></Field>
       <Field label="Does this need escalation?"><select className={cls} name="escalationRequired" defaultValue={String(initial?.escalationRequired ?? false)}><option value="false">No</option><option value="true">Yes — management attention required</option></select></Field>

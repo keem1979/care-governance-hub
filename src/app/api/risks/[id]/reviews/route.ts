@@ -17,7 +17,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!reviewDate || !nextReviewDate || notes.length < 10) throw new Error("Enter the review dates and a clear review conclusion.");
     if(nextReviewDate<=reviewDate)throw new Error("The next review date must be after this review date.");
     if(assuranceChecked.length<3)throw new Error("Record the evidence used to test whether the controls are working.");
-    if(!["IMPROVING","STABLE","DETERIORATING"].includes(trend)||!["CONTINUE_MONITORING","CHANGE_CONTROLS","ESCALATE","ACCEPT","CLOSE"].includes(decision))throw new Error("Choose a valid trend and management decision.");
+    if(!["IMPROVING","STABLE","DETERIORATING","INSUFFICIENT_EVIDENCE"].includes(trend)||!["CONTINUE_MONITORING","CHANGE_CONTROLS","ESCALATE","ACCEPT","CLOSE"].includes(decision))throw new Error("Choose a valid risk position and management decision.");
     if(decision==="ACCEPT"&&!risk.acceptanceRationale)throw new Error("Record an acceptance rationale in the risk assessment before accepting this risk.");
     const status=decision==="ACCEPT"?"ACCEPTED":risk.status==="OPEN"?"MONITORING":risk.status;
     await db.$transaction(async(tx)=>{

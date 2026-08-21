@@ -6,6 +6,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { makeRiskReference, validateRiskClosure } from "@/lib/risks";
 import { parseRiskInput } from "@/lib/risk-input";
 import { syncRiskEvidence } from "@/lib/risk-evidence";
+import { riskClosureEvidenceSummary } from "@/lib/risk-closure-evidence";
 
 export async function POST(request: Request) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -15,13 +16,16 @@ export async function POST(request: Request) {
     if (locationId && !context.locations.some(({ id }) => id === locationId)) throw new Error("Choose an authorised location.");
     if (ownerId && !(await activeMember(db, context.organisation.id, ownerId))) throw new Error("Choose an active risk owner.");
     if (closureApprovedById && !(await activeMember(db, context.organisation.id, closureApprovedById))) throw new Error("Choose an active closure approver.");
-    validateRiskClosure({ status:input.status, level:input.residualLevel, rationale:input.closureRationale ?? undefined, approverId: closureApprovedById ?? undefined, closureDate:input.closureDate });
     const evidenceIds = form.getAll("evidenceIds").map(String).filter(Boolean);
     for (const evidenceId of evidenceIds) if (!(await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context) } }))) throw new Error("Linked evidence could not be found.");
+    const closureApproverId=input.status==="CLOSED"?(closureApprovedById??context.user.id):closureApprovedById,closureDate=input.status==="CLOSED"?(input.closureDate??new Date()):input.closureDate;
+    const closureEvidence=await riskClosureEvidenceSummary(db,context,evidenceIds);
+    validateRiskClosure({ status:input.status, level:input.residualLevel, residualScore:input.residualScore, toleranceScore:input.toleranceScore, rationale:input.closureRationale ?? undefined, ownerId, approverId: closureApproverId ?? undefined, actorId:context.user.id, closureDate, ...closureEvidence, unresolvedActionCount:0 });
+    const governedInput={...input,closureApprovedById:closureApproverId,closureDate};
     const reference = String(form.get("reference") ?? "").trim() || makeRiskReference();
     const risk = await db.$transaction(async (tx) => {
       const created = await tx.risk.create({ data: {
-        organisationId: context.organisation.id,reference,...input,status:input.status as never,createdById: context.user.id,
+        organisationId: context.organisation.id,reference,...governedInput,status:input.status as never,createdById: context.user.id,
         evidenceLinks: { create: evidenceIds.map((evidenceId) => ({ evidenceId })) },
       } });
       await syncRiskEvidence(tx,{riskId:created.id,organisationId:context.organisation.id,locationId,reference,title,description:input.description,category:input.category,ownerId,createdById:context.user.id,actorId:context.user.id,identifiedDate:input.identifiedDate,nextReviewDate:input.nextReviewDate,residualScore:input.residualScore,residualLevel:input.residualLevel,status:input.status,existingControls:input.existingControls,controlEffectiveness:input.controlEffectiveness});

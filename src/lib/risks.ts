@@ -54,11 +54,17 @@ export function validateRiskPlan(input:{residualScore:number;targetScore:number;
   if(input.toleranceScore<1||input.toleranceScore>25)throw new Error("The tolerance threshold must be between 1 and 25.");
 }
 
-export function validateRiskClosure(input: { status: string; level: string; rationale?: string; approverId?: string; closureDate?: Date | null }) {
+export function validateRiskClosure(input: { status: string; level: string; residualScore?: number; toleranceScore?: number | null; rationale?: string; ownerId?: string | null; approverId?: string; actorId?: string; closureDate?: Date | null; supportingEvidenceCount?: number; verifiedCurrentEvidenceCount?: number; unresolvedActionCount?: number }) {
   if (input.status !== "CLOSED") return;
   if (!input.rationale?.trim()) throw new Error("Enter a closure rationale before closing this risk.");
+  if (input.approverId && input.actorId && input.approverId !== input.actorId) throw new Error("Risk closure approval must be recorded by the signed-in approver; another person's approval cannot be selected on their behalf.");
   if (["HIGH", "CRITICAL"].includes(input.level) && !input.approverId) throw new Error("High and critical risks require named closure approval.");
   if (["HIGH", "CRITICAL"].includes(input.level) && !input.closureDate) throw new Error("High and critical risks require a closure date.");
+  if ((input.supportingEvidenceCount ?? 0) < 1) throw new Error("Link sufficient appropriate supporting evidence before closing this risk; the live risk record alone is not closure evidence.");
+  if (["HIGH", "CRITICAL"].includes(input.level) && (input.verifiedCurrentEvidenceCount ?? 0) < 1) throw new Error("High and critical Risk closure requires current verified evidence of treatment and effectiveness.");
+  if (["HIGH", "CRITICAL"].includes(input.level) && input.ownerId && input.approverId === input.ownerId) throw new Error("High and critical Risk closure cannot be self-approved by the Risk owner.");
+  if ((input.unresolvedActionCount ?? 0) > 0) throw new Error("Resolve, transfer or formally account for linked treatment actions before closing this risk.");
+  if (typeof input.residualScore === "number" && typeof input.toleranceScore === "number" && input.residualScore > input.toleranceScore) throw new Error("Complete a formal risk review before closure: the current residual risk remains outside the recorded tolerance.");
 }
 
 export function levelClasses(level: string): string {

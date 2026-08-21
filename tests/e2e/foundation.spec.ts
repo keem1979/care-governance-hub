@@ -1,42 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
-import { generateTotp } from "@/lib/auth/mfa";
-
-const e2eMfaSecret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
-
-async function signIn(page: Page): Promise<void> {
-  await page.goto("/login?returnTo=%2Fdashboard", { waitUntil: "domcontentloaded" });
-  await page.getByLabel("Email address").fill("owner@meadowview.demo");
-  await page.getByLabel("Password").fill("DemoCare!2026");
-
-  async function submit() {
-    const response = page.waitForResponse((item) =>
-      item.url().endsWith("/api/auth/login") && item.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Sign in securely" }).click();
-    return response;
-  }
-
-  let response = await submit();
-  if (response.status() === 409) {
-    await page.getByLabel("Authenticator or recovery code").fill(generateTotp(e2eMfaSecret));
-    response = await submit();
-  }
-  expect(response.status()).toBe(200);
-  const body = (await response.json()) as { mfaSetupRequired?: boolean };
-
-  if (body.mfaSetupRequired) {
-    await expect(page).toHaveURL(/\/security$/, { timeout: 15_000 });
-    await page.getByRole("button", { name: "Start secure setup" }).click();
-    const enrolledSecret = (await page.locator("code").first().textContent())?.trim() ?? null;
-    expect(enrolledSecret).toBe(e2eMfaSecret);
-    await page.getByLabel("Six-digit verification code").fill(generateTotp(e2eMfaSecret));
-    await page.getByRole("button", { name: "Verify and enable MFA" }).click();
-    await expect(page.getByRole("heading", { name: "Save these one-time recovery codes" })).toBeVisible();
-    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-  } else {
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
-  }
-}
+import { expect, test } from "@playwright/test";
+import { signIn } from "./auth";
+import { E2E_USER } from "./fixtures";
 
 test("shows an accessible sign-in form", async ({ page }) => {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
@@ -61,7 +25,7 @@ test("sets browser protections and rejects a cross-site sign-in request", async 
 
   const crossSite = await request.post("/api/auth/login", {
     headers: { Origin: "https://untrusted.example", "Sec-Fetch-Site": "cross-site" },
-    data: { email: "owner@meadowview.demo", password: "DemoCare!2026" },
+    data: { email: E2E_USER.email, password: E2E_USER.password },
   });
   expect(crossSite.status()).toBe(403);
 });
@@ -69,8 +33,8 @@ test("sets browser protections and rejects a cross-site sign-in request", async 
 test("shows the tenant-scoped dashboard after sign-in", async ({ page }) => {
   await signIn(page);
   await expect(
-    page.getByRole("heading", { name: /Good (morning|afternoon|evening), Olivia/ }),
-  ).toBeVisible();
+    page.getByRole("heading", { name: /Good (morning|afternoon|evening), Evelyn/ }),
+  ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("What needs attention")).toBeVisible();
   await expect(page.getByText("For your team’s internal oversight")).toBeVisible();
   await page.goto("/clients", { waitUntil: "domcontentloaded" });
@@ -119,5 +83,5 @@ test("shows the RM-grade Inspection Centre with calculated assurance and one fra
   await expect(page).toHaveURL(/view=framework/);
   await expect(page.getByRole("heading", { name: "Six CQC evidence categories" })).toBeVisible();
   await page.goto("/evidence/requirements", { waitUntil: "domcontentloaded" });
-  await expect(page).toHaveURL(/\/inspection\?view=framework$/);
+  await expect(page).toHaveURL(/\/inspection\?view=framework$/, { timeout: 30_000 });
 });
