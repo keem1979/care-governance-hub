@@ -8,7 +8,11 @@ import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS, ROLE_KEYS } from "@/lib/permissions";
 import { riskActionPrefill } from "@/lib/risk-action-handoff";
 import { auditFindingActionPrefill } from "@/lib/audit-action-handoff";
+import { incidentActionPrefill } from "@/lib/incident-action-handoff";
+import { complaintActionPrefill } from "@/lib/complaint-action-handoff";
+import { safeguardingActionPrefill } from "@/lib/safeguarding-action-handoff";
 import { riskScopeWhere } from "@/lib/risks";
+import { registerScopeWhere } from "@/lib/registers";
 
 const OVERSIGHT_ROLES = new Set<string>([
   ROLE_KEYS.REGISTERED_MANAGER,
@@ -17,12 +21,12 @@ const OVERSIGHT_ROLES = new Set<string>([
   ROLE_KEYS.QUALITY_MANAGER,
 ]);
 
-export default async function NewActionPage({ searchParams }: { searchParams: Promise<{ sourceType?: string; sourceId?: string }> }) {
+export default async function NewActionPage({ searchParams }: { searchParams: Promise<{ sourceType?: string; sourceId?: string; issueId?: string }> }) {
   const context = await requirePermission(PERMISSIONS.ACTIONS_MANAGE);
   const query = await searchParams;
   const db = createDb();
   try {
-    const [memberships, clients, evidence, sources, sourceRisk, sourceAuditFinding] = await Promise.all([
+    const [memberships, clients, evidence, sources, sourceRisk, sourceAuditFinding, sourceIncident, sourceComplaint, sourceSafeguarding] = await Promise.all([
       db.organisationMembership.findMany({
         where: { organisationId: context.organisation.id, status: "ACTIVE" },
         select: { user: { select: { id: true, name: true } }, role: { select: { key: true, name: true } } },
@@ -38,13 +42,16 @@ export default async function NewActionPage({ searchParams }: { searchParams: Pr
       listActionSources(db, context),
       query.sourceType === "RISK" && query.sourceId ? db.risk.findFirst({ where: { id: query.sourceId, ...riskScopeWhere(context), archivedAt: null }, select: { reference: true, title: true, category: true, furtherControls: true, locationId: true, ownerId: true, targetDate: true, residualLevel: true, residualScore: true, targetScore: true, controlAssurance: true } }) : null,
       query.sourceType === "AUDIT" && query.sourceId ? db.auditFinding.findFirst({ where: { id: query.sourceId, audit: auditScope(context) }, select: { id: true, severity: true, summary: true, recommendation: true, immediateControl: true, criterionKeySnapshot: true, actionId: true, audit: { select: { title: true, locationId: true, reviewDate: true, auditorId: true } } } }) : null,
+      query.sourceType === "INCIDENT" && query.sourceId ? db.registerEntry.findFirst({ where: { id: query.sourceId, ...registerScopeWhere(context), definition: { key: "incidents" }, archivedAt: null }, select: { reference: true, title: true, summary: true, riskLevel: true, locationId: true, ownerId: true, eventDate: true, data: true } }) : null,
+      query.sourceType === "COMPLAINT" && query.sourceId ? db.registerEntry.findFirst({ where: { id: query.sourceId, ...registerScopeWhere(context), definition: { key: "complaints" }, archivedAt: null }, select: { reference: true, title: true, summary: true, riskLevel: true, locationId: true, ownerId: true, data: true, complaintInvestigation: { select: { remedy: true, learning: true, investigationOutcome: true } }, complaintIssues: { select: { id: true, sequence: true, category: true, concern: true, reasoning: true }, orderBy: { sequence: "asc" } } } }) : null,
+      query.sourceType === "SAFEGUARDING" && query.sourceId ? db.registerEntry.findFirst({ where: { id: query.sourceId, ...registerScopeWhere(context), definition: { key: "safeguarding" }, archivedAt: null }, select: { reference: true, title: true, summary: true, riskLevel: true, locationId: true, ownerId: true, safeguardingCase: { select: { findings: true, outcome: true, learning: true, immediateControl: true } } } }) : null,
     ]);
     const requested = query.sourceType && query.sourceId ? `${query.sourceType}:${query.sourceId}` : undefined;
     const preselected = requested && sources.some((item) => `${item.type}:${item.id}` === requested) ? requested : undefined;
     const oversight = memberships.filter((item) => OVERSIGHT_ROLES.has(item.role.key));
     const oversightOptions = (oversight.length ? oversight : memberships).map((item) => ({ id: item.user.id, name: `${item.user.name} · ${item.role.name}` }));
     const oversightIds = new Set(oversightOptions.map(({ id }) => id));
-    const prefill = sourceRisk ? riskActionPrefill(sourceRisk, context.user.id, oversightIds) : sourceAuditFinding ? auditFindingActionPrefill(sourceAuditFinding, context.user.id, oversightIds) : undefined;
+    const prefill = sourceRisk ? riskActionPrefill(sourceRisk, context.user.id, oversightIds) : sourceAuditFinding ? auditFindingActionPrefill(sourceAuditFinding, context.user.id, oversightIds) : sourceIncident ? incidentActionPrefill(sourceIncident, context.user.id, oversightIds) : sourceComplaint ? complaintActionPrefill(sourceComplaint, context.user.id, oversightIds, query.issueId) : sourceSafeguarding ? safeguardingActionPrefill(sourceSafeguarding, context.user.id, oversightIds) : undefined;
 
     return <main className="mx-auto max-w-5xl space-y-5">
       <div><Link href="/actions" className="text-sm font-semibold text-emerald-700">← Action Tracker</Link><h1 className="mt-2 text-3xl font-bold">Create improvement action</h1><p className="mt-1 text-slate-600">Create one accountable record that remains connected to its source, delivery owner, Registered Manager oversight, evidence, calendar and reports.</p></div>
@@ -58,6 +65,8 @@ export default async function NewActionPage({ searchParams }: { searchParams: Pr
         preselectedSource={preselected}
         prefill={prefill}
         riskHandoff={sourceRisk ? { reference: sourceRisk.reference, residualScore: sourceRisk.residualScore, targetScore: sourceRisk.targetScore ?? sourceRisk.residualScore } : undefined}
+        incidentHandoff={sourceIncident ? { reference: sourceIncident.reference, riskLevel: sourceIncident.riskLevel } : undefined}
+        complaintHandoff={sourceComplaint ? { reference: sourceComplaint.reference, riskLevel: sourceComplaint.riskLevel } : undefined}
       />
     </main>;
   } finally {

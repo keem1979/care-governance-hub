@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-08-28 — Safeguarding Assurance closed loop
+
+- Kept initial safeguarding capture short while adding progressive safety, triage, referral, enquiry, outcome, learning and affected-record governance.
+- Added a typed one-to-one safeguarding case, append-only chronology and formal assurance decisions without replacing the canonical register record.
+- Linked originating Incidents and Complaints through tenant-safe foreign keys and reused central Action and Evidence lifecycles.
+- Enforced completion, effectiveness and safeguarding closure as separate decisions, with proportionate Evidence and Critical separation of duties.
+- Blocked generic safeguarding closure, reopening and structured-workflow overwrites at the server boundary.
+- Added explicit provider-set external response dates to the Compliance Calendar and actionable safeguarding exceptions to My Work and management oversight.
+- Added a branded, provenance-led printable safeguarding assurance report.
+- Added fresh/upgrade migration proofs, signed-in desktop/mobile tests, tenant/location manipulation checks, RM-burden checks and a 5,000-record local performance probe.
+
+## 2026-08-28 — Complaints Assurance closed loop
+
+- Preserved the short canonical Complaint intake while adding a typed, progressive investigation, multiple issue findings and proportional response governance.
+- Added append-only Complaint communications, attributable final-response approval and formal reopening without rewriting the original closure decision.
+- Reused the central Action lifecycle for Complaint improvements and kept Action completion, verification, effectiveness and Complaint closure as separate decisions.
+- Added a reason-led Management Assurance Test with proportional Evidence, serious-response approval and Critical separation of duties.
+- Blocked generic Complaint closure and material changes to closed records at the server boundary.
+- Added Complaint deadlines and exceptions to the shared Compliance Calendar, My Work and management dashboard.
+- Upgraded branded Complaint reporting and reliable on-time response and Complaint-Action KPI sources without inferring compliance from missing deadlines.
+- Added fresh/upgrade migration proofs, signed-in desktop/mobile scenarios, tenant/location manipulation checks and a 5,000-record local performance probe.
+
+## 2026-08-28 — Incident Assurance closed loop
+
+- Kept initial Incident capture short and factual, with investigation, learning and assurance completed only when required.
+- Added proportionate Incident investigation covering chronology, sources, person/representative involvement, causes, notification rationale, learning, affected governed records and outcome.
+- Added deliberate Incident-to-central-Action handoff without creating a second Action lifecycle.
+- Enforced the distinction between Action completion, effectiveness evidence and the separate Incident assurance decision.
+- Added a reason-led Management Assurance Test with proportionate closure Evidence and role/separation controls.
+- Blocked generic Incident closure, closed-record investigation changes and contradictory not-assured decisions until the Incident is formally reopened.
+- Added append-only assurance decisions, attributable history and preservation of previous/current investigation content.
+- Validated fresh and upgrade migrations, signed-in desktop/mobile workflows, tenant/location isolation and legacy Incident preservation.
+
 ## 2026-08-20 — Phase 11 validated launch
 
 - Added the Launch Assurance Centre for controlled DBAM and external-provider pilots.

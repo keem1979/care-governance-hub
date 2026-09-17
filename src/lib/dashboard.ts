@@ -64,7 +64,7 @@ export function formatUkDateTime(date: Date): string {
   }).format(date);
 }
 
-export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; openSafeguarding:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number; workforceChecksDue?:number; competencyActions?:number; kpiReturnsOutstanding?:number;inspectionAttention?:number }): DashboardSummary[] {
+export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits: number; trainingEvidenceExpiring: number; documentsExpiring: number; openComplaints:number; complaintsAcknowledgementOverdue?:number; complaintsResponseOverdue?:number; complaintsAwaitingAssurance?:number; complaintsReopened?:number; openSafeguarding:number; safeguardingCriticalOpen?:number; safeguardingSafetyOutstanding?:number; safeguardingReferralOutstanding?:number; safeguardingExternalResponseOverdue?:number; safeguardingAwaitingAssurance?:number; safeguardingReopened?:number; incidentsAwaitingReview:number; risksOverdueReview:number; openHighRiskActions:number; overdueActions:number; governanceMeetingsDue:number; workforceChecksDue?:number; competencyActions?:number; kpiReturnsOutstanding?:number;inspectionAttention?:number }): DashboardSummary[] {
   return [
     {
       label: "Inspection requirements needing attention",
@@ -130,12 +130,46 @@ export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits
       qualifier: counts ? "Not closed or archived" : "Register data unavailable",
     },
     {
+      label: "Complaint acknowledgements overdue",
+      href: "/registers/complaints",
+      icon: CalendarClock,
+      value: counts?.complaintsAcknowledgementOverdue ?? null,
+      qualifier: counts ? "A deadline is recorded but acknowledgement is not" : "Complaint data unavailable",
+    },
+    {
+      label: "Complaint responses overdue",
+      href: "/registers/complaints",
+      icon: FileClock,
+      value: counts?.complaintsResponseOverdue ?? null,
+      qualifier: counts ? "Current response or approved extension deadline has passed" : "Complaint data unavailable",
+    },
+    {
+      label: "Complaints awaiting assurance",
+      href: "/registers/complaints",
+      icon: HeartHandshake,
+      value: counts?.complaintsAwaitingAssurance ?? null,
+      qualifier: counts ? "Investigation and response recorded; management decision remains" : "Complaint data unavailable",
+    },
+    {
+      label: "Reopened complaints",
+      href: "/registers/complaints",
+      icon: TriangleAlert,
+      value: counts?.complaintsReopened ?? null,
+      qualifier: counts ? "New information requires another governed phase" : "Complaint data unavailable",
+    },
+    {
       label: "Open safeguarding matters",
       href: "/registers/safeguarding",
       icon: ShieldAlert,
       value: counts?.openSafeguarding ?? null,
       qualifier: counts ? "Not closed or archived" : "Register data unavailable",
     },
+    { label: "Safeguarding immediate safety unresolved", href: "/registers/safeguarding", icon: ShieldAlert, value: counts?.safeguardingSafetyOutstanding ?? null, qualifier: counts ? "Current safety is unresolved or needs Evidence" : "Safeguarding data unavailable" },
+    { label: "Safeguarding referrals requiring action", href: "/registers/safeguarding", icon: Siren, value: counts?.safeguardingReferralOutstanding ?? null, qualifier: counts ? "Referral decision or required referral remains outstanding" : "Safeguarding data unavailable" },
+    { label: "Safeguarding external responses overdue", href: "/registers/safeguarding", icon: CalendarClock, value: counts?.safeguardingExternalResponseOverdue ?? null, qualifier: counts ? "Provider-set response date passed without a recorded response" : "Safeguarding data unavailable" },
+    { label: "Safeguarding awaiting assurance", href: "/registers/safeguarding", icon: ShieldAlert, value: counts?.safeguardingAwaitingAssurance ?? null, qualifier: counts ? "Case marked ready; authorised assurance remains" : "Safeguarding data unavailable" },
+    { label: "Critical safeguarding matters open", href: "/registers/safeguarding", icon: Siren, value: counts?.safeguardingCriticalOpen ?? null, qualifier: counts ? "Critical matters requiring senior governance oversight" : "Safeguarding data unavailable" },
+    { label: "Reopened safeguarding matters", href: "/registers/safeguarding", icon: TriangleAlert, value: counts?.safeguardingReopened ?? null, qualifier: counts ? "Material new information requires another governed phase" : "Safeguarding data unavailable" },
     {
       label: "Incidents awaiting review",
       href: "/registers/incidents",

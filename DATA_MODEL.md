@@ -169,3 +169,37 @@ remain explicitly scoped; no evidence or decision is shared between tenants.
 - `CommercialIntentRecord` belongs only to an external-provider pilot. Discovery and pilot-only statuses do not count as paying intent; budget confirmation, contract review or ready-to-buy status must retain a meaningful evidence note.
 - `BenchmarkConsent` records an organisation's explicitly scoped, independently reviewed and withdrawable permission for possible future aggregate measures. Aggregation-only processing, direct-identifier exclusion, free-text exclusion and a cohort of at least ten organisations are mandatory defaults.
 - Phase 11 does not implement cross-tenant benchmark output. Tenant data remains isolated, and missing pilot or outcome evidence is displayed as incomplete rather than inferred.
+
+# Incident Assurance closed-loop extension
+
+- `RegisterEntry` remains the canonical Incident record. The extension does not create a competing Incident register or copy Incident facts into Actions.
+- `IncidentInvestigation` is the one-to-one governed investigation for an Incident. Draft amendments remain attributable; register history stores previous and current investigation content so later changes do not erase the earlier decision basis.
+- `IncidentAssuranceReview` is an append-only management decision with reviewer role and risk-level snapshots, rationale, readiness checks and decision time.
+- `IncidentAssuranceReviewEvidence` links the decision to canonical tenant/location-scoped `Evidence` and prevents duplicate links within one review.
+- Corrective work remains in the central `Action` lifecycle using `sourceType = INCIDENT` and `sourceRecordId`. Action completion, verification and effectiveness do not change the Incident status automatically.
+- Generic register editing cannot close or reopen an Incident. Closure and reopening pass through Incident Assurance, while related Risks, Actions, Safeguarding records, Complaints and Audits retain independent lifecycles.
+- Low incidents may close with an accountable rationale where separate Evidence is not proportionate. Moderate, High and Critical incidents require progressively stronger investigation, evidence, effectiveness and authority conditions.
+
+# Complaints Assurance closed-loop extension
+
+- `RegisterEntry` remains the canonical Complaint record and retains the initial facts, tenant/location scope, person/staff relationships, risk level and ownership. The extension does not create a parallel Complaint register.
+- `ComplaintInvestigation` is the one-to-one typed case extension for triage, provider-set deadlines, investigation, response preparation/approval, remedy, learning, recurrence consideration and optional complainant feedback. Legacy JSON remains unchanged and is mapped into this extension where deterministically possible.
+- `ComplaintIssue` records each distinct allegation or concern, human finding, rationale, outcome and whether central improvement work is required. `ComplaintIssueEvidence` references canonical governed `Evidence`; its presence is not treated as proof of the finding.
+- `ComplaintCommunication` is an append-only chronology for acknowledgement, progress, information requests, extensions, meetings, final response and post-response information. Material final responses retain their governed Evidence link.
+- `ComplaintAssuranceReview` is an append-only management decision with reviewer role/risk snapshots, reason-led readiness checks, rationale, new information and governed `ComplaintAssuranceReviewEvidence`.
+- Complaint improvement work remains in the central `Action` lifecycle using `sourceType = COMPLAINT` and the Complaint `sourceRecordId`. A selected issue only informs the proposed Action wording; it does not create another Action model.
+- Generic editing cannot close or reopen a Complaint. Closure and reopening pass through Complaint Assurance, while related Incident, Safeguarding, Risk, Audit and Action lifecycles remain independent.
+- Low Complaints may close with an accountable rationale when separate Evidence would be disproportionate. Material Complaints require appropriate finding/response/closure Evidence; serious Complaints require response approval and Action effectiveness where Actions exist; Critical response approval and closure apply separation of duties.
+- Complaint acknowledgement and response dates project into the shared Compliance Calendar. Typed workflow state supplies My Work, management exceptions, reports and only those KPIs that can be calculated without inventing deadlines or treating missing data as compliance.
+
+# Safeguarding Assurance closed-loop extension
+
+- `RegisterEntry` remains the canonical safeguarding record. `SafeguardingCase` is its one-to-one typed workflow extension; it does not create another register or copy central Action and Evidence records.
+- Initial capture is deliberately short. Immediate safety, triage, referral, enquiry, outcome, learning and affected-record decisions are progressively disclosed on the governed case surface.
+- `SafeguardingEvent` is an append-only chronology of concern, referral, external response, meeting, outcome, closure and reopening events, with optional links to canonical governed `Evidence`.
+- Originating Incident and Complaint relationships use tenant-scoped foreign keys. Closing any linked record never silently closes another lifecycle.
+- Corrective work remains in the central `Action` lifecycle using `sourceType = SAFEGUARDING` and `sourceRecordId`. Action completion and effectiveness remain separate from safeguarding assurance and closure.
+- `SafeguardingAssuranceReview` records append-only Management Assurance decisions with role/risk snapshots, rationale, readiness reasons, material new information and governed Evidence links.
+- Low matters may close with proportionate accountable rationale. Moderate, High and Critical matters require progressively stronger evidence, effectiveness and authority; Critical matters prohibit creator/investigator self-approval.
+- Generic editing cannot close, reopen or overwrite the structured safeguarding workflow. Formal closure/reopening occurs only through Safeguarding Assurance.
+- Explicit provider-set external response dates project into the shared Compliance Calendar. My Work and dashboard exceptions surface unresolved safety, referral decisions, overdue responses, Critical matters, reopened matters and cases awaiting assurance without inventing statutory deadlines.

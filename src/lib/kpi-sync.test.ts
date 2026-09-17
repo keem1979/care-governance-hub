@@ -13,6 +13,8 @@ describe("KPI source synchronisation", () => {
     expect(REGISTER_KPI_KEYS["medication-errors"]).toBe("medicines-errors");
     expect(REGISTER_KPI_KEYS["scc-missed-calls"]).toBe("missed-visits");
     expect(KPI_AUTO_SOURCES["overdue-actions"]).toBe("Action Tracker");
+    expect(KPI_AUTO_SOURCES["complaints-responded-on-time"]).toBe("Complaints Assurance communications");
+    expect(KPI_AUTO_SOURCES["complaint-actions-completed"]).toBe("Complaint-linked Action Tracker records");
     expect(kpiAutoSource("scc-total-calls")).toBe("Monthly service performance return");
   });
 

@@ -37,7 +37,12 @@ export async function POST(request:Request,{params}:{params:Promise<{key:string}
     if(Object.keys(prerequisiteReferences).length)data.prerequisiteReferences=prerequisiteReferences;
     const eventDate=parseOptionalDate(form.get("eventDate"))??new Date();
     const entry=await db.$transaction(async(tx)=>{
-      const created=await tx.registerEntry.create({data:{organisationId:context.organisation.id,definitionId:definition.id,locationId,clientId,staffMemberId,reference,eventDate,title,summary,riskLevel:riskLevel as never,status:status as never,ownerId,data:data as Prisma.InputJsonValue,closureDate:parseOptionalDate(form.get("closureDate")),createdById:context.user.id,evidenceLinks:{create:evidenceIds.map((evidenceId)=>({evidenceId}))}}});
+      const created=await tx.registerEntry.create({data:{organisationId:context.organisation.id,definitionId:definition.id,locationId,clientId,staffMemberId,reference,eventDate,title,summary,riskLevel:riskLevel as never,status:status as never,ownerId,data:data as Prisma.InputJsonValue,closureDate:["complaints","safeguarding"].includes(key)?null:parseOptionalDate(form.get("closureDate")),createdById:context.user.id,evidenceLinks:{create:evidenceIds.map((evidenceId)=>({evidenceId}))},...(key==="complaints"?{complaintInvestigation:{create:{organisationId:context.organisation.id,locationId,investigatorId:ownerId??context.user.id,complainantName:text(data.complainantName)||null,complainantRelationship:text(data.complainantRelationship)||null,contactPreference:text(data.contactPreference)||null,accessibilityNeeds:text(data.accessibilityNeeds)||null,category:text(data.category)||null,immediateSafetyConcern:text(data.immediateSafetyConcern)||null,immediateSafetyResponse:text(data.immediateSafetyResponse)||null}}}:{})}});
+      if(key==="safeguarding"){
+        const safetyPosition=safeguardingSafety(text(data.safetyPosition));
+        await tx.safeguardingCase.create({data:{organisationId:context.organisation.id,locationId,safeguardingId:created.id,investigatorId:ownerId??context.user.id,safetyPosition,immediateControl:text(data.immediateResponse)||null}});
+        await tx.safeguardingEvent.create({data:{organisationId:context.organisation.id,locationId,safeguardingId:created.id,type:"CONCERN_RAISED",occurredAt:eventDate,summary,participants:text(data.raisedBy)||null,authorId:context.user.id,evidenceId:evidenceIds[0]??null}});
+      }
       await syncRegisterEvidence(tx,{entryId:created.id,organisationId:context.organisation.id,locationId,definitionKey:key,definitionName:definition.name,reference,title,summary,eventDate,ownerId,actorId:context.user.id,archived:status==="ARCHIVED"});
       const snapshot={reference,title,summary,riskLevel,status,data};
       await tx.registerEntryHistory.create({data:{entryId:created.id,userId:context.user.id,action:"CREATED",snapshot:snapshot as Prisma.InputJsonValue}});
@@ -48,3 +53,6 @@ export async function POST(request:Request,{params}:{params:Promise<{key:string}
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Could not add entry."},{status:400});}
   finally{await db.$disconnect();}
 }
+
+function text(value:unknown){return typeof value==="string"?value.trim():"";}
+function safeguardingSafety(value:string){if(value==="Safe now")return "SAFE_NOW" as const;if(value==="Immediate risk controlled")return "CONTROLLED_IMMEDIATE_RISK" as const;if(value==="Immediate risk unresolved")return "UNRESOLVED_IMMEDIATE_RISK" as const;return "UNKNOWN_EVIDENCE_REQUIRED" as const;}

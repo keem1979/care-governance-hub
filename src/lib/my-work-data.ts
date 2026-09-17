@@ -8,6 +8,7 @@ const CLOSED_ACTION_LIFECYCLES = ["CLOSED_VERIFIED", "NO_ACTION_REQUIRED", "SUST
 
 export async function getMyWorkData(context: AuthorisedContext) {
   const db = createDb();
+  const now = new Date();
   const authorisedLocationIds = context.locations.map(({ id }) => id);
   const locationScope = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: authorisedLocationIds } }] };
   const strictLocationScope = context.allLocations ? {} : { locationId: { in: authorisedLocationIds } };
@@ -59,8 +60,8 @@ export async function getMyWorkData(context: AuthorisedContext) {
         select: { id: true, title: true, description: true, itemType: true, dueDate: true, riskLevel: true, status: true, location: { select: { name: true } } },
       }),
       db.registerEntry.findMany({
-        where: { organisationId: context.organisation.id, ownerId: context.user.id, archivedAt: null, status: { in: ["OPEN", "IN_REVIEW", "AWAITING_ACTION"] }, ...locationScope },
-        select: { id: true, reference: true, title: true, summary: true, riskLevel: true, status: true, data: true, definition: { select: { key: true, name: true } }, location: { select: { name: true } }, client: { select: { firstName: true, lastName: true, preferredName: true } } },
+        where: { organisationId: context.organisation.id, OR: [{ ownerId: context.user.id }, { complaintInvestigation: { is: { investigatorId: context.user.id } } }, { safeguardingCase: { is: { investigatorId: context.user.id } } }], archivedAt: null, status: { in: ["OPEN", "IN_REVIEW", "AWAITING_ACTION"] }, ...locationScope },
+        select: { id: true, reference: true, title: true, summary: true, riskLevel: true, status: true, data: true, definition: { select: { key: true, name: true } }, location: { select: { name: true } }, client: { select: { firstName: true, lastName: true, preferredName: true } }, complaintInvestigation: { select: { acknowledgementDueAt: true, responseDueAt: true, extensionDueAt: true, status: true } }, complaintCommunications: { where: { type: { in: ["ACKNOWLEDGEMENT", "FINAL_RESPONSE"] } }, select: { type: true } }, complaintAssuranceReviews: { orderBy: { reviewedAt: "desc" }, take: 1, select: { decision: true } }, safeguardingCase: { select: { safetyPosition: true, referralDecision: true, status: true, externalResponseDueAt: true, externalResponseStatus: true } }, safeguardingAssuranceReviews: { orderBy: { reviewedAt: "desc" }, take: 1, select: { decision: true } } },
       }),
       db.assistantEscalation.findMany({
         where: { organisationId: context.organisation.id, assignedToId: context.user.id, status: { in: ["OPEN", "ACKNOWLEDGED"] } },
@@ -80,7 +81,42 @@ export async function getMyWorkData(context: AuthorisedContext) {
       ...dependencies.map((item) => work({ key: `DEPENDENCY:${item.id}`, source: "External follow-up", reference: item.action.reference, title: `Chase ${item.partyName}`, detail: item.request, href: `/actions/${item.action.id}/assurance`, targetAt: item.dueDate, priority: item.status === "OVERDUE" ? "HIGH" : "MEDIUM", state: item.status, locationName: item.location?.name })),
       ...inspection.map((item) => work({ key: `INSPECTION:${item.id}`, source: "Inspection assurance", reference: label(item.keyQuestion), title: item.title, detail: `Evidence: ${label(item.evidenceStatus)}; decision: ${label(item.managementDecision)}.`, href: `/inspection/${item.id}`, targetAt: item.reviewDate, priority: item.managementDecision === "NOT_ASSURED" ? "HIGH" : "MEDIUM", state: item.managementDecision, locationName: item.location?.name })),
       ...calendar.map((item) => work({ key: `CALENDAR:${item.id}`, source: "Scheduled task", reference: label(item.itemType), title: item.title, detail: item.description ?? "Complete the assigned scheduled task.", href: "/calendar", targetAt: item.dueDate, priority: priority(item.riskLevel), state: item.status, locationName: item.location?.name })),
-      ...registers.map((item) => work({ key: `REGISTER:${item.id}`, source: item.definition.name, reference: item.reference, title: item.title, detail: item.summary, href: `/registers/${item.definition.key}/${item.id}`, targetAt: extractWorkTarget(item.data), priority: item.riskLevel, state: item.status, locationName: item.location?.name, clientName: personName(item.client) })),
+      ...registers.map((item) => {
+        const complaint = item.definition.key === "complaints", safeguarding = item.definition.key === "safeguarding";
+        const acknowledgementRecorded = item.complaintCommunications.some(({ type }) => type === "ACKNOWLEDGEMENT");
+        const responseRecorded = item.complaintCommunications.some(({ type }) => type === "FINAL_RESPONSE");
+        const targetAt = complaint
+          ? !acknowledgementRecorded
+            ? item.complaintInvestigation?.acknowledgementDueAt ?? null
+            : !responseRecorded
+              ? item.complaintInvestigation?.extensionDueAt ?? item.complaintInvestigation?.responseDueAt ?? null
+              : null
+          : safeguarding ? item.safeguardingCase?.externalResponseDueAt ?? null : extractWorkTarget(item.data);
+        const detail = complaint
+          ? !acknowledgementRecorded
+            ? "Acknowledge the Complaint and record the communication."
+            : item.complaintInvestigation?.status !== "COMPLETED"
+              ? "Complete the assigned Complaint investigation and findings."
+              : !responseRecorded
+                ? "Prepare, approve where required and issue the final response."
+                : item.complaintAssuranceReviews[0]?.decision === "REOPENED"
+                  ? "Review new information and complete the reopened Complaint phase."
+                  : "Final response issued; complete Management Assurance when authorised."
+          : safeguarding
+            ? item.safeguardingAssuranceReviews[0]?.decision === "REOPENED"
+              ? "Review material new information and complete the reopened safeguarding phase."
+              : ["UNRESOLVED_IMMEDIATE_RISK","UNKNOWN_EVIDENCE_REQUIRED"].includes(item.safeguardingCase?.safetyPosition ?? "")
+                ? "Confirm the person's current safety and record immediate protection."
+                : item.safeguardingCase?.referralDecision === "AWAITING_DECISION" || item.safeguardingCase?.referralDecision === "REQUIRED"
+                  ? "Complete the professional referral decision or record the required referral."
+                  : item.safeguardingCase?.externalResponseDueAt && item.safeguardingCase.externalResponseDueAt < now && !item.safeguardingCase.externalResponseStatus
+                    ? "External safeguarding response is overdue; follow up and record the outcome."
+                  : item.safeguardingCase?.status !== "READY_FOR_ASSURANCE"
+                    ? "Complete the proportionate safeguarding enquiry and outcome."
+                    : "Safeguarding is awaiting an authorised Management Assurance decision."
+            : item.summary;
+        return work({ key: `REGISTER:${item.id}`, source: complaint ? "Complaint assurance" : safeguarding ? "Safeguarding assurance" : item.definition.name, reference: item.reference, title: item.title, detail, href: `/registers/${item.definition.key}/${item.id}`, targetAt, priority: item.riskLevel, state: item.status, locationName: item.location?.name, clientName: personName(item.client) });
+      }),
       ...escalations.map((item) => work({ key: `ESCALATION:${item.id}`, source: "Management escalation", reference: item.reference, title: item.questionRedacted, detail: label(item.reasonCode), href: "/abi-assurance", targetAt: null, priority: item.priority === "IMMEDIATE" ? "CRITICAL" : item.priority === "HIGH" ? "HIGH" : "MEDIUM", state: item.status, locationName: "Organisation-wide" })),
     ];
 

@@ -210,6 +210,102 @@ enum RegisterRiskLevel {
   CRITICAL
 }
 
+enum IncidentInvestigationStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum IncidentAssuranceDecision {
+  NOT_ASSURED
+  ASSURED_CLOSED
+  REOPENED
+}
+
+enum ComplaintInvestigationStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum ComplaintIssueFinding {
+  UPHELD
+  PARTLY_UPHELD
+  NOT_UPHELD
+  INCONCLUSIVE
+  WITHDRAWN
+}
+
+enum ComplaintCommunicationType {
+  ACKNOWLEDGEMENT
+  PROGRESS_UPDATE
+  INFORMATION_REQUEST
+  EXTENSION
+  TELEPHONE_DISCUSSION
+  MEETING
+  CORRESPONDENCE_SENT
+  FINAL_RESPONSE
+  POST_RESPONSE
+  OTHER
+}
+
+enum ComplaintCommunicationDirection {
+  INBOUND
+  OUTBOUND
+  MUTUAL
+  INTERNAL
+}
+
+enum ComplaintAssuranceDecision {
+  NOT_ASSURED
+  ASSURED_CLOSED
+  REOPENED
+}
+
+enum SafeguardingCaseStatus {
+  DRAFT
+  TRIAGED
+  REFERRED
+  ENQUIRY_IN_PROGRESS
+  AWAITING_EXTERNAL_RESPONSE
+  READY_FOR_ASSURANCE
+}
+
+enum SafeguardingSafetyPosition {
+  SAFE_NOW
+  CONTROLLED_IMMEDIATE_RISK
+  UNRESOLVED_IMMEDIATE_RISK
+  UNKNOWN_EVIDENCE_REQUIRED
+}
+
+enum SafeguardingReferralDecision {
+  AWAITING_DECISION
+  REQUIRED
+  MADE
+  NOT_REQUIRED
+}
+
+enum SafeguardingEventType {
+  CONCERN_RAISED
+  IMMEDIATE_CONTROL
+  REFERRAL
+  COMMUNICATION
+  EXTERNAL_RESPONSE
+  ENQUIRY_UPDATE
+  EVIDENCE_ADDED
+  ACTION_CREATED
+  PROGRESS_UPDATE
+  OUTCOME
+  ASSURANCE
+  CLOSURE
+  REOPENING
+  OTHER
+}
+
+enum SafeguardingAssuranceDecision {
+  NOT_ASSURED
+  ASSURED_CLOSED
+  REOPENED
+}
+
 enum CarePlanStatus {
   DRAFT
   AWAITING_PERSON_AGREEMENT
@@ -1090,6 +1186,15 @@ model Organisation {
   assistantFeedback               AssistantFeedback[]
   assistantEscalations            AssistantEscalation[]
   auditReaudits                   AuditReaudit[]
+  incidentInvestigations          IncidentInvestigation[]
+  incidentAssuranceReviews        IncidentAssuranceReview[]
+  complaintInvestigations         ComplaintInvestigation[]
+  complaintIssues                 ComplaintIssue[]
+  complaintCommunications         ComplaintCommunication[]
+  complaintAssuranceReviews       ComplaintAssuranceReview[]
+  safeguardingCases               SafeguardingCase[]
+  safeguardingEvents              SafeguardingEvent[]
+  safeguardingAssuranceReviews    SafeguardingAssuranceReview[]
   configurationVersions           TenantConfigurationVersion[]
   configurationPromotions         ConfigurationPromotion[]
   notificationPreferences         NotificationPreference[]
@@ -1153,6 +1258,15 @@ model ServiceLocation {
   offlineCaptures             OfflineCapture[]
   assistantInteractions       AIInteractionLog[]
   assistantEscalations        AssistantEscalation[]
+  incidentInvestigations      IncidentInvestigation[]
+  incidentAssuranceReviews    IncidentAssuranceReview[]
+  complaintInvestigations     ComplaintInvestigation[]
+  complaintIssues             ComplaintIssue[]
+  complaintCommunications     ComplaintCommunication[]
+  complaintAssuranceReviews   ComplaintAssuranceReview[]
+  safeguardingCases           SafeguardingCase[]
+  safeguardingEvents          SafeguardingEvent[]
+  safeguardingAssuranceReviews SafeguardingAssuranceReview[]
 
   @@unique([organisationId, code])
   @@index([organisationId, isActive])
@@ -1190,6 +1304,17 @@ model User {
   auditFindingEvidenceRetired      AuditFindingEvidence[]           @relation("AuditFindingEvidenceRetirer")
   auditReauditsReviewed            AuditReaudit[]                   @relation("AuditReauditReviewer")
   auditReauditEvidenceLinked       AuditReauditEvidence[]           @relation("AuditReauditEvidenceLinker")
+  incidentInvestigationsLed        IncidentInvestigation[]          @relation("IncidentInvestigator")
+  incidentInvestigationsCompleted  IncidentInvestigation[]          @relation("IncidentInvestigationCompleter")
+  incidentAssuranceReviewsMade     IncidentAssuranceReview[]        @relation("IncidentAssuranceReviewer")
+  complaintInvestigationsLed       ComplaintInvestigation[]         @relation("ComplaintInvestigator")
+  complaintInvestigationsCompleted ComplaintInvestigation[]         @relation("ComplaintInvestigationCompleter")
+  complaintResponsesApproved       ComplaintInvestigation[]         @relation("ComplaintResponseApprover")
+  complaintCommunicationsAuthored  ComplaintCommunication[]         @relation("ComplaintCommunicationAuthor")
+  complaintAssuranceReviewsMade    ComplaintAssuranceReview[]       @relation("ComplaintAssuranceReviewer")
+  safeguardingCasesLed             SafeguardingCase[]                @relation("SafeguardingCaseInvestigator")
+  safeguardingEventsAuthored       SafeguardingEvent[]               @relation("SafeguardingEventAuthor")
+  safeguardingAssuranceReviewsMade SafeguardingAssuranceReview[]     @relation("SafeguardingAssuranceReviewer")
   registerEntriesOwned             RegisterEntry[]                  @relation("RegisterEntryOwner")
   registerEntriesCreated           RegisterEntry[]                  @relation("RegisterEntryCreator")
   registerHistory                  RegisterEntryHistory[]
@@ -1410,34 +1535,40 @@ model Evidence {
   createdAt                  DateTime                   @default(now())
   updatedAt                  DateTime                   @updatedAt
 
-  organisation                Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  location                    ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  owner                       User                            @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  uploadedBy                  User                            @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-  currentVersion              EvidenceVersion?                @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
-  versions                    EvidenceVersion[]               @relation("EvidenceVersions")
-  auditResponses              AuditResponse[]
-  auditFindingLinks           AuditFindingEvidence[]
-  auditReauditLinks           AuditReauditEvidence[]
-  registerLinks               RegisterEntryEvidence[]
-  riskLinks                   RiskEvidence[]
-  riskClosureProposalLinks    RiskClosureProposalEvidence[]
-  actionLinks                 ActionEvidence[]
-  meetingLinks                MeetingEvidence[]
-  kpiLinks                    KpiEvidence[]
-  inspectionLinks             ComplianceRequirementEvidence[]
-  staffComplianceRecords      StaffComplianceRecord[]
-  actionUpdates               ActionUpdate[]
-  actionOccurrences           ActionOccurrence[]
-  generatedPolicy             Policy?                         @relation("GeneratedPolicyEvidence", fields: [generatedPolicyId], references: [id], onDelete: Cascade)
-  verifications               EvidenceVerification[]
-  providerEvidenceType        ProviderEvidenceType?           @relation(fields: [providerEvidenceTypeId], references: [id], onDelete: SetNull)
-  riskControlEvidence         RiskControlEvidence[]
-  governanceDecisions         GovernanceDecision[]            @relation("GovernanceDecisionEvidence")
-  governanceObligations       GovernanceObligation[]          @relation("GovernanceObligationEvidence")
-  governanceObligationUpdates GovernanceObligationUpdate[]    @relation("GovernanceObligationUpdateEvidence")
-  offlineCaptures             OfflineCapture[]
-  serviceReadinessItems       ServiceReadinessItem[]
+  organisation                 Organisation                      @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location                     ServiceLocation?                  @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  owner                        User                              @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  uploadedBy                   User                              @relation("EvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  currentVersion               EvidenceVersion?                  @relation("CurrentEvidenceVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions                     EvidenceVersion[]                 @relation("EvidenceVersions")
+  auditResponses               AuditResponse[]
+  auditFindingLinks            AuditFindingEvidence[]
+  auditReauditLinks            AuditReauditEvidence[]
+  registerLinks                RegisterEntryEvidence[]
+  riskLinks                    RiskEvidence[]
+  riskClosureProposalLinks     RiskClosureProposalEvidence[]
+  actionLinks                  ActionEvidence[]
+  meetingLinks                 MeetingEvidence[]
+  kpiLinks                     KpiEvidence[]
+  inspectionLinks              ComplianceRequirementEvidence[]
+  staffComplianceRecords       StaffComplianceRecord[]
+  actionUpdates                ActionUpdate[]
+  actionOccurrences            ActionOccurrence[]
+  generatedPolicy              Policy?                           @relation("GeneratedPolicyEvidence", fields: [generatedPolicyId], references: [id], onDelete: Cascade)
+  verifications                EvidenceVerification[]
+  providerEvidenceType         ProviderEvidenceType?             @relation(fields: [providerEvidenceTypeId], references: [id], onDelete: SetNull)
+  riskControlEvidence          RiskControlEvidence[]
+  governanceDecisions          GovernanceDecision[]              @relation("GovernanceDecisionEvidence")
+  governanceObligations        GovernanceObligation[]            @relation("GovernanceObligationEvidence")
+  governanceObligationUpdates  GovernanceObligationUpdate[]      @relation("GovernanceObligationUpdateEvidence")
+  offlineCaptures              OfflineCapture[]
+  serviceReadinessItems        ServiceReadinessItem[]
+  incidentAssuranceReviewLinks IncidentAssuranceReviewEvidence[]
+  complaintIssueLinks          ComplaintIssueEvidence[]
+  complaintCommunicationLinks  ComplaintCommunication[]
+  complaintAssuranceReviewLinks ComplaintAssuranceReviewEvidence[]
+  safeguardingEventLinks       SafeguardingEvent[]
+  safeguardingAssuranceReviewLinks SafeguardingAssuranceReviewEvidence[]
 
   @@unique([organisationId, generatedPolicyTemplateKey])
   @@index([organisationId, status])
@@ -1809,16 +1940,27 @@ model RegisterEntry {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  organisation    Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
-  definition      RegisterDefinition              @relation(fields: [definitionId], references: [id], onDelete: Restrict)
-  location        ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  client          Client?                         @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  staffMember     StaffMember?                    @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
-  owner           User?                           @relation("RegisterEntryOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  createdBy       User                            @relation("RegisterEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  evidenceLinks   RegisterEntryEvidence[]
-  history         RegisterEntryHistory[]
-  inspectionLinks ComplianceRequirementRegister[]
+  organisation             Organisation                    @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  definition               RegisterDefinition              @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  location                 ServiceLocation?                @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  client                   Client?                         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  staffMember              StaffMember?                    @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  owner                    User?                           @relation("RegisterEntryOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy                User                            @relation("RegisterEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  evidenceLinks            RegisterEntryEvidence[]
+  history                  RegisterEntryHistory[]
+  inspectionLinks          ComplianceRequirementRegister[]
+  incidentInvestigation    IncidentInvestigation?
+  incidentAssuranceReviews IncidentAssuranceReview[]
+  complaintInvestigation   ComplaintInvestigation?
+  complaintIssues          ComplaintIssue[]
+  complaintCommunications  ComplaintCommunication[]
+  complaintAssuranceReviews ComplaintAssuranceReview[]
+  safeguardingCase          SafeguardingCase?                 @relation("SafeguardingRecord")
+  originatedSafeguardingIncidents SafeguardingCase[]          @relation("SafeguardingOriginatingIncident")
+  originatedSafeguardingComplaints SafeguardingCase[]         @relation("SafeguardingOriginatingComplaint")
+  safeguardingEvents        SafeguardingEvent[]
+  safeguardingAssuranceReviews SafeguardingAssuranceReview[]
 
   @@unique([organisationId, definitionId, reference])
   @@index([organisationId, definitionId, status])
@@ -1850,6 +1992,338 @@ model RegisterEntryHistory {
   user  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([entryId, createdAt])
+}
+
+model IncidentInvestigation {
+  id                              String                      @id @default(uuid()) @db.Uuid
+  organisationId                  String                      @db.Uuid
+  locationId                      String?                     @db.Uuid
+  incidentId                      String                      @unique @db.Uuid
+  status                          IncidentInvestigationStatus @default(DRAFT)
+  factualChronology               String?
+  informationSources              String?
+  personRepresentativeInvolvement String?
+  immediateCauses                 String[]                    @default([])
+  contributingFactors             String[]                    @default([])
+  systemCauses                    String[]                    @default([])
+  rootCause                       String?
+  notificationDecisionSummary     String?
+  learning                        String?
+  learningSharedWith              String?
+  affectedRecordsReviewed         String?
+  outcome                         String?
+  noFurtherActionRationale        String?
+  investigatorId                  String                      @db.Uuid
+  completedById                   String?                     @db.Uuid
+  completedAt                     DateTime?
+  createdAt                       DateTime                    @default(now())
+  updatedAt                       DateTime                    @updatedAt
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  incident     RegisterEntry    @relation(fields: [incidentId], references: [id], onDelete: Restrict)
+  investigator User             @relation("IncidentInvestigator", fields: [investigatorId], references: [id], onDelete: Restrict)
+  completedBy  User?            @relation("IncidentInvestigationCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, status, updatedAt])
+  @@index([locationId, status])
+}
+
+model IncidentAssuranceReview {
+  id                      String                    @id @default(uuid()) @db.Uuid
+  organisationId          String                    @db.Uuid
+  locationId              String?                   @db.Uuid
+  incidentId              String                    @db.Uuid
+  reviewerId              String                    @db.Uuid
+  reviewerRoleKeySnapshot String
+  riskLevelSnapshot       RegisterRiskLevel
+  decision                IncidentAssuranceDecision
+  rationale               String
+  checksSnapshot          Json
+  reviewedAt              DateTime                  @default(now())
+
+  organisation  Organisation                      @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location      ServiceLocation?                  @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  incident      RegisterEntry                     @relation(fields: [incidentId], references: [id], onDelete: Restrict)
+  reviewer      User                              @relation("IncidentAssuranceReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  evidenceLinks IncidentAssuranceReviewEvidence[]
+
+  @@index([organisationId, incidentId, reviewedAt])
+  @@index([locationId, decision, reviewedAt])
+}
+
+model IncidentAssuranceReviewEvidence {
+  reviewId   String @db.Uuid
+  evidenceId String @db.Uuid
+
+  review   IncidentAssuranceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  evidence Evidence                @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@id([reviewId, evidenceId])
+  @@index([evidenceId])
+}
+
+model ComplaintInvestigation {
+  id                         String                       @id @default(uuid()) @db.Uuid
+  organisationId             String                       @db.Uuid
+  locationId                 String?                      @db.Uuid
+  complaintId                String                       @unique @db.Uuid
+  status                     ComplaintInvestigationStatus @default(DRAFT)
+  complainantName            String?
+  complainantRelationship    String?
+  representationAuthority    String?
+  contactPreference          String?
+  accessibilityNeeds         String?
+  category                   String?
+  immediateSafetyConcern     String?
+  immediateSafetyResponse    String?
+  safeguardingDecision       String?
+  incidentDecision           String?
+  triageSummary              String?
+  acknowledgementDueAt       DateTime?
+  responseDueAt              DateTime?
+  extensionDueAt             DateTime?
+  extensionReason            String?
+  investigationApproach      String?
+  evidenceSources            String?
+  complainantInvolvement     String?
+  investigationOutcome       String?
+  remedy                     String?
+  learning                   String?
+  learningScopes             String[]                     @default([])
+  affectedRecordsReviewed    String?
+  recurrenceReview           String?
+  noFurtherActionRationale   String?
+  responsePreparedAt         DateTime?
+  responseSummary            String?
+  responseApprovedById       String?                      @db.Uuid
+  responseApprovedAt         DateTime?
+  findingsCommunicated       Boolean?
+  remedyCommunicated         Boolean?
+  learningCommunicated       Boolean?
+  escalationRightsConfirmed Boolean?
+  complainantSatisfaction    String?
+  satisfactionComment        String?
+  legacyInvestigator         String?
+  investigatorId             String                       @db.Uuid
+  completedById              String?                      @db.Uuid
+  completedAt                DateTime?
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
+
+  organisation       Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location           ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  complaint          RegisterEntry    @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  investigator       User             @relation("ComplaintInvestigator", fields: [investigatorId], references: [id], onDelete: Restrict)
+  completedBy        User?            @relation("ComplaintInvestigationCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+  responseApprovedBy User?            @relation("ComplaintResponseApprover", fields: [responseApprovedById], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, status, responseDueAt])
+  @@index([locationId, status])
+  @@index([investigatorId, status])
+  @@index([organisationId, acknowledgementDueAt])
+}
+
+model ComplaintIssue {
+  id             String                 @id @default(uuid()) @db.Uuid
+  organisationId String                 @db.Uuid
+  locationId     String?                @db.Uuid
+  complaintId    String                 @db.Uuid
+  sequence       Int
+  category       String
+  concern        String
+  finding        ComplaintIssueFinding?
+  reasoning      String?
+  outcomeSummary String?
+  actionRequired Boolean?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organisation Organisation             @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation?         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  complaint    RegisterEntry            @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  evidenceLinks ComplaintIssueEvidence[]
+
+  @@unique([complaintId, sequence])
+  @@index([organisationId, category, finding])
+  @@index([locationId, category])
+}
+
+model ComplaintIssueEvidence {
+  issueId    String @db.Uuid
+  evidenceId String @db.Uuid
+
+  issue    ComplaintIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  evidence Evidence       @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@id([issueId, evidenceId])
+  @@index([evidenceId])
+}
+
+model ComplaintCommunication {
+  id             String                          @id @default(uuid()) @db.Uuid
+  organisationId String                          @db.Uuid
+  locationId     String?                         @db.Uuid
+  complaintId    String                          @db.Uuid
+  type           ComplaintCommunicationType
+  direction      ComplaintCommunicationDirection
+  occurredAt     DateTime
+  participants   String
+  summary        String
+  authorId       String                          @db.Uuid
+  evidenceId     String?                         @db.Uuid
+  createdAt      DateTime                        @default(now())
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  complaint    RegisterEntry    @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  author       User             @relation("ComplaintCommunicationAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  evidence     Evidence?        @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, complaintId, occurredAt])
+  @@index([locationId, occurredAt])
+  @@index([organisationId, type, occurredAt])
+}
+
+model ComplaintAssuranceReview {
+  id                      String                     @id @default(uuid()) @db.Uuid
+  organisationId          String                     @db.Uuid
+  locationId              String?                    @db.Uuid
+  complaintId             String                     @db.Uuid
+  reviewerId              String                     @db.Uuid
+  reviewerRoleKeySnapshot String
+  riskLevelSnapshot       RegisterRiskLevel
+  decision                ComplaintAssuranceDecision
+  rationale               String
+  newInformation          String?
+  checksSnapshot          Json
+  reviewedAt              DateTime                   @default(now())
+
+  organisation  Organisation                       @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location      ServiceLocation?                   @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  complaint     RegisterEntry                      @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  reviewer      User                               @relation("ComplaintAssuranceReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  evidenceLinks ComplaintAssuranceReviewEvidence[]
+
+  @@index([organisationId, complaintId, reviewedAt])
+  @@index([locationId, decision, reviewedAt])
+}
+
+model ComplaintAssuranceReviewEvidence {
+  reviewId   String @db.Uuid
+  evidenceId String @db.Uuid
+
+  review   ComplaintAssuranceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  evidence Evidence                 @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@id([reviewId, evidenceId])
+  @@index([evidenceId])
+}
+
+model SafeguardingCase {
+  id                       String                       @id @default(uuid()) @db.Uuid
+  organisationId           String                       @db.Uuid
+  locationId               String?                      @db.Uuid
+  safeguardingId           String                       @unique @db.Uuid
+  status                    SafeguardingCaseStatus       @default(DRAFT)
+  safetyPosition            SafeguardingSafetyPosition  @default(UNKNOWN_EVIDENCE_REQUIRED)
+  immediateControl          String?
+  concernCategories         String[]                     @default([])
+  triageRationale           String?
+  referralDecision          SafeguardingReferralDecision @default(AWAITING_DECISION)
+  referredTo                String[]                     @default([])
+  referralDate              DateTime?
+  externalReference         String?
+  externalResponseDueAt     DateTime?
+  externalResponseStatus    String?
+  investigationQuestion     String?
+  investigationSummary      String?
+  peopleConsulted           String?
+  findings                  String?
+  outcome                   String?
+  externalDependencies      String?
+  learning                  String?
+  affectedRecordsReviewed   String?
+  recurrenceReview          String?
+  noFurtherActionRationale  String?
+  originatingIncidentId     String?                      @db.Uuid
+  originatingComplaintId    String?                      @db.Uuid
+  investigatorId            String                       @db.Uuid
+  completedAt               DateTime?
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+
+  organisation        Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location            ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  safeguarding        RegisterEntry    @relation("SafeguardingRecord", fields: [safeguardingId], references: [id], onDelete: Restrict)
+  originatingIncident RegisterEntry?   @relation("SafeguardingOriginatingIncident", fields: [originatingIncidentId], references: [id], onDelete: SetNull)
+  originatingComplaint RegisterEntry?  @relation("SafeguardingOriginatingComplaint", fields: [originatingComplaintId], references: [id], onDelete: SetNull)
+  investigator        User             @relation("SafeguardingCaseInvestigator", fields: [investigatorId], references: [id], onDelete: Restrict)
+
+  @@index([organisationId, status, externalResponseDueAt])
+  @@index([locationId, status])
+  @@index([investigatorId, status])
+  @@index([originatingIncidentId])
+  @@index([originatingComplaintId])
+}
+
+model SafeguardingEvent {
+  id              String                 @id @default(uuid()) @db.Uuid
+  organisationId  String                 @db.Uuid
+  locationId      String?                @db.Uuid
+  safeguardingId  String                 @db.Uuid
+  type             SafeguardingEventType
+  occurredAt       DateTime
+  summary          String
+  participants     String?
+  authorId         String                 @db.Uuid
+  evidenceId       String?                @db.Uuid
+  createdAt        DateTime               @default(now())
+
+  organisation Organisation     @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location     ServiceLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  safeguarding RegisterEntry    @relation(fields: [safeguardingId], references: [id], onDelete: Restrict)
+  author       User             @relation("SafeguardingEventAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  evidence     Evidence?        @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, safeguardingId, occurredAt])
+  @@index([locationId, occurredAt])
+  @@index([organisationId, type, occurredAt])
+}
+
+model SafeguardingAssuranceReview {
+  id                      String                         @id @default(uuid()) @db.Uuid
+  organisationId          String                         @db.Uuid
+  locationId              String?                        @db.Uuid
+  safeguardingId          String                         @db.Uuid
+  reviewerId              String                         @db.Uuid
+  reviewerRoleKeySnapshot String
+  riskLevelSnapshot       RegisterRiskLevel
+  decision                SafeguardingAssuranceDecision
+  rationale               String
+  newInformation          String?
+  checksSnapshot          Json
+  reviewedAt              DateTime                       @default(now())
+
+  organisation  Organisation                          @relation(fields: [organisationId], references: [id], onDelete: Restrict)
+  location      ServiceLocation?                     @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  safeguarding RegisterEntry                        @relation(fields: [safeguardingId], references: [id], onDelete: Restrict)
+  reviewer      User                                 @relation("SafeguardingAssuranceReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  evidenceLinks SafeguardingAssuranceReviewEvidence[]
+
+  @@index([organisationId, safeguardingId, reviewedAt])
+  @@index([locationId, decision, reviewedAt])
+}
+
+model SafeguardingAssuranceReviewEvidence {
+  reviewId   String @db.Uuid
+  evidenceId String @db.Uuid
+
+  review   SafeguardingAssuranceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  evidence Evidence                    @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@id([reviewId, evidenceId])
+  @@index([evidenceId])
 }
 
 model Risk {

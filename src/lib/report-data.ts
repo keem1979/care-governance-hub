@@ -182,13 +182,43 @@ export async function generateReport(
           definition: { select: { key: true, name: true } },
           location: { select: { name: true } },
           owner: { select: { name: true } },
+          complaintInvestigation: { select: { status: true, category: true, acknowledgementDueAt: true, responseDueAt: true, extensionDueAt: true, remedy: true, learning: true } },
+          complaintIssues: { select: { finding: true } },
+          complaintCommunications: { where: { type: { in: ["ACKNOWLEDGEMENT", "FINAL_RESPONSE"] } }, select: { type: true } },
+          complaintAssuranceReviews: { orderBy: { reviewedAt: "desc" }, take: 1, select: { decision: true } },
           _count: { select: { evidenceLinks: true } },
         },
         orderBy: { eventDate: "desc" },
         take: 1000,
       });
+      const complaintActions = source === "COMPLAINT" && entries.length
+        ? await db.action.findMany({
+            where: { organisationId: context.organisation.id, sourceType: "COMPLAINT", sourceRecordId: { in: entries.map(({ id }) => id) }, archivedAt: null, ...selectedOptionalLocation },
+            select: { sourceRecordId: true, closedAt: true, dueDate: true, effectivenessReviews: { orderBy: { reviewDate: "desc" }, take: 1, select: { outcome: true } } },
+          })
+        : [];
       rows.push(...entries.map((item) => {
-        const attention = ["HIGH", "CRITICAL"].includes(item.riskLevel);
+        const acknowledgementRecorded = item.complaintCommunications.some(({ type }) => type === "ACKNOWLEDGEMENT");
+        const responseRecorded = item.complaintCommunications.some(({ type }) => type === "FINAL_RESPONSE");
+        const responseDueAt = item.complaintInvestigation?.extensionDueAt ?? item.complaintInvestigation?.responseDueAt ?? null;
+        const overdueAcknowledgement = source === "COMPLAINT" && !acknowledgementRecorded && Boolean(item.complaintInvestigation?.acknowledgementDueAt && item.complaintInvestigation.acknowledgementDueAt < now);
+        const overdueResponse = source === "COMPLAINT" && !responseRecorded && Boolean(responseDueAt && responseDueAt < now);
+        const actionsForComplaint = complaintActions.filter(({ sourceRecordId }) => sourceRecordId === item.id);
+        const overdueActions = actionsForComplaint.filter((action) => !action.closedAt && action.dueDate < now).length;
+        const awaitingAssurance = source === "COMPLAINT" && item.status !== "CLOSED" && item.complaintInvestigation?.status === "COMPLETED" && responseRecorded;
+        const reopened = source === "COMPLAINT" && item.complaintAssuranceReviews[0]?.decision === "REOPENED";
+        const attention = ["HIGH", "CRITICAL"].includes(item.riskLevel) || overdueAcknowledgement || overdueResponse || overdueActions > 0 || awaitingAssurance || reopened;
+        const complaintDetail = source === "COMPLAINT"
+          ? `${item.complaintIssues.length} issue(s), ${item.complaintIssues.filter(({ finding }) => Boolean(finding)).length} finding(s); ${acknowledgementRecorded ? "acknowledged" : "acknowledgement outstanding"}; ${responseRecorded ? "response issued" : "response outstanding"}; ${actionsForComplaint.length} Action(s), ${overdueActions} overdue; assurance ${item.complaintAssuranceReviews[0]?.decision ? label(item.complaintAssuranceReviews[0].decision) : "not decided"}`
+          : `${label(item.riskLevel)} risk; ${item._count.evidenceLinks} evidence links`;
+        const attentionReason = [
+          overdueAcknowledgement ? "Acknowledgement overdue" : "",
+          overdueResponse ? "Response overdue" : "",
+          overdueActions ? `${overdueActions} linked Action(s) overdue` : "",
+          reopened ? "Complaint reopened" : "",
+          awaitingAssurance ? "Management Assurance decision required" : "",
+          ["HIGH", "CRITICAL"].includes(item.riskLevel) ? `${label(item.riskLevel)} risk record` : "",
+        ].filter(Boolean).join("; ");
         return {
         type: label(source),
         reference: item.reference,
@@ -196,13 +226,13 @@ export async function generateReport(
         href: `/registers/${item.definition.key}/${item.id}`,
         date: dateKey(item.eventDate),
         location: item.location?.name ?? "Organisation-wide",
-        category: item.definition.name,
+        category: source === "COMPLAINT" ? item.complaintInvestigation?.category ?? item.definition.name : item.definition.name,
         status: item.status,
         owner: item.owner?.name ?? "Unassigned",
-        detail: `${label(item.riskLevel)} risk; ${item._count.evidenceLinks} evidence links`,
+        detail: complaintDetail,
         attention,
-        overdue: false,
-        attentionReason: attention ? `${label(item.riskLevel)} risk record` : "",
+        overdue: overdueAcknowledgement || overdueResponse || overdueActions > 0,
+        attentionReason,
       };}));
     }
 

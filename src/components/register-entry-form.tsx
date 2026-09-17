@@ -8,11 +8,13 @@ import { REGISTER_RISK_LEVELS, REGISTER_STATUSES, registerFormExperience, regist
 type Option = { id: string; name: string };
 type Initial = { id: string; reference: string; eventDate: string; title: string; summary: string; riskLevel: string; status: string; locationId: string; ownerId: string; clientId: string; staffMemberId: string; closureDate: string; data: Record<string, unknown>; evidenceIds: string[] };
 
-export function RegisterEntryForm({ registerKey, registerName, fields, locations, owners, clients, staff, evidence, clientRequired=false, defaultClientId="", initial }: { registerKey: string; registerName: string; fields: RegisterField[]; locations: Option[]; owners: Option[]; clients: Option[]; staff: Option[]; evidence: { id: string; title: string }[]; clientRequired?: boolean; defaultClientId?: string; initial?: Initial }) {
+export function RegisterEntryForm({ registerKey, registerName, fields, locations, owners, clients, staff, evidence, clientRequired=false, defaultClientId="", defaultLocationId="", defaultOwnerId="", initial }: { registerKey: string; registerName: string; fields: RegisterField[]; locations: Option[]; owners: Option[]; clients: Option[]; staff: Option[]; evidence: { id: string; title: string }[]; clientRequired?: boolean; defaultClientId?: string; defaultLocationId?: string; defaultOwnerId?: string; initial?: Initial }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const experience = registerFormExperience(registerKey, registerName);
+  const assuredRegister = ["incidents", "complaints", "safeguarding"].includes(registerKey);
+  const statusOptions = assuredRegister ? (initial?.status === "CLOSED" ? ["CLOSED"] : REGISTER_STATUSES.filter((value) => value !== "CLOSED")) : REGISTER_STATUSES;
   const cls = "mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm";
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -52,10 +54,10 @@ export function RegisterEntryForm({ registerKey, registerName, fields, locations
     <FormSection number="3" title="Responsibility and follow-up" description="Assign ownership, rate current risk and keep the workflow status accurate.">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="text-sm font-medium">Current risk to people or the service<select className={cls} name="riskLevel" defaultValue={initial?.riskLevel ?? "LOW"}>{REGISTER_RISK_LEVELS.map((value) => <option key={value}>{value.charAt(0) + value.slice(1).toLowerCase()}</option>)}</select></label>
-        <label className="text-sm font-medium">Record status<select className={cls} name="status" defaultValue={initial?.status ?? "OPEN"}>{REGISTER_STATUSES.map((value) => <option key={value} value={value}>{registerStatusLabel(value)}</option>)}</select></label>
-        <label className="text-sm font-medium">Service location<select className={cls} name="locationId" defaultValue={initial?.locationId ?? ""}><option value="">Organisation-wide</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label className="text-sm font-medium">Person responsible for follow-up<select className={cls} name="ownerId" defaultValue={initial?.ownerId ?? ""}><option value="">Choose later</option>{owners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label className="text-sm font-medium">Date work was closed<input className={cls} name="closureDate" type="date" defaultValue={initial?.closureDate} /></label>
+        <label className="text-sm font-medium">Record status<select className={cls} name="status" defaultValue={initial?.status ?? "OPEN"}>{statusOptions.map((value) => <option key={value} value={value}>{registerStatusLabel(value)}</option>)}</select>{assuredRegister ? <span className="mt-1 block text-xs font-normal text-slate-500">Closure and reopening are controlled by the Management Assurance Test on this record’s page.</span> : null}</label>
+        <label className="text-sm font-medium">Service location<select className={cls} name="locationId" defaultValue={initial?.locationId ?? defaultLocationId}><option value="">Organisation-wide</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label className="text-sm font-medium">Person responsible for follow-up<select className={cls} name="ownerId" defaultValue={initial?.ownerId ?? defaultOwnerId}><option value="">Choose later</option>{owners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        {!assuredRegister ? <label className="text-sm font-medium">Date work was closed<input className={cls} name="closureDate" type="date" defaultValue={initial?.closureDate} /></label> : null}
       </div>
     </FormSection>
 

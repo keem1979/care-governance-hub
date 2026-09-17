@@ -8,6 +8,8 @@ export const KPI_AUTO_SOURCES: Record<string, string> = {
   "pressure-damage": "Pressure damage register",
   "hospital-admissions": "Hospital admissions register",
   "scc-complaints-received": "Complaints register",
+  "complaints-responded-on-time": "Complaints Assurance communications",
+  "complaint-actions-completed": "Complaint-linked Action Tracker records",
   compliments: "Compliments register",
   "scc-safeguarding-referrals": "Safeguarding register",
   incidents: "Incidents register",

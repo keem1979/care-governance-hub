@@ -65,6 +65,44 @@ export async function POST(request: Request) {
       sourceValues.set(slug, value);
     }
 
+    const complaintResponses = await db.complaintCommunication.findMany({
+      where: {
+        organisationId: context.organisation.id,
+        type: "FINAL_RESPONSE",
+        occurredAt: { gte: reportingMonth, lt: monthEnd },
+        complaint: { archivedAt: null, ...(locationId ? { locationId } : {}) },
+      },
+      select: {
+        occurredAt: true,
+        complaint: { select: { complaintInvestigation: { select: { responseDueAt: true, extensionDueAt: true } } } },
+      },
+    });
+    if (complaintResponses.length > 0) {
+      const assessable = complaintResponses.flatMap((response) => {
+        const dueAt = response.complaint.complaintInvestigation?.extensionDueAt ?? response.complaint.complaintInvestigation?.responseDueAt;
+        return dueAt ? [{ occurredAt: response.occurredAt, dueAt }] : [];
+      });
+      if (assessable.length === complaintResponses.length) {
+        const onTime = assessable.filter((response) => response.occurredAt <= response.dueAt).length;
+        sourceValues.set("complaints-responded-on-time", compliancePercentage(onTime, assessable.length) ?? 0);
+      }
+    }
+
+    const completedComplaintActions = await db.action.findMany({
+      where: {
+        organisationId: context.organisation.id,
+        sourceType: "COMPLAINT",
+        archivedAt: null,
+        closedAt: { gte: reportingMonth, lt: monthEnd },
+        ...(locationId ? { locationId } : {}),
+      },
+      select: { closedAt: true, dueDate: true },
+    });
+    if (completedComplaintActions.length > 0) {
+      const onTime = completedComplaintActions.filter((action) => Boolean(action.closedAt && action.closedAt <= action.dueDate)).length;
+      sourceValues.set("complaint-actions-completed", compliancePercentage(onTime, completedComplaintActions.length) ?? 0);
+    }
+
     const activeActionWhere = {
       organisationId: context.organisation.id,
       archivedAt: null,

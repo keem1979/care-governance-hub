@@ -48,6 +48,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ke
     if (title.length < 3 || summary.length < 3) throw new Error("Enter a title and summary.");
     if (locationId && !context.locations.some((item) => item.id === locationId)) throw new Error("Choose an authorised location.");
     if (!REGISTER_RISK_LEVELS.includes(riskLevel as never) || !REGISTER_STATUSES.includes(status as never)) throw new Error("Choose valid values.");
+    if (["incidents", "complaints", "safeguarding"].includes(key) && status === "CLOSED" && entry.status !== "CLOSED") throw new Error("Close this governed record through its Management Assurance Test, not the general status field.");
+    if (["incidents", "complaints", "safeguarding"].includes(key) && entry.status === "CLOSED") throw new Error("Reopen this governed record through its recorded assurance decision before making changes.");
     if (ownerId && !(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: ownerId, status: "ACTIVE" } }))) throw new Error("Choose an active owner.");
     if (clientId && !(await db.client.findFirst({ where: { id: clientId, ...clientScopeWhere(context) } }))) throw new Error("Choose an authorised client record.");
     if (staffMemberId && !(await db.staffMember.findFirst({ where: { id: staffMemberId, ...workforceScopeWhere(context) } }))) throw new Error("Choose an authorised staff record.");
@@ -66,7 +68,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ke
     const snapshot = { title, summary, riskLevel, status, data };
 
     await db.$transaction(async (tx) => {
-      await tx.registerEntry.update({ where: { id }, data: { title, summary, locationId, clientId, staffMemberId, ownerId, riskLevel: riskLevel as never, status: status as never, eventDate, closureDate: parseOptionalDate(form.get("closureDate")), data: data as Prisma.InputJsonValue, evidenceLinks: { deleteMany: {}, create: evidenceIds.map((evidenceId) => ({ evidenceId })) } } });
+      await tx.registerEntry.update({ where: { id }, data: { title, summary, locationId, clientId, staffMemberId, ownerId, riskLevel: riskLevel as never, status: status as never, eventDate, closureDate: ["incidents", "complaints", "safeguarding"].includes(key) ? entry.closureDate : parseOptionalDate(form.get("closureDate")), data: data as Prisma.InputJsonValue, evidenceLinks: { deleteMany: {}, create: evidenceIds.map((evidenceId) => ({ evidenceId })) } } });
       await syncRegisterEvidence(tx, {
         entryId: id, organisationId: context.organisation.id, locationId,
         definitionKey: key, definitionName: entry.definition.name, reference: entry.reference,

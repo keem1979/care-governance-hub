@@ -1,10 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
-const FINAL_MIGRATION = "20260821194500_audit_assurance_closed_loop";
+const FINAL_MIGRATION = "20260828170000_safeguarding_assurance_closed_loop";
+const DEFERRED_UPGRADE_MIGRATIONS = new Set([
+  "20260828090000_incident_assurance_closed_loop",
+  "20260828130000_complaints_assurance_closed_loop",
+  FINAL_MIGRATION,
+]);
 const TEMP_BASENAME = "qcgms-action-assurance-release-gate";
 const root = resolve(tmpdir(), TEMP_BASENAME);
 const dataDir = join(root, "pgdata");
@@ -13,9 +18,14 @@ const port = Number(process.env.QCGMS_E2E_PG_PORT ?? 55439);
 const webPort = Number(process.env.QCGMS_E2E_WEB_PORT ?? 3021);
 const freshDatabase = "qcgms_e2e_action_fresh";
 const upgradeDatabase = "qcgms_e2e_action_upgrade";
+const legacyDatabase = "qcgms_e2e_action_legacy";
 const seedDatabase = "qcgms_e2e_action_seed";
 const pgBin = locatePostgresBin();
-const releaseBuildDir = `.next-release-gate-${process.pid}`;
+const prebuiltDir = process.env.QCGMS_E2E_PREBUILT_DIR?.trim();
+const incidentOnly = process.env.QCGMS_E2E_INCIDENT_ONLY === "1";
+const complaintOnly = process.env.QCGMS_E2E_COMPLAINT_ONLY === "1";
+const safeguardingOnly = process.env.QCGMS_E2E_SAFEGUARDING_ONLY === "1";
+const releaseBuildDir = prebuiltDir || `.next-release-gate-${process.pid}`;
 let clusterStarted = false;
 
 await main();
@@ -30,7 +40,7 @@ async function main() {
     run(pg("pg_ctl"), ["-D", dataDir, "-o", `-h 127.0.0.1 -p ${port} -F`, "-w", "start"]);
     clusterStarted = true;
 
-    for (const database of [freshDatabase, upgradeDatabase, seedDatabase]) {
+    for (const database of [freshDatabase, upgradeDatabase, legacyDatabase, seedDatabase]) {
       run(pg("createdb"), ["-h", "127.0.0.1", "-p", String(port), "-U", "postgres", database]);
     }
 
@@ -39,32 +49,66 @@ async function main() {
     prismaDeploy(freshUrl);
     psql(freshDatabase, "scripts/release-gate/verify-action-assurance-fresh.sql");
     psql(freshDatabase, "scripts/release-gate/verify-audit-assurance.sql");
+    psql(freshDatabase, "scripts/release-gate/verify-incident-assurance.sql");
+    psql(freshDatabase, "scripts/release-gate/verify-complaints-assurance.sql");
+    psql(freshDatabase, "scripts/release-gate/verify-safeguarding-assurance.sql");
 
-    step("Immediately preceding-schema upgrade proof");
+    step("Committed-baseline three-assurance upgrade proof");
     copyPreviousMigrations();
     const upgradeUrl = databaseUrl(upgradeDatabase);
     prismaDeploy(upgradeUrl, previousMigrations);
-    psql(upgradeDatabase, "scripts/release-gate/evidence-controls-upgrade-fixture.sql");
-    psql(upgradeDatabase, "scripts/release-gate/audit-assurance-upgrade-fixture.sql");
+    psql(upgradeDatabase, "scripts/release-gate/incident-assurance-upgrade-fixture.sql");
+    psql(upgradeDatabase, "scripts/release-gate/complaints-assurance-upgrade-fixture.sql");
+    psql(upgradeDatabase, "scripts/release-gate/safeguarding-assurance-upgrade-fixture.sql");
     prismaDeploy(upgradeUrl);
-    psql(upgradeDatabase, "scripts/release-gate/verify-evidence-controls-upgrade.sql");
     psql(upgradeDatabase, "scripts/release-gate/verify-audit-assurance.sql");
+    psql(upgradeDatabase, "scripts/release-gate/verify-incident-assurance.sql");
+    psql(upgradeDatabase, "scripts/release-gate/verify-complaints-assurance.sql");
+    psql(upgradeDatabase, "scripts/release-gate/verify-safeguarding-assurance.sql");
+
+    step("Seeded legacy governance relationship preservation proof");
+    const legacyUrl = databaseUrl(legacyDatabase);
+    prismaDeploy(legacyUrl, previousMigrations);
+    psql(legacyDatabase, "scripts/release-gate/assurance-convergence-upgrade-fixture.sql");
+    prismaDeploy(legacyUrl);
+    psql(legacyDatabase, "scripts/release-gate/verify-assurance-convergence-upgrade.sql");
 
     step("Deployment-seed proof on a disposable database");
     const seedUrl = databaseUrl(seedDatabase);
     prismaDeploy(seedUrl);
     run(process.execPath, ["node_modules/tsx/dist/cli.mjs", "prisma/seed.ts"], { DATABASE_URL: seedUrl });
 
-    step("Production-mode Next build for signed-in browser validation");
-    run(process.execPath, ["node_modules/next/dist/bin/next", "build"], {
-      DATABASE_URL: freshUrl,
-      SESSION_SECRET: process.env.SESSION_SECRET ?? "e2e-only-secret-with-at-least-thirty-two-characters",
-      E2E_LOCAL_RELEASE_GATE: "1",
-      NEXT_DIST_DIR: releaseBuildDir,
-    });
+    if (prebuiltDir) {
+      if (!existsSync(join(releaseBuildDir, "BUILD_ID"))) {
+        throw new Error(`The requested prebuilt directory is not a completed Next build: ${releaseBuildDir}`);
+      }
+      step("Targeted correction validation using the last successful production build");
+    } else {
+      step("Production-mode Next build for signed-in browser validation");
+      const tsconfigPath = resolve("tsconfig.json");
+      const tsconfigBeforeBuild = readFileSync(tsconfigPath, "utf8");
+      try {
+        run(process.execPath, ["node_modules/next/dist/bin/next", "build"], {
+          DATABASE_URL: freshUrl,
+          SESSION_SECRET: process.env.SESSION_SECRET ?? "e2e-only-secret-with-at-least-thirty-two-characters",
+          E2E_LOCAL_RELEASE_GATE: "1",
+          NEXT_DIST_DIR: releaseBuildDir,
+          NODE_OPTIONS: process.env.NODE_OPTIONS ?? "--max-old-space-size=6144",
+        });
+      } finally {
+        writeFileSync(tsconfigPath, tsconfigBeforeBuild);
+      }
+    }
 
     step("Signed-in desktop Action assurance gate");
-    run(process.execPath, ["node_modules/@playwright/test/cli.js", "test", "tests/e2e/action-assurance-release-gate.spec.ts", "tests/e2e/audit-assurance-release-gate.spec.ts", "--project=chromium"], {
+    const desktopSpecs = incidentOnly
+      ? ["tests/e2e/incident-assurance-release-gate.spec.ts"]
+      : safeguardingOnly
+        ? ["tests/e2e/safeguarding-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-rm-burden.spec.ts"]
+      : complaintOnly
+        ? ["tests/e2e/complaint-assurance-release-gate.spec.ts"]
+        : ["tests/e2e/action-assurance-release-gate.spec.ts", "tests/e2e/audit-assurance-release-gate.spec.ts", "tests/e2e/incident-assurance-release-gate.spec.ts", "tests/e2e/complaint-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-rm-burden.spec.ts"];
+    run(process.execPath, ["node_modules/@playwright/test/cli.js", "test", ...desktopSpecs, "--project=chromium"], {
       DATABASE_URL: freshUrl,
       PLAYWRIGHT_PORT: String(webPort),
       PLAYWRIGHT_SERVER_MODE: "production",
@@ -76,9 +120,18 @@ async function main() {
 
     step("Evidence search performance probe (5,000 synthetic local rows)");
     psql(freshDatabase, "scripts/release-gate/evidence-controls-performance.sql");
+    psql(freshDatabase, "scripts/release-gate/complaints-assurance-performance.sql");
+    psql(freshDatabase, "scripts/release-gate/safeguarding-assurance-performance.sql");
 
     step("Signed-in mobile Action assurance gate");
-    run(process.execPath, ["node_modules/@playwright/test/cli.js", "test", "tests/e2e/action-assurance-mobile.spec.ts", "tests/e2e/audit-assurance-mobile.spec.ts", "--project=mobile"], {
+    const mobileSpecs = incidentOnly
+      ? ["tests/e2e/incident-assurance-mobile.spec.ts"]
+      : safeguardingOnly
+        ? ["tests/e2e/safeguarding-assurance-mobile.spec.ts"]
+      : complaintOnly
+        ? ["tests/e2e/complaint-assurance-mobile.spec.ts"]
+        : ["tests/e2e/action-assurance-mobile.spec.ts", "tests/e2e/audit-assurance-mobile.spec.ts", "tests/e2e/incident-assurance-mobile.spec.ts", "tests/e2e/complaint-assurance-mobile.spec.ts", "tests/e2e/safeguarding-assurance-mobile.spec.ts"];
+    run(process.execPath, ["node_modules/@playwright/test/cli.js", "test", ...mobileSpecs, "--project=mobile"], {
       DATABASE_URL: freshUrl,
       PLAYWRIGHT_PORT: String(webPort),
       PLAYWRIGHT_SERVER_MODE: "production",
@@ -88,7 +141,7 @@ async function main() {
     });
     await assertPortReleased(webPort);
 
-    step("RELEASE GATE PASS");
+    step(incidentOnly ? "TARGETED INCIDENT CORRECTION PASS" : complaintOnly ? "TARGETED COMPLAINTS ASSURANCE PASS" : safeguardingOnly ? "TARGETED SAFEGUARDING ASSURANCE PASS" : prebuiltDir ? "TARGETED PREBUILT VALIDATION PASS" : "RELEASE GATE PASS");
   } finally {
     if (clusterStarted) {
       run(pg("pg_ctl"), ["-D", dataDir, "-m", "fast", "-w", "stop"], {}, true);
@@ -102,12 +155,10 @@ function copyPreviousMigrations() {
   const source = resolve("prisma/migrations");
   mkdirSync(previousMigrations, { recursive: true });
   for (const name of readdirSync(source)) {
-    if (name === FINAL_MIGRATION) continue;
+    if (DEFERRED_UPGRADE_MIGRATIONS.has(name)) continue;
     cpSync(join(source, name), join(previousMigrations, name), { recursive: true });
   }
-  if (!existsSync(join(source, FINAL_MIGRATION, "migration.sql"))) {
-    throw new Error(`Required final migration ${FINAL_MIGRATION} was not found.`);
-  }
+  for (const migration of DEFERRED_UPGRADE_MIGRATIONS) if (!existsSync(join(source, migration, "migration.sql"))) throw new Error(`Required deferred migration ${migration} was not found.`);
 }
 
 function prismaDeploy(url, migrationPath) {
