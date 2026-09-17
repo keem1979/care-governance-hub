@@ -662,7 +662,7 @@ After review and a deliberate local commit boundary for this slice, the next val
 ## Mobile improvements
 
 - Worklist items collapse to a single-column action summary instead of forcing a wide register table.
-- Quick views scroll horizontally without widening the page.
+- Quick views wrap onto additional rows without widening the page or hiding filters off-screen.
 - Record actions wrap inside the shared header.
 - Evidence choices are full-width checkbox targets rather than a narrow multi-select.
 - Capture cards use reduced mobile padding while retaining 44px-class controls.
@@ -725,17 +725,48 @@ The final local release gate passed. The implementation intentionally changes pr
 
 The first Evidence/Oversight combined run exposed strict-locator ambiguities because the new governed timeline and the canonical section correctly displayed the same Action/reopening facts. Tests were narrowed to the intended semantic link or visible occurrence without changing governance behaviour. The final complete run passed 9/9 desktop and 5/5 mobile.
 
-## Visual verification
+## Visual UX Evidence
 
-Production-mode local screenshots were captured from fictional seeded data and inspected at desktop and mobile viewports:
+The final review was run from the committed profile/Quick Find boundary `d12f171` against a fresh local PostgreSQL database, all 63 migrations, a newly generated production-mode Next.js build and fictional Meadow View Home Care data. The normal agent-browser executable was not available in this Windows workspace, so the same production-browser acceptance criteria were implemented through the repository's established Playwright release-gate stack.
 
-- Command Centre: clear five-second hierarchy; immediate/overdue/assurance/upcoming groups read before supporting counts.
-- Safeguarding worklist: compact rows remain scan-friendly and keep stage, attention reason, owner, scope and supporting records together.
-- Safeguarding capture: the visible task contains only required-now information, known context, safe defaults and optional Evidence; later detail remains collapsed.
-- Safeguarding detail: header and attention status are clear before the domain workflow; canonical Action, chronology and assurance controls remain visible.
-- Mobile detail: no horizontal overflow or clipped assurance controls. The existing full governed workflow is vertically long, which remains a later progressive-disclosure opportunity rather than a reason to remove governance content.
+Every captured route was checked for a blank body, Next/Vite error overlays, document-level horizontal overflow, browser page errors, unexpected console errors and unexpected HTTP failures. Desktop and mobile capture suites both passed **1/1**. No production service, database, environment or deployment was changed.
 
-Screenshots were written to a temporary local test directory and are not part of the repository or release artefact.
+| Evidence | Viewport | Result |
+| --- | --- | --- |
+| `01-command-centre-desktop.png` | Desktop | Clear exception-first hierarchy; passed |
+| `02-incidents-worklist-desktop.png` | Desktop | Governed worklist remains scan-friendly; passed |
+| `03-complaints-worklist-desktop.png` | Desktop | Domain-specific stage and response signals remain clear; passed |
+| `04-safeguarding-worklist-desktop.png` | Desktop | Immediate safety and assurance signals remain clear; passed |
+| `05-safeguarding-detail-desktop.png` | Desktop | Full workflow, Action, Evidence and assurance controls remain visible; passed |
+| `06-complaint-detail-desktop.png` | Desktop | Complaint-specific communication, remedy and assurance flow remains distinct; passed |
+| `07-actions-worklist-desktop.png` | Desktop | Quick views now wrap without clipping; passed after correction |
+| `08-action-detail-desktop.png` | Desktop | Completion, verification, effectiveness and closure remain visibly separate; passed |
+| `09-evidence-drawer-desktop.png` | Desktop | Canonical Evidence search, metadata preview and linkage are clear; passed |
+| `10-management-oversight-desktop.png` | Desktop | Assignment and delegation cards now size independently; passed after correction |
+| `11-client-profile-desktop.png` | Desktop | Identity, linked governance, actions, Evidence and chronology are coherent; passed |
+| `12-staff-profile-desktop.png` | Desktop | Compliance, linked records and workforce chronology are coherent; passed |
+| `13-global-quick-find-desktop.png` | Desktop | Grouped, scoped results remain understandable; passed |
+| `14-safeguarding-capture-desktop.png` | Desktop | Required-now capture stays short and progressive; passed |
+| `15-management-oversight-tablet.png` | Tablet | Cards stack without overlap or horizontal overflow; passed |
+| `m01-command-centre-mobile.png` | Mobile | Exception hierarchy and start-work controls remain usable; passed |
+| `m02-safeguarding-worklist-mobile.png` | Mobile | All quick views are visible and rows remain actionable; passed |
+| `m03-safeguarding-detail-mobile.png` | Mobile | No horizontal overflow or clipped assurance controls; passed |
+| `m04-action-detail-mobile.png` | Mobile | Lifecycle and progress controls remain usable; passed |
+| `m05-client-profile-mobile.png` | Mobile | Profile and linked-governance cards remain readable; passed |
+| `m06-staff-profile-mobile.png` | Mobile | Workforce and compliance forms remain usable; passed |
+| `m07-global-quick-find-mobile.png` | Mobile | Full-width search and grouped results remain usable; passed |
+| `m08-evidence-drawer-mobile.png` | Mobile | Full-width Evidence selection and fixed action area remain usable; passed |
+
+The 23-image evidence set was inspected and retained as a local review artefact, but it is deliberately excluded from source control. Repository convention keeps Playwright output under ignored `test-results/`; QCGMS does not otherwise version release screenshots in `docs/`. The reusable visual gate therefore writes to `test-results/ui-review/` unless an explicit `QCGMS_VISUAL_OUTPUT_DIR` is supplied.
+
+Two presentation defects were found and corrected without changing governance behaviour:
+
+1. Management Oversight's short Assignment card inherited the height of the long Delegation form at desktop width. The grid now aligns cards to their own content height.
+2. Quick-view pills used a horizontally clipped strip. They now wrap, making every filter visible on desktop and mobile.
+
+The fresh-database migration proof passed **0 → 63**. The final production build passed. At 5,000 synthetic records the selective Evidence query completed in **4.030 ms**, the broader active-Evidence query in **6.214 ms**, the overdue Complaint query in **1.857 ms**, Complaint issue grouping in **0.221 ms**, and the overdue Safeguarding response query in **1.732 ms**.
+
+One non-blocking visual debt remains: full Safeguarding and Staff governed records are necessarily long on mobile. They are readable and functionally complete, but a future sticky in-page section navigator could reduce scrolling without hiding assurance content.
 
 ## Remaining frontend debt
 

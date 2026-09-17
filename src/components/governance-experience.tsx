@@ -82,7 +82,7 @@ export function QuickViewNav({
   preserve?: Record<string, string>;
 }) {
   return (
-    <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Quick views">
+    <nav className="flex flex-wrap gap-2 pb-1" aria-label="Quick views">
       {items.map((item) => (
         <Link
           key={item.key}
