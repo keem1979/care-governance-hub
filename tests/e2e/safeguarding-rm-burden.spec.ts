@@ -32,11 +32,20 @@ test("RM safeguarding experience is exception-led and progressively disclosed", 
 
   await e2eGoto(page, `/registers/safeguarding/${setup.safeguarding["E2E-SG-READY"].id}`);
   await expect(page.getByRole("region", { name: "Record attention summary" })).toBeVisible();
-  await expect(page.getByText("Automatic chronology")).toBeVisible();
+  await expect(page.getByText("Safeguarding progress and chronology")).toBeVisible();
+  await expect(page.locator("#safeguarding-case")).not.toHaveAttribute("open", "");
   await expect(page.getByRole("link", { name: "Create linked Action" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Print assurance record" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /E2E-ACT-SAFEGUARDING-EFFECTIVE/ })).toBeVisible();
+  await expect(page.locator("#linked-actions summary")).toHaveText("View 1 closed Action");
+  await expect(page.getByRole("link", { name: /E2E-ACT-SAFEGUARDING-EFFECTIVE/ })).not.toBeVisible();
   await capture(page, "desktop-safeguarding-detail.png");
+  await page.locator("#linked-actions summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("link", { name: /E2E-ACT-SAFEGUARDING-EFFECTIVE/ })).toBeVisible();
+  await page.locator("#safeguarding-case summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#safeguarding-case")).toHaveAttribute("open", "");
+  await expect(page.getByRole("heading", { name: "Confirm only what is known now" })).toBeVisible();
 });
 
 async function capture(page: import("@playwright/test").Page, filename: string) {

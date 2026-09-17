@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
   CircleDot,
   Clock3,
   MapPin,
@@ -186,6 +187,67 @@ export function AttentionStrip({
   );
 }
 
+export function CurrentWorkPanel({
+  title,
+  detail,
+  href,
+  actionLabel,
+}: {
+  title: string;
+  detail: string;
+  href: string;
+  actionLabel: string;
+}) {
+  return (
+    <section id="current-work" className="scroll-mt-6 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 sm:p-5" aria-labelledby="current-work-title">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[.14em] text-emerald-700">Current work</p>
+          <h2 id="current-work-title" className="mt-1 text-lg font-black text-emerald-950">{title}</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-emerald-950/80">{detail}</p>
+        </div>
+        <a href={href} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-900">
+          {actionLabel} <ArrowRight aria-hidden="true" size={16} />
+        </a>
+      </div>
+    </section>
+  );
+}
+
+export function DisclosureSection({
+  id,
+  title,
+  summary,
+  children,
+  defaultOpen = false,
+  tone = "neutral",
+}: {
+  id?: string;
+  title: string;
+  summary: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  tone?: "neutral" | "active" | "history";
+}) {
+  const colours = tone === "active"
+    ? "border-emerald-300 bg-emerald-50/40"
+    : tone === "history"
+      ? "border-slate-200 bg-slate-50/60"
+      : "border-slate-200 bg-white";
+  return (
+    <details id={id} open={defaultOpen} className={`group scroll-mt-6 overflow-hidden rounded-2xl border ${colours}`}>
+      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-inset sm:px-5">
+        <span>
+          <span className="block font-black text-slate-950">{title}</span>
+          <span className="mt-0.5 block text-sm leading-5 text-slate-600">{summary}</span>
+        </span>
+        <ChevronDown aria-hidden="true" className="shrink-0 text-slate-500 transition group-open:rotate-180" size={20} />
+      </summary>
+      <div className="border-t border-slate-200 bg-white p-4 sm:p-5">{children}</div>
+    </details>
+  );
+}
+
 export type GovernanceTimelineEntry = {
   id: string;
   title: string;
@@ -195,31 +257,44 @@ export type GovernanceTimelineEntry = {
   tone?: "default" | "decision" | "attention";
 };
 
-export function GovernanceTimeline({ entries }: { entries: GovernanceTimelineEntry[] }) {
+export function GovernanceTimeline({ entries, collapsible = false, defaultOpen = true }: { entries: GovernanceTimelineEntry[]; collapsible?: boolean; defaultOpen?: boolean }) {
   const sorted = [...entries].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+  const content = <>
+    {sorted.length ? (
+      <ol className="relative mt-5 space-y-0 before:absolute before:bottom-2 before:left-[.46rem] before:top-2 before:w-px before:bg-slate-200">
+        {sorted.map((entry) => (
+          <li key={entry.id} className="relative grid grid-cols-[1rem_1fr] gap-3 pb-5 last:pb-0">
+            <CircleDot aria-hidden="true" size={16} className={`relative z-10 mt-1 bg-white ${entry.tone === "attention" ? "text-amber-700" : entry.tone === "decision" ? "text-emerald-700" : "text-slate-400"}`} />
+            <div>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <p className="font-bold text-slate-950">{entry.title}</p>
+                <time className="text-xs text-slate-500" dateTime={entry.occurredAt.toISOString()}>{formatDateTime(entry.occurredAt)}</time>
+              </div>
+              {entry.detail ? <p className="mt-1 text-sm leading-6 text-slate-600">{entry.detail}</p> : null}
+              {entry.actor ? <p className="mt-1 text-xs font-semibold text-slate-500">Recorded by {entry.actor}</p> : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    ) : <p className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">No governed events are recorded yet.</p>}
+  </>;
+  const heading = (
+    <div className="flex items-center gap-3">
+      <span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-slate-700"><Clock3 aria-hidden="true" size={19} /></span>
+      <div><p className="text-xs font-black uppercase tracking-[.14em] text-slate-500">Governed chronology</p><h2 className="text-xl font-black">Timeline</h2><p className="text-xs text-slate-500">{sorted.length} governed event{sorted.length === 1 ? "" : "s"}</p></div>
+    </div>
+  );
+  if (collapsible) return (
+    <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" id="timeline" open={defaultOpen}>
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-inset sm:px-6">
+        {heading}<ChevronDown aria-hidden="true" className="shrink-0 text-slate-500 transition group-open:rotate-180" size={20} />
+      </summary>
+      <div className="border-t border-slate-200 px-5 pb-5 sm:px-6 sm:pb-6">{content}</div>
+    </details>
+  );
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" id="timeline">
-      <div className="flex items-center gap-3">
-        <span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-slate-700"><Clock3 aria-hidden="true" size={19} /></span>
-        <div><p className="text-xs font-black uppercase tracking-[.14em] text-slate-500">Governed chronology</p><h2 className="text-xl font-black">Timeline</h2></div>
-      </div>
-      {sorted.length ? (
-        <ol className="relative mt-5 space-y-0 before:absolute before:bottom-2 before:left-[.46rem] before:top-2 before:w-px before:bg-slate-200">
-          {sorted.map((entry) => (
-            <li key={entry.id} className="relative grid grid-cols-[1rem_1fr] gap-3 pb-5 last:pb-0">
-              <CircleDot aria-hidden="true" size={16} className={`relative z-10 mt-1 bg-white ${entry.tone === "attention" ? "text-amber-700" : entry.tone === "decision" ? "text-emerald-700" : "text-slate-400"}`} />
-              <div>
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <p className="font-bold text-slate-950">{entry.title}</p>
-                  <time className="text-xs text-slate-500" dateTime={entry.occurredAt.toISOString()}>{formatDateTime(entry.occurredAt)}</time>
-                </div>
-                {entry.detail ? <p className="mt-1 text-sm leading-6 text-slate-600">{entry.detail}</p> : null}
-                {entry.actor ? <p className="mt-1 text-xs font-semibold text-slate-500">Recorded by {entry.actor}</p> : null}
-              </div>
-            </li>
-          ))}
-        </ol>
-      ) : <p className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">No governed events are recorded yet.</p>}
+      {heading}{content}
     </section>
   );
 }

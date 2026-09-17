@@ -21,6 +21,10 @@ test("Safeguarding Assurance preserves safety, Action, effectiveness and closure
   await signIn(page, E2E_USERS.registeredManager);
   await e2eGoto(page, `/registers/safeguarding/${ready.id}`);
   await expect(page.getByRole("heading", { name: "Concern → safety → referral → enquiry → assurance" })).toBeVisible();
+  await expect(page.locator("#linked-actions summary")).toHaveText("View 1 closed Action");
+  await expect(page.getByRole("link", { name: /E2E-ACT-SAFEGUARDING-EFFECTIVE/ })).not.toBeVisible();
+  await page.locator("#linked-actions summary").focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("link", { name: /E2E-ACT-SAFEGUARDING-EFFECTIVE/ })).toBeVisible();
   await expect(page.getByText(/Effectiveness: effective/i)).toBeVisible();
   await expect(page.getByRole("link", { name: "Print assurance record" })).toBeVisible();
@@ -63,7 +67,10 @@ test("Safeguarding Assurance preserves safety, Action, effectiveness and closure
   expect((await decision(page, low.id, null, "ASSURED_CLOSED", "This low-complexity concern has a complete proportionate record and accountable rationale.")).status).toBe(200);
   expect((await decision(page, low.id, setup.evidenceId, "REOPENED", "Material new information requires another review.", "A new professional account was received after closure.")).status).toBe(200);
   await e2eReload(page);
-  await expect(page.getByText("Reopened", { exact: true })).toBeVisible();
+  await expect(page.getByText("Reopened", { exact: true })).not.toBeVisible();
+  const reopeningHistory = page.locator("details").filter({ hasText: "Safeguarding assurance decisions" });
+  await reopeningHistory.locator("summary").click();
+  await expect(reopeningHistory.getByText("Reopened", { exact: true })).toBeVisible();
 
   await e2eGoto(page, `/registers/safeguarding/${critical.id}`);
   const self = await decision(page, critical.id, setup.evidenceId, "ASSURED_CLOSED", "The same manager must not self-close Critical safeguarding.");
@@ -78,7 +85,7 @@ test("Safeguarding Assurance preserves safety, Action, effectiveness and closure
   await ownerContext.close();
 
   await e2eGoto(page, "/my-work");
-  await expect(page.getByText("E2E-SG-OVERDUE")).toBeVisible();
+  await expect(page.getByText("E2E-SG-OVERDUE", { exact: true })).toBeVisible();
   await expect(page.getByText(/Complete the proportionate safeguarding enquiry|external/i).first()).toBeVisible();
   await e2eGoto(page, "/dashboard");
   await expect(page.getByText("Safeguarding external responses overdue")).toBeVisible();

@@ -17,9 +17,13 @@ test("Incident Assurance preserves investigation, canonical Action, effectivenes
   await signIn(page, E2E_USERS.registeredManager);
   await page.goto(`/registers/incidents/${ready.id}`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Facts → investigation → Action → effectiveness → assurance" })).toBeVisible();
+  await expect(page.locator("#linked-actions summary")).toHaveText("View 1 closed Action");
+  await expect(page.getByRole("link", { name: /E2E-ACT-INCIDENT-EFFECTIVE/ })).not.toBeVisible();
+  await page.locator("#linked-actions summary").focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("link", { name: /E2E-ACT-INCIDENT-EFFECTIVE/ })).toBeVisible();
   await expect(page.getByText(/Effectiveness: effective/i)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Outstanding assurance requirements" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Outstanding assurance requirements", exact: true })).toBeVisible();
   await expect(page.getByText("Sufficient appropriate closure Evidence selected")).toBeVisible();
 
   const genericClosure = await page.evaluate(async (id) => {
@@ -38,7 +42,10 @@ test("Incident Assurance preserves investigation, canonical Action, effectivenes
   expect(closure.status).toBe(200);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByText("Closed · HIGH risk")).toBeVisible();
-  await expect(page.getByText("ASSURED CLOSED", { exact: true })).toBeVisible();
+  await expect(page.getByText("ASSURED CLOSED", { exact: true })).not.toBeVisible();
+  const closureHistory = page.locator("details").filter({ hasText: "Incident assurance decisions" });
+  await closureHistory.locator("summary").click();
+  await expect(closureHistory.getByText("ASSURED CLOSED", { exact: true })).toBeVisible();
 
   const closedInvestigation = await page.evaluate(async (id) => {
     const form = new FormData(); form.set("intent", "draft");
@@ -64,6 +71,7 @@ test("Incident Assurance preserves investigation, canonical Action, effectivenes
   expect(reopening.status).toBe(200);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByText("In review · HIGH risk")).toBeVisible();
+  await page.locator("#linked-actions summary").click();
   await expect(page.getByRole("link", { name: /E2E-ACT-INCIDENT-EFFECTIVE/ })).toBeVisible();
   await expect(page.getByText(/Effectiveness: effective/i)).toBeVisible();
 

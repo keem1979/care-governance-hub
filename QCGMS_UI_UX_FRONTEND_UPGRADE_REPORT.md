@@ -788,3 +788,126 @@ One non-blocking visual debt remains: full Safeguarding and Staff governed recor
 ## Next recommended frontend slice
 
 The next frontend slice should address **controlled Evidence file preview/download**. It should retain explicit authorisation, safe content handling, provenance/currentness context and canonical storage. Recently viewed records and a broad relationship drawer remain deferred until their privacy and referential-integrity designs are agreed.
+
+## Final Visual UX commit boundary
+
+The 23-screen Visual UX Evidence Gate was separated from the profile/search feature boundary and committed locally as `25b27a5` (`test: add visual ux verification and polish`). It contains the two verified presentation corrections, the reusable browser evidence gate and this report's visual evidence record. Screenshots remain local QA artefacts rather than source-controlled product files: QCGMS already treats Playwright output under ignored `test-results/` as transient, and the repository has no convention for versioning release screenshots.
+
+No schema, migration, dependency, environment, deployment configuration or production change was included. The progressive-disclosure work described below is a separate local release boundary.
+
+## Progressive disclosure audit
+
+The Incident, Complaint, Safeguarding and Action detail pages were classified into identity, current stage, current work, supporting context and history. Critical severity, safety position, overdue work, assurance blockers, failed effectiveness and closure authority remain visible. Completed forms, prior decisions, closed Actions, governed chronology and technical history now remain available without occupying the initial working view.
+
+The implementation uses server-rendered native `details`/`summary` elements. Default state is deterministic from lifecycle data; opening a section does not fetch again, hydrate a new client component or alter authorisation. Hidden presentation is never treated as a security boundary.
+
+## Incident detail changes
+
+- A visible Current Work panel directs the RM to investigation, linked Actions or Management Assurance according to the live lifecycle.
+- Active investigation remains open; a completed investigation is summarised behind disclosure.
+- Linked Actions show the management position first: open, overdue and awaiting-effectiveness counts. Active exceptions lead; closed Actions are disclosed on request.
+- The governed chronology and append-only assurance decisions remain available but no longer precede active work.
+- Technical audit history is explicitly separated from operational governance history.
+
+## Complaint detail changes
+
+- Current Work prioritises acknowledgement, investigation, final response, linked Actions or assurance without conflating response issue with closure.
+- Completed investigation and communications collapse to concise lifecycle summaries.
+- Structured issues remain expanded when a finding or Action decision is outstanding and collapse when resolved.
+- Closed Actions and append-only closure/reopening decisions remain keyboard-accessible historical detail.
+- Complaint-specific acknowledgement, remedy, communication and final-response semantics remain distinct from Incident and Safeguarding.
+
+## Safeguarding detail changes
+
+- Immediate safety and referral position remain in the always-visible lifecycle summary and assurance blockers.
+- The active safeguarding case and progress chronology remain open until ready for assurance; completed case content collapses thereafter.
+- Current Work directs the manager to safety, referral, enquiry, linked protection Actions or authorised assurance as appropriate.
+- Closure/reopening decisions remain append-only and available behind historical disclosure.
+- The design does not duplicate a second safeguarding Action, Evidence or investigation lifecycle.
+
+## Action detail changes
+
+- The next governed decision remains the dominant header action and Attention summary.
+- Progress entry is moved ahead of completed background content while delivery remains active.
+- Required work stays open during delivery and becomes a compact reference after completion.
+- Verification, closure and role-aware Evidence open automatically when assurance work is active.
+- Occurrence history and the governed timeline collapse by default; completion, verification, effectiveness and closure remain separate decisions.
+
+## My Work polish
+
+Work now uses explicit verbs such as **Acknowledge Complaint**, **Investigate Complaint**, **Send Complaint response**, **Confirm safety**, **Complete referral**, **Progress Safeguarding** and **Review Incident**. Register work links target `#current-work` rather than the top of a long record.
+
+The list is lightly grouped into Overdue, Due today, Due in the next 7 days, Needs a target and Upcoming. This remains a personal worklist, not a duplicate Command Centre. Source labels were simplified from heavy pills to restrained text, while urgency and priority retain meaningful scan treatment.
+
+## Design-system consolidation
+
+Two proven shared patterns were consolidated in `governance-experience.tsx`:
+
+- `CurrentWorkPanel` for the one immediate governance task on mature register records;
+- `DisclosureSection` for accessible lifecycle-aware supporting detail and history.
+
+`GovernanceTimeline` gained an optional native collapsible presentation while preserving its existing non-collapsible use. A local `RelatedActionsSummary` removes three duplicate Incident/Complaint/Safeguarding renderings while continuing to use the one canonical central Action lifecycle.
+
+## Components consolidated
+
+- Current-work callout and anchor behaviour across Incident, Complaint and Safeguarding.
+- Disclosure heading, summary, focus treatment and semantic tone.
+- Active/closed related-Action summary across the three assurance registers.
+- Governed timeline presentation where chronology is supporting rather than current work.
+- My Work item card and useful date grouping.
+
+## Components deliberately kept separate
+
+Incident investigation, Complaint investigation/communications, Safeguarding case/progress and Action assurance controls remain domain-specific because their decisions, authority and closure tests differ. Record headers, Attention summaries, Evidence infrastructure and canonical server actions were reused rather than wrapped in a speculative generic workflow abstraction.
+
+## Badge/card reduction
+
+Resolved Complaint issue metadata now uses restrained text rather than multiple coloured pills. My Work source labels are plain text; priority remains a badge because it materially supports rapid scanning. The work keeps safety/overdue/critical colour but removes colour from ordinary metadata. Existing lifecycle cards were retained where their aligned comparison remains useful.
+
+## Mobile scroll reduction
+
+Completed Safeguarding case content, Complaint communications/investigation, closed Actions, historical decisions, Action requirements and timelines no longer stack permanently on mobile. Identity, attention, current work, stage and active controls appear before supporting history. This is a qualitative reduction rather than a fabricated percentage: the genuine before captures showed multi-screen completed forms above active assurance, while the new captures place the next decision near the top and make completed detail opt-in.
+
+## Accessibility
+
+- Native `details`/`summary` provides built-in expanded state and screen-reader semantics.
+- Summaries are keyboard focusable and tested with Enter.
+- Focus-visible treatment uses the existing emerald focus language.
+- Disclosure names describe content and state rather than using generic “More” labels.
+- Current-work links and mobile controls retain at least 40–44px-class interaction height where tested.
+- Status and urgency remain expressed in text, not colour alone.
+
+## Performance
+
+Progressive disclosure remains server-rendered. No new client state, effect, client fetch, dependency or duplicate query was introduced. Collapsed content reuses data already authorised and loaded for the record, avoiding needless expansion requests and hydration. Register and Evidence performance remain covered by the established 5,000-record probes.
+
+## Visual screenshots
+
+The final visual gate captures genuine fictional lifecycle states for desktop Incident, Complaint, Safeguarding, Action and My Work plus mobile Safeguarding, Action and My Work. It also reruns the existing Command Centre, worklist, profile, Quick Find, Evidence drawer and Management Oversight captures. Screenshots are written to ignored `test-results/ui-review/` (or an explicit external output directory) and checked for blank pages, framework error overlays, horizontal overflow, page errors, unexpected console errors and unexpected HTTP failures.
+
+## Regression results
+
+- TypeScript: passed with the repository's production memory setting.
+- Targeted ESLint and full ESLint: passed.
+- Prisma validation: passed.
+- Automated unit/integration suite: **360/360 passed across 75/75 files**.
+- Next.js production build: passed; 147 routes generated.
+- Fresh database: **0 → 63 migrations passed**.
+- Committed-baseline upgrade: **60 → 63 migrations passed**.
+- Seeded legacy-governance upgrade and deployment seed: passed.
+- Targeted Complaint desktop assurance: **1/1 passed**.
+- Targeted Complaint mobile disclosure regression: **1/1 passed**.
+- Final combined browser gate: desktop `12/12` passed; mobile `6/6` runnable scenarios passed, with `2` intentional server-side isolation checks skipped on mobile because the same boundaries passed in the desktop gate.
+- Final visual gate: desktop `1/1` and mobile `1/1` passed with no blank pages, framework overlays, unexpected page/console/HTTP errors or horizontal overflow.
+- Performance: representative 5,000-record Evidence, Complaint and Safeguarding probes passed.
+- Builds: Next.js production build passed (`147` routes) and the Sites/Vinext compatibility build passed. Vinext emitted existing forward-compatibility warnings for native Vite config loading and a runtime-resolved branding-logo route; neither warning blocked the build.
+
+The first combined browser attempt correctly exposed tests that assumed completed Actions and historical decisions remained permanently expanded. The product behaviour was retained; tests were strengthened to verify closed-by-default presentation, keyboard expansion and the unchanged canonical evidence/history beneath it.
+
+## Remaining UX debt
+
+1. Risk and Audit detail pages should receive progressive-disclosure treatment only after their current-stage hierarchy is assessed; they were deliberately excluded from this focused slice.
+2. The Action assurance page is still a separate route. That is acceptable for decision focus, but a future usability review should test return-to-source navigation with RMs.
+3. A sticky in-page navigator may help exceptionally long active Safeguarding records, but should not precede evidence from real use.
+4. Controlled Evidence file preview/download remains the next high-value frontend slice.
+5. Recently viewed records and a broad relationship drawer remain deferred pending privacy and referential-integrity decisions.

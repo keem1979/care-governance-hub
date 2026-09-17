@@ -21,6 +21,10 @@ test("Complaints Assurance keeps response, Action, effectiveness and closure as 
   await signIn(page, E2E_USERS.registeredManager);
   await e2eGoto(page, `/registers/complaints/${ready.id}`);
   await expect(page.getByRole("heading", { name: "Received → acknowledged → investigated → response → assurance" })).toBeVisible();
+  await expect(page.locator("#linked-actions summary")).toHaveText("View 1 closed Action");
+  await expect(page.getByRole("link", { name: /E2E-ACT-COMPLAINT-EFFECTIVE/ })).not.toBeVisible();
+  await page.locator("#linked-actions summary").focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("link", { name: /E2E-ACT-COMPLAINT-EFFECTIVE/ })).toBeVisible();
   await expect(page.getByText(/Effectiveness: effective/i)).toBeVisible();
   await expect(page.getByRole("link", { name: "Print assurance record" })).toBeVisible();
@@ -51,7 +55,11 @@ test("Complaints Assurance keeps response, Action, effectiveness and closure as 
   expect(highClosure.status).toBe(200);
   await e2eReload(page);
   await expect(page.getByText("Closed · HIGH risk")).toBeVisible();
-  await expect(page.getByText("ASSURED CLOSED", { exact: true })).toBeVisible();
+  await expect(page.getByText("ASSURED CLOSED", { exact: true })).not.toBeVisible();
+  const closureHistory = page.locator("details").filter({ hasText: "Complaint assurance decisions" });
+  await closureHistory.locator("summary").click();
+  await expect(closureHistory.getByText("ASSURED CLOSED", { exact: true })).toBeVisible();
+  await page.locator("#linked-actions summary").click();
   await expect(page.getByRole("link", { name: /E2E-ACT-COMPLAINT-EFFECTIVE/ })).toBeVisible();
 
   const closedInvestigation = await page.evaluate(async (id) => {
@@ -68,8 +76,11 @@ test("Complaints Assurance keeps response, Action, effectiveness and closure as 
   const reopening = await complaintDecision(page, low.id, setup.evidenceId, "REOPENED", "New correspondence requires the original conclusion to be reviewed.", "The complainant supplied material new information after the final response.");
   expect(reopening.status).toBe(200);
   await e2eReload(page);
-  await expect(page.getByText("REOPENED", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Material new information recorded on reopening/i).first()).toBeVisible();
+  await expect(page.getByText("REOPENED", { exact: true })).not.toBeVisible();
+  const reopeningHistory = page.locator("details").filter({ hasText: "Complaint assurance decisions" });
+  await reopeningHistory.locator("summary").click();
+  await expect(reopeningHistory.getByText("REOPENED", { exact: true })).toBeVisible();
+  await expect(reopeningHistory.getByText(/The complainant supplied material new information after the final response/i)).toBeVisible();
 
   await e2eGoto(page, `/registers/complaints/${critical.id}`);
   const selfApproval = await complaintDecision(page, critical.id, setup.evidenceId, "ASSURED_CLOSED", "A Critical Complaint must reject closure by the same manager who created and investigated it.");
@@ -84,7 +95,7 @@ test("Complaints Assurance keeps response, Action, effectiveness and closure as 
   await ownerContext.close();
 
   await e2eGoto(page, "/my-work");
-  await expect(page.getByText("E2E-CMP-OVERDUE")).toBeVisible();
+  await expect(page.getByText("E2E-CMP-OVERDUE", { exact: true })).toBeVisible();
   await expect(page.getByText(/Acknowledge the Complaint/i)).toBeVisible();
   await e2eGoto(page, "/dashboard");
   await expect(page.getByText("Complaint acknowledgements overdue")).toBeVisible();

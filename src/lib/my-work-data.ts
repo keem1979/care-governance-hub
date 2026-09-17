@@ -92,7 +92,7 @@ export async function getMyWorkData(context: AuthorisedContext) {
               ? item.complaintInvestigation?.extensionDueAt ?? item.complaintInvestigation?.responseDueAt ?? null
               : null
           : safeguarding ? item.safeguardingCase?.externalResponseDueAt ?? null : extractWorkTarget(item.data);
-        const detail = complaint
+        const instruction = complaint
           ? !acknowledgementRecorded
             ? "Acknowledge the Complaint and record the communication."
             : item.complaintInvestigation?.status !== "COMPLETED"
@@ -114,8 +114,25 @@ export async function getMyWorkData(context: AuthorisedContext) {
                   : item.safeguardingCase?.status !== "READY_FOR_ASSURANCE"
                     ? "Complete the proportionate safeguarding enquiry and outcome."
                     : "Safeguarding is awaiting an authorised Management Assurance decision."
-            : item.summary;
-        return work({ key: `REGISTER:${item.id}`, source: complaint ? "Complaint assurance" : safeguarding ? "Safeguarding assurance" : item.definition.name, reference: item.reference, title: item.title, detail, href: `/registers/${item.definition.key}/${item.id}`, targetAt, priority: item.riskLevel, state: item.status, locationName: item.location?.name, clientName: personName(item.client) });
+            : "Review the Incident position, required follow-up and current assurance blockers.";
+        const title = complaint
+          ? !acknowledgementRecorded
+            ? `Acknowledge Complaint ${item.reference}`
+            : item.complaintInvestigation?.status !== "COMPLETED"
+              ? `Investigate Complaint ${item.reference}`
+              : !responseRecorded
+                ? `Send Complaint response ${item.reference}`
+                : `Review Complaint assurance ${item.reference}`
+          : safeguarding
+            ? ["UNRESOLVED_IMMEDIATE_RISK", "UNKNOWN_EVIDENCE_REQUIRED"].includes(item.safeguardingCase?.safetyPosition ?? "")
+              ? `Confirm safety for Safeguarding ${item.reference}`
+              : item.safeguardingCase?.referralDecision === "AWAITING_DECISION" || item.safeguardingCase?.referralDecision === "REQUIRED"
+                ? `Complete referral for Safeguarding ${item.reference}`
+                : item.safeguardingCase?.status !== "READY_FOR_ASSURANCE"
+                  ? `Progress Safeguarding ${item.reference}`
+                  : `Review Safeguarding assurance ${item.reference}`
+            : `Review Incident ${item.reference}`;
+        return work({ key: `REGISTER:${item.id}`, source: complaint ? "Complaint assurance" : safeguarding ? "Safeguarding assurance" : item.definition.name, reference: item.reference, title, detail: `${item.title}. ${instruction}`, href: `/registers/${item.definition.key}/${item.id}#current-work`, targetAt, priority: item.riskLevel, state: item.status, locationName: item.location?.name, clientName: personName(item.client) });
       }),
       ...escalations.map((item) => work({ key: `ESCALATION:${item.id}`, source: "Management escalation", reference: item.reference, title: item.questionRedacted, detail: label(item.reasonCode), href: "/abi-assurance", targetAt: null, priority: item.priority === "IMMEDIATE" ? "CRITICAL" : item.priority === "HIGH" ? "HIGH" : "MEDIUM", state: item.status, locationName: "Organisation-wide" })),
     ];

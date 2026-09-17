@@ -9,6 +9,9 @@ test("Complaint investigation, chronology and assurance remain usable on mobile"
   await signIn(page, E2E_USERS.registeredManager);
   await e2eGoto(page, `/registers/complaints/${setup.complaints["E2E-CMP-READY"].id}`);
   await expect(page.getByRole("heading", { name: "Received → acknowledged → investigated → response → assurance" })).toBeVisible();
+  await expect(page.locator("#complaint-communications")).not.toHaveAttribute("open", "");
+  await page.locator("#complaint-communications summary").focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Record material communication" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
   const assurance = page.getByRole("button", { name: "Authorise Complaint closure" });

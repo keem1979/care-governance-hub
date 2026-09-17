@@ -16,7 +16,8 @@ test("Safeguarding worklist, progress and assurance remain practical on mobile",
 
   await e2eGoto(page, `/registers/safeguarding/${setup.safeguarding["E2E-SG-READY"].id}`);
   await expect(page.getByRole("heading", { name: "Concern → safety → referral → enquiry → assurance" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Confirm only what is known now" })).toBeVisible();
+  await expect(page.locator("#current-work")).toBeVisible();
+  await expect(page.locator("#safeguarding-case")).not.toHaveAttribute("open", "");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
   const button = page.getByRole("button", { name: "Authorise closure" });
   await expect(button).toBeVisible();
@@ -26,4 +27,7 @@ test("Safeguarding worklist, progress and assurance remain practical on mobile",
     mkdirSync(directory, { recursive: true });
     await page.screenshot({ path: join(directory, "mobile-safeguarding-detail.png"), fullPage: true });
   }
+  await page.locator("#safeguarding-case summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Confirm only what is known now" })).toBeVisible();
 });

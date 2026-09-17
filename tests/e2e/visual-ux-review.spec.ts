@@ -44,6 +44,7 @@ test("capture the real QCGMS visual UX evidence set", async ({ page, request }, 
     await capture(page, "/registers/safeguarding", "m02-safeguarding-worklist-mobile.png");
     await capture(page, `/registers/safeguarding/${setup.safeguarding["E2E-SG-READY"].id}`, "m03-safeguarding-detail-mobile.png");
     await capture(page, `/actions/${setup.actions["E2E-ACT-ASSURANCE-INEFFECTIVE"].id}`, "m04-action-detail-mobile.png");
+    await capture(page, "/my-work", "m09-my-work-progressive-mobile.png");
     await capture(page, `/clients/${visual.clientId}`, "m05-client-profile-mobile.png");
     await capture(page, `/workforce/${visual.staffId}`, "m06-staff-profile-mobile.png");
     await openQuickFind(page, "Bennett");
@@ -57,8 +58,13 @@ test("capture the real QCGMS visual UX evidence set", async ({ page, request }, 
     await capture(page, "/registers/safeguarding", "04-safeguarding-worklist-desktop.png");
     await capture(page, `/registers/safeguarding/${setup.safeguarding["E2E-SG-READY"].id}`, "05-safeguarding-detail-desktop.png");
     await capture(page, `/registers/complaints/${setup.complaints["E2E-CMP-READY"].id}`, "06-complaint-detail-desktop.png");
+    await capture(page, `/registers/incidents/${setup.incidents["E2E-INC-READY"].id}`, "16-incident-detail-progressive-desktop.png");
+    await capture(page, `/registers/complaints/${setup.complaints["E2E-CMP-READY"].id}`, "17-complaint-detail-progressive-desktop.png");
+    await capture(page, `/registers/safeguarding/${setup.safeguarding["E2E-SG-READY"].id}`, "18-safeguarding-detail-progressive-desktop.png");
     await capture(page, "/actions", "07-actions-worklist-desktop.png");
     await capture(page, `/actions/${setup.actions["E2E-ACT-ASSURANCE-INEFFECTIVE"].id}`, "08-action-detail-desktop.png");
+    await capture(page, `/actions/${setup.actions["E2E-ACT-ASSURANCE-INEFFECTIVE"].id}`, "19-action-detail-progressive-desktop.png");
+    await capture(page, "/my-work", "20-my-work-progressive-desktop.png");
     await openEvidenceDrawer(page, setup.actions["E2E-ACT-ASSURANCE-HIGH"].id);
     await screen(page, "09-evidence-drawer-desktop.png", false);
     await capture(page, "/management", "10-management-oversight-desktop.png");
@@ -91,6 +97,7 @@ async function capture(page: Page, route: string, filename: string) {
   await expect(page.locator("body")).not.toHaveText("");
   await expect(page.locator("[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+  if (route.includes("/registers/") && route.split("/").length > 3 && !route.endsWith("/new")) await expect(page.locator("#current-work")).toBeVisible();
   await screen(page, filename, true);
 }
 
