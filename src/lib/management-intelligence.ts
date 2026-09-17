@@ -38,7 +38,7 @@ export type ManagementFilters = {
 
 export type ManagementQueueItem = {
   key: string;
-  source: "ACTION" | "RISK" | "EXTERNAL";
+  source: "ACTION" | "RISK" | "INCIDENT" | "COMPLAINT" | "SAFEGUARDING" | "EXTERNAL";
   reference: string;
   title: string;
   locationId: string | null;
@@ -104,8 +104,8 @@ export function filterManagementQueue(items: readonly ManagementQueueItem[], fil
 export function managementViewLabel(value: string): string {
   return ({
     REGISTERED_MANAGER: "Registered manager",
-    OWNER: "Owner overview",
-    LOCATION: "Location command",
+    OWNER: "Organisation oversight",
+    LOCATION: "Location oversight",
     MY_WORK: "My work (legacy)",
   } as Record<string, string>)[value] ?? sentence(value);
 }

@@ -6,6 +6,7 @@ import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { evidenceTypesForContext, taxonomyLabels } from "@/lib/evidence-taxonomy";
 import { PERMISSIONS } from "@/lib/permissions";
+import { registerScopeWhere } from "@/lib/registers";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await requirePermission(PERMISSIONS.ACTIONS_MANAGE), { id } = await params, db = createDb();
@@ -19,16 +20,27 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       for (const application of applications) for (const family of application.controlVersion.expectedEvidenceFamilyKeys) for (const type of application.controlVersion.expectedEvidenceTypeKeys) expected.add(`${family}:${type}`);
     }
     const existing = new Set(action.evidenceLinks.map((item) => item.evidenceId));
-    const candidates = await db.evidence.findMany({
+    const sourceEvidenceIds = new Set<string>();
+    if (["INCIDENT", "COMPLAINT", "SAFEGUARDING", "REGISTER"].includes(action.sourceType) && action.sourceRecordId) {
+      const source = await db.registerEntry.findFirst({
+        where: { id: action.sourceRecordId, ...registerScopeWhere(context) },
+        select: { evidenceLinks: { select: { evidenceId: true } } },
+      });
+      for (const link of source?.evidenceLinks ?? []) sourceEvidenceIds.add(link.evidenceId);
+    }
+    const evidenceSelect = { id: true, title: true, locationId: true, category: true, evidenceType: true, taxonomyFamilyKey: true, taxonomyTypeKey: true, currentnessStatus: true, evidenceDate: true, reviewExpiryDate: true, sourceName: true, sourceReference: true, updatedAt: true, location: { select: { name: true } }, verifications: { orderBy: { verifiedAt: "desc" as const }, take: 1, select: { outcome: true, verifiedAt: true } } };
+    const [recentCandidates, sourceCandidates] = await Promise.all([db.evidence.findMany({
       where: { AND: [evidenceScopeWhere(context), { status: "ACTIVE", archivedAt: null }, ...(q ? [{ OR: [{ title: { contains: q, mode: "insensitive" as const } }, { tags: { has: q.toLowerCase() } }] }] : [])] },
-      select: { id: true, title: true, locationId: true, category: true, evidenceType: true, taxonomyFamilyKey: true, taxonomyTypeKey: true, currentnessStatus: true, updatedAt: true },
-      orderBy: { updatedAt: "desc" }, take: 60,
-    });
+      select: evidenceSelect,
+      orderBy: { updatedAt: "desc" }, take: 40,
+    }), sourceEvidenceIds.size ? db.evidence.findMany({ where: { id: { in: [...sourceEvidenceIds] }, ...evidenceScopeWhere(context), status: "ACTIVE", archivedAt: null }, select: evidenceSelect }) : Promise.resolve([])]);
+    const candidates = [...new Map([...sourceCandidates, ...recentCandidates].map((item) => [item.id, item])).values()];
     const results = candidates.map((item) => {
       const taxonomyKey = `${item.taxonomyFamilyKey}:${item.taxonomyTypeKey}`, contextual = expected.has(taxonomyKey), sameLocation = Boolean(action.locationId && item.locationId === action.locationId);
       const labels = item.taxonomyFamilyKey && item.taxonomyTypeKey ? taxonomyLabels(item.taxonomyFamilyKey, item.taxonomyTypeKey) : null;
-      const score = (contextual ? 40 : 0) + (sameLocation ? 20 : 0) + (item.currentnessStatus === "CURRENT" ? 10 : 0) + (existing.has(item.id) ? 5 : 0);
-      return { id: item.id, title: item.title, taxonomy: labels ? `${labels.familyLabel} · ${labels.typeLabel}` : `${item.category} · ${item.evidenceType}`, currentness: item.currentnessStatus, alreadyLinked: existing.has(item.id), suggestedRole: role, reason: contextual ? "Evidence type matches this Action context or an applied Provider Control." : sameLocation ? "Available in the same authorised location." : "Available within your authorised Evidence Library scope.", score };
+      const sourceRelated = sourceEvidenceIds.has(item.id);
+      const score = (sourceRelated ? 80 : 0) + (contextual ? 40 : 0) + (sameLocation ? 20 : 0) + (item.currentnessStatus === "CURRENT" ? 10 : 0) + (existing.has(item.id) ? 5 : 0);
+      return { id: item.id, title: item.title, taxonomy: labels ? `${labels.familyLabel} · ${labels.typeLabel}` : `${item.category} · ${item.evidenceType}`, currentness: item.currentnessStatus, alreadyLinked: existing.has(item.id), suggestedRole: role, group: sourceRelated ? "SOURCE" : q ? "SEARCH" : "RECENT", reason: sourceRelated ? `Already linked to ${action.sourceType.toLowerCase()} ${action.sourceRecordId ? "source record" : "source"}.` : contextual ? "Evidence type matches this Action context or an applied Provider Control." : sameLocation ? "Recently available in the same authorised location." : "Recently available within your authorised Evidence Library scope.", evidenceDate: item.evidenceDate, reviewExpiryDate: item.reviewExpiryDate, sourceName: item.sourceName, sourceReference: item.sourceReference, locationName: item.location?.name ?? "Organisation-wide", verification: item.verifications[0]?.outcome ?? "NOT_VERIFIED", score };
     }).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title)).slice(0, 20);
     return NextResponse.json({ results, method: "Deterministic ranking uses Action context, Provider Control expectations, authorised location and Evidence currentness. It does not decide suitability." });
   } finally { await db.$disconnect(); }

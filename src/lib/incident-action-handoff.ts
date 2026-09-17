@@ -30,8 +30,8 @@ export function incidentActionPrefill(incident: IncidentForAction, fallbackOwner
     ownerId,
     oversightOwnerId,
     priority: incident.riskLevel,
-    dueDate: future(incident.riskLevel === "CRITICAL" ? 2 : incident.riskLevel === "HIGH" ? 7 : incident.riskLevel === "MEDIUM" ? 14 : 30),
-    reviewDate: future(incident.riskLevel === "CRITICAL" ? 1 : 7),
+    dueDate: "",
+    reviewDate: "",
     escalationRequired: incident.riskLevel === "CRITICAL",
     escalationReason: incident.riskLevel === "CRITICAL" ? "Critical Incident requires immediate senior oversight and documented control." : "",
     managementResponse: immediate ? `Immediate response recorded: ${immediate}` : "",
@@ -42,4 +42,3 @@ export function incidentActionPrefill(incident: IncidentForAction, fallbackOwner
 
 function record(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
-function future(days: number) { const value = new Date(); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10); }

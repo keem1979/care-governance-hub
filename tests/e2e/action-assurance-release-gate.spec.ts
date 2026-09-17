@@ -17,6 +17,11 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
 
   // The delivery owner cannot self-verify the High Action, even through a direct request.
   await signIn(page, E2E_USERS.riskOwner);
+  await page.goto("/actions", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "What needs action now?" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Quick views" })).toBeVisible();
+  const highItem = page.locator("article").filter({ hasText: "E2E-ACT-ASSURANCE-HIGH" }).first();
+  await expect(highItem).toContainText(/verification|critical|overdue/i);
   await page.goto(`/actions/${high.id}/assurance`, { waitUntil: "domcontentloaded" });
   const signedInOwnerId = await page.locator('input[name="verifierId"]').inputValue();
   const selfVerification = await verificationRequest(page, high.id, setup.evidenceId, signedInOwnerId);
@@ -31,8 +36,16 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await expect(rm.getByRole("heading", { name: "Role-aware Evidence" })).toBeVisible();
   await expect(rm.getByText("Completion", { exact: true }).first()).toBeVisible();
   const evidenceSection = section(rm, "3. Role-aware Evidence");
-  await evidenceSection.getByRole("button", { name: "Search" }).click();
-  await expect(evidenceSection.getByText("E2E verified governance source").first()).toBeVisible();
+  await evidenceSection.getByRole("button", { name: "Link Evidence" }).click();
+  const evidenceDrawer = rm.getByRole("dialog", { name: "Find, preview and link Evidence" });
+  await expect(evidenceDrawer).toBeVisible();
+  await evidenceDrawer.getByLabel("Search Evidence Library").fill("E2E verified governance source");
+  await evidenceDrawer.getByRole("button", { name: "Search authorised Evidence" }).click();
+  await expect(evidenceDrawer.getByText("E2E verified governance source").first()).toBeVisible();
+  await evidenceDrawer.getByText("Preview governance metadata").first().click();
+  await expect(evidenceDrawer).toContainText("E2E-SRC-001");
+  await evidenceDrawer.getByRole("button", { name: "Close Evidence drawer" }).click();
+  await expect(evidenceDrawer).not.toBeVisible();
 
   const verification = section(rm, "4. Verification");
   await verification.getByLabel("Verification outcome").selectOption("VERIFIED");
@@ -112,6 +125,10 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await signIn(restricted, E2E_USERS.locationRestricted);
   const restrictedSearch = await restricted.evaluate(async id => { const response = await fetch(`/api/actions/${id}/evidence-links?role=COMPLETION&q=E2E`); return response.status; }, high.id);
   expect(restrictedSearch).toBe(404);
+  const restrictedDirectory = await restricted.evaluate(async locationId => { const response = await fetch(`/api/actions/authorised-options?kind=OWNER&q=reg&locationId=${encodeURIComponent(locationId)}`); return response.status; }, high.locationId);
+  expect(restrictedDirectory).toBe(403);
+  const restrictedEvidence = await restricted.evaluate(async locationId => { const response = await fetch(`/api/evidence/authorised-options?kind=EVIDENCE&q=E2E&locationId=${encodeURIComponent(locationId)}`); return response.status; }, high.locationId);
+  expect(restrictedEvidence).toBe(403);
   await restrictedContext.close();
 
   const otherContext = await browser.newContext({ baseURL: origin });
@@ -121,6 +138,10 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await expect(other.getByText(/page could not be found/i)).toBeVisible();
   const crossTenantClosure = await other.evaluate(async id => { const form = new FormData(); form.set("intent", "close"); form.set("rationale", "A deliberately unauthorised cross-tenant closure attempt."); const response = await fetch(`/api/actions/${id}/assurance/closure`, { method: "POST", body: form }); return response.status; }, high.id);
   expect(crossTenantClosure).toBe(404);
+  const crossTenantDirectory = await other.evaluate(async name => { const response = await fetch(`/api/actions/authorised-options?kind=OWNER&q=${encodeURIComponent(name)}`); return await response.json(); }, E2E_USERS.registeredManager.name);
+  expect(crossTenantDirectory.items ?? []).toHaveLength(0);
+  const crossTenantEvidence = await other.evaluate(async () => { const response = await fetch("/api/evidence/authorised-options?kind=EVIDENCE&q=E2E"); return await response.json(); });
+  expect(crossTenantEvidence.items ?? []).toHaveLength(0);
   await otherContext.close();
   await ownerContext.close();
   await rmContext.close();
@@ -221,9 +242,9 @@ test("capability, governance authority, active Evidence and external dependencie
   const noCurrentEvidence = await closureRequest(page, low.id, setup.evidenceId, "Retired Evidence must not satisfy the current closure requirement.", "ignored");
   expect(noCurrentEvidence.status).toBe(400);
   expect(noCurrentEvidence.body.error).toContain("Choose closure evidence already linked to this Action");
-  await page.goto("/actions", { waitUntil: "domcontentloaded" });
-  const lowRow = page.locator("tr").filter({ hasText: "E2E-ACT-ASSURANCE-LOW" });
-  await expect(lowRow.locator("td").last()).toContainText("0");
+  await page.goto("/actions?view=ALL&q=E2E-ACT-ASSURANCE-LOW", { waitUntil: "domcontentloaded" });
+  const lowItem = page.locator("article").filter({ hasText: "E2E-ACT-ASSURANCE-LOW" });
+  await expect(lowItem).toContainText("0 Evidence items");
 
   await page.goto(`/actions/${dependency.id}/assurance`, { waitUntil: "domcontentloaded" });
   await expect(section(page, "5. External dependencies")).toContainText("Fictional Specialist Service");

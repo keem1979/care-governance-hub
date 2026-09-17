@@ -25,8 +25,8 @@ export function auditFindingActionPrefill(finding: AuditFindingForAction, fallba
     ownerId,
     oversightOwnerId,
     priority: finding.severity === "MEDIUM" ? "MEDIUM" : finding.severity,
-    dueDate: inputDate(finding.audit.reviewDate) || future(finding.severity === "CRITICAL" ? 2 : finding.severity === "HIGH" ? 7 : 30),
-    reviewDate: future(finding.severity === "CRITICAL" ? 1 : 7),
+    dueDate: inputDate(finding.audit.reviewDate),
+    reviewDate: "",
     escalationRequired: finding.severity === "CRITICAL",
     escalationReason: finding.severity === "CRITICAL" ? "Critical Audit Finding requires immediate management review and documented safety control." : "",
     issueKey: finding.criterionKeySnapshot,
@@ -34,4 +34,3 @@ export function auditFindingActionPrefill(finding: AuditFindingForAction, fallba
 }
 
 function inputDate(value: Date | null) { return value?.toISOString().slice(0, 10) ?? ""; }
-function future(days: number) { const value = new Date(); value.setUTCDate(value.getUTCDate() + days); return inputDate(value); }

@@ -46,9 +46,9 @@ import type { AuthorisedContext } from "@/lib/auth/dal";
 import { PERMISSIONS } from "@/lib/permissions";
 
 const primaryNavigation = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+  { href: "/dashboard", label: "Command Centre", icon: LayoutDashboard, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
   { href: "/my-work", label: "My Work", icon: ListChecks, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
-  { href: "/management", label: "Management Command", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
+  { href: "/management", label: "Management Oversight", icon: ChartNoAxesCombined, anyOf: [PERMISSIONS.GOVERNANCE_VIEW] },
 ] as const;
 
 const navigationGroups = [
@@ -65,18 +65,29 @@ const navigationGroups = [
     ],
   },
   {
-    key: "governance",
-    label: "Governance & Assurance",
-    description: "Controls, evidence and improvement",
+    key: "assurance",
+    label: "Assurance",
+    description: "Safety, feedback, risk and audit",
     icon: ShieldCheck,
     items: [
-      { href: "/policies", label: "Policies", icon: BookOpenCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-      { href: "/evidence", label: "Evidence & Assurance", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
-      { href: "/audits", label: "Audit Centre", icon: ClipboardCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE] },
-      { href: "/registers", label: "Registers", icon: NotebookTabs, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
-      { href: "/risks", label: "Risk Register", icon: ShieldEllipsis, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/registers/incidents", label: "Incidents", icon: Activity, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/registers/complaints", label: "Complaints", icon: NotebookTabs, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/registers/safeguarding", label: "Safeguarding", icon: ShieldCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/risks", label: "Risks", icon: ShieldEllipsis, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/audits", label: "Audits", icon: ClipboardCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.AUDITS_COMPLETE] },
+    ],
+  },
+  {
+    key: "governance",
+    label: "Governance",
+    description: "Actions, evidence and controls",
+    icon: Workflow,
+    items: [
       { href: "/actions", label: "Actions & Improvement", icon: ListChecks, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.ACTIONS_MANAGE, PERMISSIONS.ASSIGNED_TASKS_EDIT] },
+      { href: "/evidence", label: "Evidence Library", icon: FolderOpen, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.EVIDENCE_UPLOAD] },
+      { href: "/policies", label: "Policies", icon: BookOpenCheck, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
       { href: "/meetings", label: "Governance Meetings", icon: UsersRound, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
+      { href: "/registers", label: "All operational registers", icon: NotebookTabs, anyOf: [PERMISSIONS.GOVERNANCE_VIEW, PERMISSIONS.GOVERNANCE_EDIT] },
     ],
   },
   {
@@ -181,12 +192,13 @@ export function AppShell({
   const moduleKey = pathname.split("/").filter(Boolean)[0] ?? "dashboard";
   const connections = moduleConnections[moduleKey];
   const canOpen = (anyOf: readonly string[]) => anyOf.some((permission) => context.permissions.includes(permission));
+  const isActive = (href: string) => href === "/registers" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
   const visiblePrimary = primaryNavigation.filter(({ anyOf }) => canOpen(anyOf));
   const visibleGroups = navigationGroups.map((group) => ({ ...group, items: group.items.filter(({ anyOf }) => canOpen(anyOf)) })).filter((group) => group.items.length > 0);
   const visibleSpecialistGroup = { ...specialistNavigationGroup, items: specialistNavigationGroup.items.filter(({ anyOf }) => canOpen(anyOf)) };
-  const specialistContainsActive = visibleSpecialistGroup.items.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`));
+  const specialistContainsActive = visibleSpecialistGroup.items.some(({ href }) => isActive(href));
   const allVisibleGroups = visibleSpecialistGroup.items.length ? [...visibleGroups, visibleSpecialistGroup] : visibleGroups;
-  const activeGroupKey = allVisibleGroups.find((group) => group.items.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`)))?.key;
+  const activeGroupKey = allVisibleGroups.find((group) => group.items.some(({ href }) => isActive(href)))?.key;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set([activeGroupKey ?? "care"]));
   const cleanNavQuery = navQuery.trim().toLowerCase();
   const groupsInMenu = showSpecialistTools || cleanNavQuery || specialistContainsActive ? allVisibleGroups : visibleGroups;
@@ -276,14 +288,14 @@ export function AppShell({
           {!cleanNavQuery ? <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[.18em] text-emerald-100/45">Workspace</p> : null}
           <ul className="space-y-1">
             {visiblePrimary.filter((item) => !cleanNavQuery || item.label.toLowerCase().includes(cleanNavQuery)).map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
+              const active = isActive(href);
               return <li key={href}><Link href={href} prefetch={false} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active ? "bg-white text-brand-dark shadow-sm" : "text-emerald-50/80 hover:bg-white/10 hover:text-white"}`}><span className={`grid size-8 place-items-center rounded-lg ${active ? "bg-emerald-50 text-emerald-800" : "bg-white/6 text-emerald-100/75 group-hover:bg-white/10 group-hover:text-white"}`}><Icon aria-hidden="true" size={17} /></span><span className="min-w-0 flex-1 truncate">{label}</span>{active ? <span className="size-1.5 rounded-full bg-emerald-600" aria-hidden="true" /> : null}</Link></li>;
             })}
           </ul>
 
           <div className="mt-4 space-y-2">
             {displayedGroups.map((group) => {
-              const GroupIcon = group.icon, containsActive = group.items.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`)), expanded = cleanNavQuery ? true : expandedGroups.has(group.key) || containsActive;
+              const GroupIcon = group.icon, containsActive = group.items.some(({ href }) => isActive(href)), expanded = cleanNavQuery ? true : expandedGroups.has(group.key) || containsActive;
               return <section key={group.key} className={`overflow-hidden rounded-2xl border transition ${containsActive ? "border-emerald-300/25 bg-white/7" : "border-white/7 bg-white/[.025]"}`} aria-labelledby={`nav-group-${group.key}`}>
                 <button type="button" id={`nav-group-${group.key}`} aria-expanded={expanded} aria-controls={`nav-group-items-${group.key}`} onClick={() => toggleGroup(group.key)} className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-white/7 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-emerald-300">
                   <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${containsActive ? "bg-emerald-400 text-slate-950" : "bg-white/8 text-emerald-100"}`}><GroupIcon aria-hidden="true" size={18} /></span>
@@ -292,7 +304,7 @@ export function AppShell({
                   {expanded ? <ChevronDown aria-hidden="true" size={15} className="text-emerald-100/55" /> : <ChevronRight aria-hidden="true" size={15} className="text-emerald-100/55" />}
                 </button>
                 {expanded ? <ul id={`nav-group-items-${group.key}`} className="space-y-1 border-t border-white/7 px-2 py-2">{group.items.map(({ href, label, icon: Icon }) => {
-                  const active = pathname === href || pathname.startsWith(`${href}/`);
+                  const active = isActive(href);
                   return <li key={href}><Link href={href} prefetch={false} onMouseEnter={() => router.prefetch(href)} onFocus={() => router.prefetch(href)} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-white font-bold text-brand-dark shadow-sm" : "text-emerald-50/75 hover:bg-white/10 hover:text-white"}`}><Icon aria-hidden="true" size={17} className={active ? "text-emerald-700" : "text-emerald-100/55 group-hover:text-white"} /><span className="min-w-0 flex-1 truncate">{label}</span>{active ? <span className="size-1.5 rounded-full bg-emerald-600" aria-hidden="true" /> : null}</Link></li>;
                 })}</ul> : null}
               </section>;

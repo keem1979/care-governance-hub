@@ -96,7 +96,7 @@ export function dashboardSummaries(counts?: { policiesDue: number; overdueAudits
     },
     {
       label: "Open high-risk actions",
-      href: "/actions",
+      href: "/actions?view=HIGH_CRITICAL",
       icon: ListTodo,
       value: counts?.openHighRiskActions ?? null,
       qualifier: counts ? "Open high and critical priority actions" : "Action data unavailable",

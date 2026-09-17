@@ -15,15 +15,35 @@ test("Action assurance remains usable on a mobile viewport", async ({ page, requ
   const high = setup.actions["E2E-ACT-ASSURANCE-HIGH"], dependency = setup.actions["E2E-ACT-ASSURANCE-DEPENDENCY"];
 
   await signIn(page, E2E_USERS.registeredManager);
+  await page.goto("/actions", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "What needs action now?" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Quick views" })).toBeVisible();
+  await expectNoOverflow(page);
+
+  await page.goto("/actions/new", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Create improvement action" })).toBeVisible();
+  const ownerSearch = page.getByLabel("Who owns this Action?");
+  const ownerResponse = page.waitForResponse(response => response.url().includes("/api/actions/authorised-options?") && response.url().includes("kind=OWNER"));
+  await ownerSearch.fill("reg");
+  expect((await ownerResponse).status()).toBe(200);
+  await expect(page.getByRole("option").filter({ hasText: E2E_USERS.registeredManager.name }).first()).toBeVisible();
+  await expectNoOverflow(page);
+
   await page.goto(`/actions/${high.id}/assurance`, { waitUntil: "domcontentloaded" });
   await expectNoOverflow(page);
   await expect(page.getByRole("heading", { name: "3. Role-aware Evidence" })).toBeVisible();
 
-  const search = page.getByLabel("Search Evidence Library");
+  await page.getByRole("button", { name: "Link Evidence" }).click();
+  const evidenceDrawer = page.getByRole("dialog", { name: "Find, preview and link Evidence" });
+  await expect(evidenceDrawer).toBeVisible();
+  const search = evidenceDrawer.getByLabel("Search Evidence Library");
   await search.fill("E2E");
-  await page.getByRole("button", { name: "Search" }).click();
-  await expect(page.getByText("E2E corrected completion evidence").first()).toBeVisible();
+  await evidenceDrawer.getByRole("button", { name: "Search authorised Evidence" }).click();
+  await expect(evidenceDrawer.getByText("E2E corrected completion evidence").first()).toBeVisible();
   await expectNoOverflow(page);
+  await expectPracticalTouchTarget(evidenceDrawer.getByRole("button", { name: "Close Evidence drawer" }));
+  await evidenceDrawer.getByRole("button", { name: "Close Evidence drawer" }).click();
+  await expect(evidenceDrawer).not.toBeVisible();
 
   await expect(page.getByLabel("Verification outcome")).toBeVisible();
   await expect(page.getByLabel("Effectiveness outcome")).toBeVisible();
@@ -35,6 +55,11 @@ test("Action assurance remains usable on a mobile viewport", async ({ page, requ
   await page.goto(`/actions/${dependency.id}/assurance`, { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Fictional Specialist Service")).toBeVisible();
   await expect(page.getByRole("button", { name: "Record chase" })).toBeVisible();
+  await expectNoOverflow(page);
+
+  await page.goto("/management", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Management Oversight" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Oversight summary" })).toBeVisible();
   await expectNoOverflow(page);
 });
 

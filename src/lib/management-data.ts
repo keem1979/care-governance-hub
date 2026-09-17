@@ -17,7 +17,7 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
   const selectedLocation = filters.locationId ? { locationId: filters.locationId } : {};
 
   try {
-    const [actions, risks, dependencies, delegations, members] = await Promise.all([
+    const [actions, risks, assuranceRecords, dependencies, delegations, members] = await Promise.all([
       db.action.findMany({
         where: {
           organisationId: context.organisation.id,
@@ -41,6 +41,26 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
         },
         select: { id: true, reference: true, title: true, locationId: true, residualLevel: true, residualScore: true, toleranceScore: true, status: true, nextReviewDate: true, owner: { select: { name: true } }, location: { select: { name: true } } },
         orderBy: [{ residualScore: "desc" }, { nextReviewDate: "asc" }],
+        take: 250,
+      }) : Promise.resolve([]),
+      canViewGovernance ? db.registerEntry.findMany({
+        where: {
+          organisationId: context.organisation.id,
+          archivedAt: null,
+          status: { notIn: ["CLOSED", "ARCHIVED"] },
+          definition: { key: { in: ["incidents", "complaints", "safeguarding"] } },
+          ...locationScope,
+          ...selectedLocation,
+        },
+        select: {
+          id: true, reference: true, title: true, riskLevel: true, status: true, locationId: true, eventDate: true,
+          definition: { select: { key: true } }, owner: { select: { name: true } }, location: { select: { name: true } },
+          incidentInvestigation: { select: { status: true, completedAt: true } },
+          complaintInvestigation: { select: { status: true, responseDueAt: true, extensionDueAt: true } },
+          complaintCommunications: { where: { type: "FINAL_RESPONSE" }, orderBy: { occurredAt: "desc" }, take: 1, select: { occurredAt: true } },
+          safeguardingCase: { select: { status: true, safetyPosition: true, externalResponseDueAt: true } },
+        },
+        orderBy: [{ riskLevel: "desc" }, { eventDate: "asc" }],
         take: 250,
       }) : Promise.resolve([]),
       db.externalDependency.findMany({
@@ -119,6 +139,45 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
           href: `/risks/${risk.id}`,
         };
       }),
+      ...assuranceRecords.flatMap((record): ManagementQueueItem[] => {
+        const key = record.definition.key;
+        const source = key === "incidents" ? "INCIDENT" : key === "complaints" ? "COMPLAINT" : "SAFEGUARDING";
+        const finalResponse = record.complaintCommunications[0]?.occurredAt ?? null;
+        const dueAt = source === "COMPLAINT" && !finalResponse
+          ? record.complaintInvestigation?.extensionDueAt ?? record.complaintInvestigation?.responseDueAt ?? null
+          : source === "SAFEGUARDING" ? record.safeguardingCase?.externalResponseDueAt ?? null : null;
+        const overdue = Boolean(dueAt && dueAt < now);
+        const awaitingAssurance = source === "INCIDENT"
+          ? record.incidentInvestigation?.status === "COMPLETED"
+          : source === "COMPLAINT"
+            ? record.complaintInvestigation?.status === "COMPLETED" && Boolean(finalResponse)
+            : record.safeguardingCase?.status === "READY_FOR_ASSURANCE";
+        const immediateSafety = source === "SAFEGUARDING" && ["UNRESOLVED_IMMEDIATE_RISK", "UNKNOWN_EVIDENCE_REQUIRED"].includes(record.safeguardingCase?.safetyPosition ?? "");
+        if (!["HIGH", "CRITICAL"].includes(record.riskLevel) && !overdue && !awaitingAssurance && !immediateSafety) return [];
+        const reason = immediateSafety
+          ? "The current safety position needs management intervention."
+          : overdue
+            ? source === "COMPLAINT" ? "The Complaint response deadline is overdue." : "The external safeguarding response is overdue; review the interim control and escalation."
+            : awaitingAssurance
+              ? `${title(source)} is ready for an authorised assurance decision.`
+              : `${title(source)} remains open with ${record.riskLevel.toLowerCase()} risk.`;
+        return [{
+          key: `${source}:${record.id}`,
+          source,
+          reference: record.reference,
+          title: record.title,
+          locationId: record.locationId,
+          locationName: record.location?.name ?? "Organisation-wide",
+          ownerName: record.owner?.name ?? "Unassigned",
+          severity: record.riskLevel === "CRITICAL" ? "CRITICAL" : record.riskLevel === "HIGH" || immediateSafety ? "HIGH" : "MEDIUM",
+          state: record.status,
+          reason,
+          dueAt,
+          overdue,
+          unverified: awaitingAssurance,
+          href: `/registers/${key}/${record.id}`,
+        }];
+      }),
       ...dependencies.map((dependency): ManagementQueueItem => {
         const overdue = dependency.dueDate < now || dependency.status === "OVERDUE";
         return {
@@ -158,7 +217,7 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
     }, new Map<string, { id: string; name: string; total: number; overdue: number; critical: number; awaitingAssurance: number }>()).values()].sort((a, b) => b.overdue - a.overdue || b.critical - a.critical || a.name.localeCompare(b.name));
     const locationSummaries = context.locations.map((location) => {
       const locationItems = queue.filter((item) => item.locationId === location.id);
-      return { id: location.id, name: location.name, total: locationItems.length, critical: locationItems.filter((item) => item.severity === "CRITICAL").length, overdue: locationItems.filter((item) => item.overdue).length, unverified: locationItems.filter((item) => item.unverified).length };
+      return { id: location.id, name: location.name, total: locationItems.length, critical: locationItems.filter((item) => item.severity === "CRITICAL").length, overdue: locationItems.filter((item) => item.overdue).length, unverified: locationItems.filter((item) => item.unverified).length, external: locationItems.filter((item) => item.source === "EXTERNAL" || (item.source === "SAFEGUARDING" && item.reason.toLowerCase().includes("external"))).length };
     });
 
     return {
@@ -200,5 +259,7 @@ export async function getDefaultManagementFilters(context: AuthorisedContext): P
 
 function compareQueue(a: ManagementQueueItem, b: ManagementQueueItem): number {
   const severity = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 };
-  return Number(b.overdue) - Number(a.overdue) || severity[a.severity] - severity[b.severity] || (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER);
+  return severity[a.severity] - severity[b.severity] || Number(b.overdue) - Number(a.overdue) || (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER);
 }
+
+function title(value: string): string { return value.toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase()); }

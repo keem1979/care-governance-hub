@@ -33,7 +33,7 @@ export function riskActionPrefill(risk: RiskForAction, fallbackOwnerId: string, 
     ownerId,
     oversightOwnerId,
     priority: risk.residualLevel === "MODERATE" ? "MEDIUM" : risk.residualLevel,
-    dueDate: inputDate(risk.targetDate) || future(30),
+    dueDate: inputDate(risk.targetDate),
     reviewDate: reviewDate(risk.targetDate),
   };
 }
@@ -63,9 +63,8 @@ function actionCategory(category: string) {
 }
 
 function inputDate(value: Date | null) { return value?.toISOString().slice(0, 10) ?? ""; }
-function future(days: number) { const value = new Date(); value.setUTCDate(value.getUTCDate() + days); return inputDate(value); }
 function reviewDate(targetDate: Date | null) {
-  if (!targetDate) return future(14);
+  if (!targetDate) return "";
   const value = new Date(targetDate);
   value.setUTCDate(value.getUTCDate() - 7);
   return inputDate(value < new Date() ? new Date() : value);

@@ -70,7 +70,7 @@ export async function getMyWorkData(context: AuthorisedContext) {
     ]);
 
     const items: MyWorkItem[] = [
-      ...actions.map((item) => work({ key: `ACTION:${item.id}`, source: "Action", reference: item.reference, title: item.title, detail: item.description, href: `/actions/${item.id}`, targetAt: item.dueDate, priority: item.priority, state: item.lifecycleStatus, locationName: item.location?.name, clientName: personName(item.client) })),
+      ...actions.map((item) => work({ key: `ACTION:${item.id}`, source: "Action", reference: item.reference, title: actionWorkTitle(item.lifecycleStatus, item.title), detail: actionWorkDetail(item.lifecycleStatus, item.description), href: actionWorkHref(item.id, item.lifecycleStatus), targetAt: item.dueDate, priority: item.priority, state: item.lifecycleStatus, locationName: item.location?.name, clientName: personName(item.client) })),
       ...risks.map((item) => work({ key: `RISK:${item.id}`, source: "Risk review", reference: item.reference, title: item.title, detail: item.description, href: `/risks/${item.id}`, targetAt: item.nextReviewDate, priority: item.residualLevel, state: item.status, locationName: item.location?.name })),
       ...audits.map((item) => work({ key: `AUDIT:${item.id}`, source: "Audit", reference: "Assigned audit", title: item.title, detail: item.objective ?? "Complete the audit and record the evidence-based outcome.", href: `/audits/${item.id}`, targetAt: item.reviewDate ?? item.auditDate, priority: "MEDIUM", state: item.status, locationName: item.location.name })),
       ...policies.map((item) => work({ key: `POLICY:${item.id}`, source: "Policy review", reference: item.category, title: item.title, detail: `Policy status: ${label(item.status)}; approval: ${label(item.approvalStatus)}.`, href: `/policies/${item.id}`, targetAt: item.nextReviewDate, priority: "MEDIUM", state: item.status, locationName: "Organisation-wide" })),
@@ -142,4 +142,22 @@ function personName(person: { firstName: string; lastName: string; preferredName
 
 function label(value: string): string {
   return value.replaceAll("_", " ").toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase());
+}
+
+function actionWorkTitle(lifecycle: string, title: string) {
+  if (lifecycle === "AWAITING_VERIFICATION") return `Completion submitted: ${title}`;
+  if (lifecycle === "AWAITING_EFFECTIVENESS") return `Effectiveness review: ${title}`;
+  if (lifecycle === "READY_FOR_CLOSURE") return `Closure review: ${title}`;
+  if (lifecycle === "REOPENED_REPEAT_FINDING") return `Reopened Action: ${title}`;
+  return title;
+}
+function actionWorkDetail(lifecycle: string, fallback: string) {
+  if (lifecycle === "AWAITING_VERIFICATION") return "Completion is recorded. A manager must compare the work and Evidence with the success measure.";
+  if (lifecycle === "AWAITING_EFFECTIVENESS") return "Completion was verified. Review whether the expected outcome was actually achieved.";
+  if (lifecycle === "READY_FOR_CLOSURE") return "Assurance requirements are recorded. An authorised closure decision remains outstanding.";
+  if (lifecycle === "REOPENED_REPEAT_FINDING") return "A repeat finding has reopened this Action; review the control and renewed work required.";
+  return fallback;
+}
+function actionWorkHref(id: string, lifecycle: string) {
+  return ["AWAITING_VERIFICATION", "AWAITING_EFFECTIVENESS", "READY_FOR_CLOSURE", "REOPENED_REPEAT_FINDING"].includes(lifecycle) ? `/actions/${id}/assurance` : `/actions/${id}`;
 }

@@ -27,13 +27,11 @@ export function complaintActionPrefill(complaint: ComplaintForAction, fallbackOw
     ownerId,
     oversightOwnerId,
     priority: complaint.riskLevel,
-    dueDate: future(complaint.riskLevel === "CRITICAL" ? 2 : complaint.riskLevel === "HIGH" ? 7 : complaint.riskLevel === "MEDIUM" ? 14 : 30),
-    reviewDate: future(complaint.riskLevel === "CRITICAL" ? 1 : 7),
+    dueDate: "",
+    reviewDate: "",
     escalationRequired: complaint.riskLevel === "CRITICAL",
     escalationReason: complaint.riskLevel === "CRITICAL" ? "Critical Complaint requires immediate senior oversight and documented control." : "",
     progressNote: complaint.complaintInvestigation?.learning ? `Complaint learning: ${complaint.complaintInvestigation.learning}` : "",
     issueKey: `complaint-${complaint.reference.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replaceAll(/(^-|-$)/g, "")}${issue ? `-issue-${issue.sequence}` : ""}`,
   };
 }
-
-function future(days: number) { const value = new Date(); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10); }
