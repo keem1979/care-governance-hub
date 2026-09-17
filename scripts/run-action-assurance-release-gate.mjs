@@ -25,6 +25,8 @@ const prebuiltDir = process.env.QCGMS_E2E_PREBUILT_DIR?.trim();
 const incidentOnly = process.env.QCGMS_E2E_INCIDENT_ONLY === "1";
 const complaintOnly = process.env.QCGMS_E2E_COMPLAINT_ONLY === "1";
 const safeguardingOnly = process.env.QCGMS_E2E_SAFEGUARDING_ONLY === "1";
+const profileOnly = process.env.QCGMS_E2E_PROFILE_ONLY === "1";
+const mobileOnly = process.env.QCGMS_E2E_MOBILE_ONLY === "1";
 const releaseBuildDir = prebuiltDir || `.next-release-gate-${process.pid}`;
 let clusterStarted = false;
 
@@ -53,30 +55,32 @@ async function main() {
     psql(freshDatabase, "scripts/release-gate/verify-complaints-assurance.sql");
     psql(freshDatabase, "scripts/release-gate/verify-safeguarding-assurance.sql");
 
-    step("Committed-baseline three-assurance upgrade proof");
-    copyPreviousMigrations();
-    const upgradeUrl = databaseUrl(upgradeDatabase);
-    prismaDeploy(upgradeUrl, previousMigrations);
-    psql(upgradeDatabase, "scripts/release-gate/incident-assurance-upgrade-fixture.sql");
-    psql(upgradeDatabase, "scripts/release-gate/complaints-assurance-upgrade-fixture.sql");
-    psql(upgradeDatabase, "scripts/release-gate/safeguarding-assurance-upgrade-fixture.sql");
-    prismaDeploy(upgradeUrl);
-    psql(upgradeDatabase, "scripts/release-gate/verify-audit-assurance.sql");
-    psql(upgradeDatabase, "scripts/release-gate/verify-incident-assurance.sql");
-    psql(upgradeDatabase, "scripts/release-gate/verify-complaints-assurance.sql");
-    psql(upgradeDatabase, "scripts/release-gate/verify-safeguarding-assurance.sql");
+    if (!profileOnly && !mobileOnly) {
+      step("Committed-baseline three-assurance upgrade proof");
+      copyPreviousMigrations();
+      const upgradeUrl = databaseUrl(upgradeDatabase);
+      prismaDeploy(upgradeUrl, previousMigrations);
+      psql(upgradeDatabase, "scripts/release-gate/incident-assurance-upgrade-fixture.sql");
+      psql(upgradeDatabase, "scripts/release-gate/complaints-assurance-upgrade-fixture.sql");
+      psql(upgradeDatabase, "scripts/release-gate/safeguarding-assurance-upgrade-fixture.sql");
+      prismaDeploy(upgradeUrl);
+      psql(upgradeDatabase, "scripts/release-gate/verify-audit-assurance.sql");
+      psql(upgradeDatabase, "scripts/release-gate/verify-incident-assurance.sql");
+      psql(upgradeDatabase, "scripts/release-gate/verify-complaints-assurance.sql");
+      psql(upgradeDatabase, "scripts/release-gate/verify-safeguarding-assurance.sql");
 
-    step("Seeded legacy governance relationship preservation proof");
-    const legacyUrl = databaseUrl(legacyDatabase);
-    prismaDeploy(legacyUrl, previousMigrations);
-    psql(legacyDatabase, "scripts/release-gate/assurance-convergence-upgrade-fixture.sql");
-    prismaDeploy(legacyUrl);
-    psql(legacyDatabase, "scripts/release-gate/verify-assurance-convergence-upgrade.sql");
+      step("Seeded legacy governance relationship preservation proof");
+      const legacyUrl = databaseUrl(legacyDatabase);
+      prismaDeploy(legacyUrl, previousMigrations);
+      psql(legacyDatabase, "scripts/release-gate/assurance-convergence-upgrade-fixture.sql");
+      prismaDeploy(legacyUrl);
+      psql(legacyDatabase, "scripts/release-gate/verify-assurance-convergence-upgrade.sql");
 
-    step("Deployment-seed proof on a disposable database");
-    const seedUrl = databaseUrl(seedDatabase);
-    prismaDeploy(seedUrl);
-    run(process.execPath, ["node_modules/tsx/dist/cli.mjs", "prisma/seed.ts"], { DATABASE_URL: seedUrl });
+      step("Deployment-seed proof on a disposable database");
+      const seedUrl = databaseUrl(seedDatabase);
+      prismaDeploy(seedUrl);
+      run(process.execPath, ["node_modules/tsx/dist/cli.mjs", "prisma/seed.ts"], { DATABASE_URL: seedUrl });
+    }
 
     if (prebuiltDir) {
       if (!existsSync(join(releaseBuildDir, "BUILD_ID"))) {
@@ -100,15 +104,39 @@ async function main() {
       }
     }
 
-    step("Signed-in desktop Action assurance gate");
-    const desktopSpecs = incidentOnly
-      ? ["tests/e2e/incident-assurance-release-gate.spec.ts"]
+    if (!mobileOnly) {
+      step("Signed-in desktop Action assurance gate");
+      const desktopSpecs = profileOnly
+        ? ["tests/e2e/profile-quick-find.spec.ts"]
+        : incidentOnly
+        ? ["tests/e2e/incident-assurance-release-gate.spec.ts"]
+        : safeguardingOnly
+          ? ["tests/e2e/safeguarding-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-rm-burden.spec.ts"]
+        : complaintOnly
+          ? ["tests/e2e/complaint-assurance-release-gate.spec.ts"]
+          : ["tests/e2e/action-assurance-release-gate.spec.ts", "tests/e2e/audit-assurance-release-gate.spec.ts", "tests/e2e/incident-assurance-release-gate.spec.ts", "tests/e2e/complaint-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-rm-burden.spec.ts", "tests/e2e/profile-quick-find.spec.ts"];
+      run(process.execPath, ["node_modules/@playwright/test/cli.js", "test", ...desktopSpecs, "--project=chromium"], {
+        DATABASE_URL: freshUrl,
+        PLAYWRIGHT_PORT: String(webPort),
+        PLAYWRIGHT_SERVER_MODE: "production",
+        E2E_LOCAL_RELEASE_GATE: "1",
+        NEXT_DIST_DIR: releaseBuildDir,
+        CI: "1",
+      });
+      await assertPortReleased(webPort);
+    }
+
+    step("Signed-in mobile Action assurance gate");
+    const mobileSpecs = profileOnly
+      ? ["tests/e2e/profile-quick-find.spec.ts"]
+      : incidentOnly
+      ? ["tests/e2e/incident-assurance-mobile.spec.ts"]
       : safeguardingOnly
-        ? ["tests/e2e/safeguarding-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-rm-burden.spec.ts"]
+        ? ["tests/e2e/safeguarding-assurance-mobile.spec.ts"]
       : complaintOnly
-        ? ["tests/e2e/complaint-assurance-release-gate.spec.ts"]
-        : ["tests/e2e/action-assurance-release-gate.spec.ts", "tests/e2e/audit-assurance-release-gate.spec.ts", "tests/e2e/incident-assurance-release-gate.spec.ts", "tests/e2e/complaint-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-assurance-release-gate.spec.ts", "tests/e2e/safeguarding-rm-burden.spec.ts"];
-    run(process.execPath, ["node_modules/@playwright/test/cli.js", "test", ...desktopSpecs, "--project=chromium"], {
+        ? ["tests/e2e/complaint-assurance-mobile.spec.ts"]
+        : ["tests/e2e/action-assurance-mobile.spec.ts", "tests/e2e/audit-assurance-mobile.spec.ts", "tests/e2e/incident-assurance-mobile.spec.ts", "tests/e2e/complaint-assurance-mobile.spec.ts", "tests/e2e/safeguarding-assurance-mobile.spec.ts", "tests/e2e/profile-quick-find.spec.ts"];
+    run(process.execPath, ["node_modules/@playwright/test/cli.js", "test", ...mobileSpecs, "--project=mobile"], {
       DATABASE_URL: freshUrl,
       PLAYWRIGHT_PORT: String(webPort),
       PLAYWRIGHT_SERVER_MODE: "production",
@@ -123,25 +151,7 @@ async function main() {
     psql(freshDatabase, "scripts/release-gate/complaints-assurance-performance.sql");
     psql(freshDatabase, "scripts/release-gate/safeguarding-assurance-performance.sql");
 
-    step("Signed-in mobile Action assurance gate");
-    const mobileSpecs = incidentOnly
-      ? ["tests/e2e/incident-assurance-mobile.spec.ts"]
-      : safeguardingOnly
-        ? ["tests/e2e/safeguarding-assurance-mobile.spec.ts"]
-      : complaintOnly
-        ? ["tests/e2e/complaint-assurance-mobile.spec.ts"]
-        : ["tests/e2e/action-assurance-mobile.spec.ts", "tests/e2e/audit-assurance-mobile.spec.ts", "tests/e2e/incident-assurance-mobile.spec.ts", "tests/e2e/complaint-assurance-mobile.spec.ts", "tests/e2e/safeguarding-assurance-mobile.spec.ts"];
-    run(process.execPath, ["node_modules/@playwright/test/cli.js", "test", ...mobileSpecs, "--project=mobile"], {
-      DATABASE_URL: freshUrl,
-      PLAYWRIGHT_PORT: String(webPort),
-      PLAYWRIGHT_SERVER_MODE: "production",
-      E2E_LOCAL_RELEASE_GATE: "1",
-      NEXT_DIST_DIR: releaseBuildDir,
-      CI: "1",
-    });
-    await assertPortReleased(webPort);
-
-    step(incidentOnly ? "TARGETED INCIDENT CORRECTION PASS" : complaintOnly ? "TARGETED COMPLAINTS ASSURANCE PASS" : safeguardingOnly ? "TARGETED SAFEGUARDING ASSURANCE PASS" : prebuiltDir ? "TARGETED PREBUILT VALIDATION PASS" : "RELEASE GATE PASS");
+    step(mobileOnly ? "TARGETED MOBILE REGRESSION PASS" : profileOnly ? "TARGETED PROFILE AND QUICK FIND PASS" : incidentOnly ? "TARGETED INCIDENT CORRECTION PASS" : complaintOnly ? "TARGETED COMPLAINTS ASSURANCE PASS" : safeguardingOnly ? "TARGETED SAFEGUARDING ASSURANCE PASS" : prebuiltDir ? "TARGETED PREBUILT VALIDATION PASS" : "RELEASE GATE PASS");
   } finally {
     if (clusterStarted) {
       run(pg("pg_ctl"), ["-D", dataDir, "-m", "fast", "-w", "stop"], {}, true);

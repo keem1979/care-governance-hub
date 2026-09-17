@@ -74,17 +74,19 @@ export function QuickViewNav({
   items,
   active,
   defaultKey = "ALL",
+  preserve = {},
 }: {
   items: Array<{ key: string; label: string; count?: number }>;
   active: string;
   defaultKey?: string;
+  preserve?: Record<string, string>;
 }) {
   return (
     <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Quick views">
       {items.map((item) => (
         <Link
           key={item.key}
-          href={item.key === defaultKey ? "?" : `?view=${item.key}`}
+          href={quickViewHref(item.key, defaultKey, preserve)}
           aria-current={active === item.key ? "page" : undefined}
           className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-bold transition ${active === item.key ? "bg-slate-950 text-white" : "border border-slate-300 bg-white text-slate-700 hover:border-emerald-500"}`}
         >
@@ -93,6 +95,14 @@ export function QuickViewNav({
       ))}
     </nav>
   );
+}
+
+function quickViewHref(key: string, defaultKey: string, preserve: Record<string, string>) {
+  const params = new URLSearchParams(Object.entries(preserve).filter(([, value]) => Boolean(value)));
+  if (key === defaultKey) params.delete("view");
+  else params.set("view", key);
+  const query = params.toString();
+  return query ? `?${query}` : "?";
 }
 
 export function RecordHeader({

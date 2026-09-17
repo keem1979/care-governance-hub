@@ -151,6 +151,18 @@ export async function POST(request: Request) {
     const user=provisionedUsers.get(email)!;
     const guildfordLocation=await db.serviceLocation.upsert({where:{organisationId_code:{organisationId:organisation.id,code:"GUILDFORD"}},update:{name:"Guildford Branch",isActive:true},create:{organisationId:organisation.id,code:"GUILDFORD",name:"Guildford Branch"},select:{id:true}});
     const oxfordLocation=await db.serviceLocation.upsert({where:{organisationId_code:{organisationId:organisation.id,code:"OXFORD"}},update:{name:"Oxford Branch",isActive:true},create:{organisationId:organisation.id,code:"OXFORD",name:"Oxford Branch"},select:{id:true}});
+    await Promise.all([
+      db.client.upsert({
+        where: { organisationId_clientReference: { organisationId: organisation.id, clientReference: "E2E-CLI-0001" } },
+        update: { locationId: guildfordLocation.id, firstName: "Cameron", lastName: "Fictional", preferredName: "Cam", phone: "07000 000001", email: "cameron@example.invalid", status: "ACTIVE", archivedAt: null },
+        create: { organisationId: organisation.id, locationId: guildfordLocation.id, clientReference: "E2E-CLI-0001", clientNumber: 990001, firstName: "Cameron", lastName: "Fictional", preferredName: "Cam", phone: "07000 000001", email: "cameron@example.invalid", status: "ACTIVE", communicationSummary: "Fictional release-gate profile used only for authorised UX testing." },
+      }),
+      db.staffMember.upsert({
+        where: { organisationId_employeeReference: { organisationId: organisation.id, employeeReference: "E2E-STF-0001" } },
+        update: { locationId: guildfordLocation.id, firstName: "Taylor", lastName: "Fictional", preferredName: "Tay", workEmail: "taylor@example.invalid", workPhone: "07000 000002", jobTitle: "Care Quality Lead", employmentStatus: "ACTIVE", archivedAt: null },
+        create: { organisationId: organisation.id, locationId: guildfordLocation.id, employeeReference: "E2E-STF-0001", staffNumber: 990001, firstName: "Taylor", lastName: "Fictional", preferredName: "Tay", workEmail: "taylor@example.invalid", workPhone: "07000 000002", jobTitle: "Care Quality Lead", department: "Quality", employmentStatus: "ACTIVE" },
+      }),
+    ]);
     const restricted=usersToProvision.find(item=>item.allLocations===false);if(restricted){const membershipId=provisionedUsers.get(restricted.email)!.membershipId;await db.membershipLocation.deleteMany({where:{membershipId}});await db.membershipLocation.create({data:{membershipId,locationId:oxfordLocation.id}})}
     const existingFramework=await db.riskFrameworkVersion.findFirst({where:{organisationId:organisation.id,status:"EFFECTIVE"},select:{id:true}});
     if(!existingFramework){

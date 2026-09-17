@@ -3,7 +3,9 @@
 ## Release boundary
 
 - Baseline inspected: `bfac3f9`
-- Scope: shared navigation, Management Command Centre, Incident/Complaint/Safeguarding presentation, Actions & Improvement, Evidence relationships, governed timelines and Management Oversight
+- Clean frontend boundary commit: `f6311df` (`feat: improve governance evidence and oversight ux`)
+- Current uncommitted scope: Client Profile, Staff Profile, Global Quick Find and controlled profile-to-Action/Evidence hand-off
+- Scope: shared navigation, Management Command Centre, Incident/Complaint/Safeguarding presentation, Actions & Improvement, Evidence relationships, governed timelines, Management Oversight, Client/Staff profiles and authorised cross-module lookup
 - Assurance behaviour changed: **No**
 - Database/schema changes: **None**
 - Production status: **Not deployed**
@@ -38,8 +40,8 @@ The audit found a strong governance backend presented through an interface that 
 | Calendar | Keep / polish later | Existing month/list modes serve a clear deadline purpose. |
 | Risk register | Deliberately retain table | Comparing inherent/current/target scores is a genuine tabular task. |
 | Audits | Deliberately retain table | Score, progress and review comparison benefits from aligned columns. |
-| Client directory | Deliberately retain table for now | Directory comparison and controlled identity lookup remain useful; profile experience is a later slice. |
-| Workforce | Deliberately retain table for now | Compliance comparison across staff remains a valid table use. |
+| Client directory | Retain directory table; replace profile | Directory comparison remains useful; the individual profile is now a governance overview rather than a contact record. |
+| Workforce | Retain comparison table; restructure profile | Workforce comparison remains valid; the individual profile is now exception-led and governance-first. |
 | Actions | Replace table / restructure | Daily management is now worklist-first; the canonical Action lifecycle is unchanged. |
 | Policies and other operational registers | Keep / audit later | Not changed before the three assurance pilots prove the shared pattern. |
 
@@ -56,6 +58,10 @@ The audit found a strong governance backend presented through an interface that 
 - Incident, Complaint and Safeguarding governed management timelines
 - Action assurance Evidence linking
 - `/management` organisation, RM and location oversight views
+- `/clients/[id]` Client governance profile
+- `/workforce/[id]` Staff governance profile
+- Global Quick Find in the authenticated application shell
+- Profile-aware `/actions/new`, `/actions` and `/evidence/new` hand-offs
 - Global application navigation
 
 The shared frontend primitives are intentionally small: `GovernanceWorklist`, `QuickViewNav`, `RecordHeader` and `AttentionStrip`. They consume existing server data and do not introduce another governance model.
@@ -451,6 +457,208 @@ This slice changes presentation and authorised read/query composition only. It i
 
 Final validation: **357/357 automated tests**, **9/9 desktop**, **5/5 mobile**, fresh **0 → 63**, committed-baseline **60 → 63**, seeded legacy upgrade, production Next.js build and Sites/Vinext build all passed.
 
+## Clean release boundary and profile / Quick Find upgrade
+
+### 1. Clean UI release boundary
+
+The complete frontend delta from `bfac3f9` was audited before new profile work began. It contained the intentional assurance, Actions, Evidence and Management Oversight UX work only: no schema or migration change, dependency update, environment file, secret, generated build output, local database, machine-specific path or unrelated source change was included.
+
+That validated slice was committed locally as:
+
+`f6311df feat: improve governance evidence and oversight ux`
+
+The worktree was clean immediately after that commit. The Client/Staff/Quick Find slice described below remains a separate **uncommitted local working tree**. Nothing has been pushed, deployed or migrated in production.
+
+### 2. Client Directory audit and Client Profile decision
+
+The directory table is retained because controlled identity comparison by name, reference, location and status is a genuine task. It remains a lookup surface rather than a place to expose sensitive profile detail. The former Client profile already had controlled identity data, location scope, contact details and private photo handling, but it behaved mainly as an expanded directory card. Related governance records were not organised around the RM's practical questions: what is current, what needs attention and what can be started without re-entering the person.
+
+The profile has therefore been restructured on the existing canonical data model. It now presents:
+
+- photo, name, internal reference, status and service location as the identity header;
+- immediate exceptions for serious open records, overdue Actions and care-plan review dates;
+- current Care Plan and latest assessment/review position;
+- separate Incident, Safeguarding and Complaint groups rather than one undifferentiated register list;
+- related central Actions, Action-linked Risks and both direct and governed indirect Evidence;
+- phone, email, address, communication needs, emergency contact and next-of-kin information already held by QCGMS;
+- a latest-first governed timeline assembled from canonical record timestamps.
+
+No direct Client-to-Risk relationship was invented. Risks are shown only where an existing canonical Action provides the relationship, and the UI says so. The Care Plan query uses the existing authorised Care Plan scope rather than tenant-only filtering.
+
+#### Client governance summary and related records
+
+Attention appears before history, current records before old records and the legitimate next action before secondary metadata. Related lists are bounded and link back to Care Plans, assessments, assurance registers, Actions, Risks and Evidence rather than reproducing their editable content.
+
+#### Client timeline
+
+The profile timeline uses meaningful existing governance events and timestamps only. It is capped, latest-first and deliberately excludes daily care notes and low-value technical mutations.
+
+### 3. Client Profile click and typing reduction
+
+From the Client profile an authorised RM can now deliberately:
+
+- open or create the person's Care Plan;
+- record an Incident, Complaint or Safeguarding concern with the existing controlled Client selector flow;
+- create a central Action with the Client and known location already selected;
+- add governed Evidence with the Client relationship, organisation source and known location already supplied.
+
+The RM still confirms the Action purpose, accountable owner, due date and outcome. QCGMS does not infer a professional decision or silently create a governance record.
+
+### 4. Staff Directory audit and Staff Profile decision
+
+The Workforce comparison table is retained because managers need to compare staff compliance across a service. The individual profile no longer repeats that wide matrix. The existing Staff page already contained controlled identity, compliance records, documents, leave administration and secure photo handling. Its presentation gave employment administration and governance assurance similar weight, making it harder for a manager to identify current competence or oversight concerns.
+
+The upgraded Staff profile now leads with:
+
+- photo, name, staff reference, role, status and location;
+- overdue/development/pending compliance exceptions;
+- overdue central Actions and serious linked governance matters where the viewer is authorised;
+- current training, competency, supervision and appraisal status;
+- governed documents/Evidence, assigned care-plan responsibilities and related assurance records;
+- contact phone and work email already held in Workforce;
+- a latest-first governed timeline.
+
+Existing leave behaviour is preserved under a deliberately secondary **Employment administration and leave** disclosure. QCGMS has not been expanded into payroll, rota, recruitment or general HR software.
+
+#### Training, competency, supervision and appraisal
+
+Current exceptions are shown first, followed by the existing compliance history. Dates and current status come from canonical Workforce records; the RM is not asked to calculate due or expiry positions manually. Full historical detail remains available without dominating the five-second profile view.
+
+#### Staff governance relationships and timeline
+
+Central Actions, authorised assurance-register involvement, care-plan responsibilities and governed staff Evidence are linked rather than copied. The timeline is latest-first, bounded and includes only workforce/governance events the viewer is already authorised to see.
+
+### 5. Staff Profile click and typing reduction
+
+The profile can hand the Staff identity and location into:
+
+- the existing compliance-record workflow;
+- a central Action sourced from Workforce;
+- governed Evidence linked to the Staff record;
+- filtered Action and Evidence views.
+
+All links remain subject to the existing permission, tenant and location rules. No free-text Staff identity or second workforce record is created.
+
+### 6. Global Quick Find architecture and search categories
+
+One authenticated Quick Find entry now sits in the shared application header and is available with `Ctrl+K` / `Cmd+K`. It searches only the record families the current user is authorised to see:
+
+- Clients;
+- Staff;
+- Incidents;
+- Complaints;
+- Safeguarding;
+- Actions;
+- Risks;
+- Evidence.
+
+Results are grouped and open canonical detail URLs. Matching is deterministic—exact, prefix, word-prefix, then contains—rather than AI-generated. Input is debounced, bounded to 80 characters and requires two characters; each result group is capped. The UI provides loading, empty and access-safe messages, keyboard movement, Enter to open and Escape to close.
+
+Recently viewed records were deliberately deferred. Implementing them properly requires auditable per-user tracking and retention/privacy decisions; a fake client-side list would create a second, unreliable source of activity history.
+
+### 7. Quick Find security model
+
+The server endpoint authenticates first, checks module permissions, then applies the existing canonical scope helper for each record family before any result is returned:
+
+- `clientScopeWhere`;
+- `workforceScopeWhere`;
+- `registerScopeWhere`;
+- `actionScopeWhere`;
+- `riskScopeWhere`;
+- `evidenceScopeWhere`.
+
+An assigned-only Action user remains restricted to owned work. An Evidence upload-only user can find only Evidence they own or uploaded; they cannot use Quick Find to enumerate another user's Evidence metadata. No counts, hidden references or “record exists” messages are returned for inaccessible records. Direct profile navigation repeats the same server-side scope enforcement, so the UI is not a security boundary.
+
+### 8. Navigation reduction and RM administrative-burden result
+
+The normal path is now **open Quick Find → type → select** for a Client, Staff Member, Incident, Complaint, Safeguarding record, Action, Risk or Evidence record. Once on a profile, the RM sees the exception summary on the first screen and opens the canonical source directly. Creating a related Action or Evidence record carries the canonical person and known location, so identity and service context are confirmed rather than retyped.
+
+QCGMS calculates and presents existing due/expiry state; it does not ask the RM to search several modules or manually compare dates. The directory tables remain available when comparison—not individual understanding—is the task.
+
+### 9. Canonical data and governance preservation
+
+This slice introduces no Prisma model, migration, search index, identity store, Action lifecycle, Evidence store or relationship table. It reuses:
+
+- Client Directory and Workforce as the identity sources;
+- existing private profile-photo endpoints;
+- central Actions and their source/subject relationships;
+- the governed Evidence Library;
+- existing register, Risk and Care Plan records;
+- current permissions, tenant/location scope and audit history.
+
+No assurance status, closure authority, verification, effectiveness decision, safeguarding judgement, Complaint outcome or Risk score was changed.
+
+### 10. Mobile and accessibility result
+
+The Quick Find control becomes an icon-sized header action on small screens and opens a full-height native dialog. The service-location control is hidden below the `sm` breakpoint to keep the shared mobile header within the viewport; location context remains available in navigation and record content. At larger widths the existing location control is unchanged.
+
+Client and Staff profiles use single-column mobile summaries, wrapping actions and touch-sized controls. Quick Find has a labelled combobox, listbox/options, active-result state, keyboard support and an explicitly labelled close control.
+
+The first complete mobile rerun exposed the shared header overflow across five unrelated assurance pages. That was a genuine convergence regression. The shared shell was corrected once rather than patching each module; the next full representative mobile run passed every runnable workflow.
+
+### 11. Search and profile performance result
+
+Quick Find performs a bounded, permission-gated query only for authorised record families and returns at most five ranked results per family. It does not preload full directories and does not introduce an external search service or AI call. Production-mode E2E enforces a five-second end-to-end Quick Find budget; the final run passed that gate.
+
+The existing 5,000-row local probes also passed on the final build. Representative execution times were approximately:
+
+- targeted Evidence search: **4.4 ms**;
+- broad Evidence ordering: **7.2 ms**;
+- Complaint overdue aggregate: **1.7 ms**;
+- Safeguarding overdue aggregate: **2.0 ms**.
+
+These are disposable local database measurements, not production latency claims.
+
+### 12. Tests added
+
+- Unit coverage for deterministic Quick Find ranking, grouping and bounded output.
+- Production-mode browser coverage for opening Client and Staff profiles through Quick Find.
+- Client-to-Action context carry-forward.
+- direct cross-location and cross-tenant profile denial.
+- cross-location/tenant Quick Find non-disclosure.
+- upload-only Evidence metadata non-disclosure.
+- Client Directory denial for an upload-only contributor.
+- desktop and mobile horizontal-overflow checks.
+
+The release-gate script now supports safe targeted profile and mobile modes while retaining the unchanged full gate as its default. A harness ordering defect discovered in mobile-only mode was corrected so the guarded E2E fixture is created before the 5,000-row performance fixture is used.
+
+### 13. Governance regression and final validation
+
+- Prisma validation: **passed**.
+- TypeScript: **passed** with a 6 GB local Node heap after the generated Vinext output made the default 2 GB process exhaust memory.
+- ESLint: **passed**.
+- Automated tests: **360/360 passed** across **75/75 files**.
+- Fresh database: **0 → 63 migrations passed**.
+- Previously completed combined database proofs: committed-baseline **60 → 63**, seeded legacy upgrade and deployment seed all passed against this working tree before the final presentation-only mobile correction.
+- Profile/Quick Find desktop production-mode E2E: **3/3 passed**.
+- Profile/Quick Find mobile production-mode E2E: **1/1 runnable test passed**; **2 server-side isolation tests intentionally skipped** in the mobile project and passed on desktop.
+- Full representative mobile production-mode regression: **6/6 runnable tests passed**; the same **2 server-only tests intentionally skipped**.
+- Existing combined desktop assurance scenarios: **9/9 passed** earlier in the same implementation gate; the new profile scenarios add **3/3** desktop passes.
+- Next.js production build: **passed**, 147 routes/pages generated, including `/api/quick-find`.
+- Sites/Vinext compatibility build: **passed**.
+- No `tsconfig.json` change remains after build verification.
+
+### 14. Known limitations and remaining frontend debt
+
+1. Quick Find uses bounded database lookup, suitable for the current architecture; very large multi-site tenants may later justify a dedicated authorised search index after real operational measurements.
+2. Recently viewed items are deferred pending an explicit privacy/retention design.
+3. Client Risk visibility is relationship-honest and Action-mediated until a referentially safe governance relationship layer exists.
+4. The Client Evidence Library link intentionally filters direct profile Evidence; the profile itself also shows indirect governed Evidence and labels the direct link clearly.
+5. The Staff profile does not attempt payroll, rota or full HR case management.
+
+### 15. Production and source-control status
+
+- Clean previous frontend slice committed locally: `f6311df`.
+- Current Client/Staff/Quick Find slice: **implemented and validated; prepared for the Visual UX Gate commit boundary**.
+- Remote push: **not performed**.
+- Production database migration: **not performed**.
+- Deployment/publish: **not performed**.
+- Live application: **unchanged**.
+
+### 16. Recommended next frontend slice
+
+After review and a deliberate local commit boundary for this slice, the next valuable frontend work is a controlled file-preview/download experience for Evidence. It should reuse the existing storage and authorisation paths, display provenance/currentness before content, and avoid implicit download or cross-scope metadata exposure. A broad generic relationship drawer should still wait for the referentially safe governance-relationship architecture.
+
 ## Mobile improvements
 
 - Worklist items collapse to a single-column action summary instead of forcing a wide register table.
@@ -533,11 +741,10 @@ Screenshots were written to a temporary local test directory and are not part of
 
 1. Server-backed governed-source typeahead after the typed relationship architecture is agreed.
 2. Extend the governed management timeline to remaining high-value domains only where canonical events are reliable; retain immutable technical audit history.
-3. Client and Staff profile experience, including photo handling, without weakening directory security.
-4. Global quick find across authorised governance records; deliberately not started in this slice.
-5. Production-like large-tenant Action and Management Oversight baselines plus operational monitoring.
-6. Evidence file preview/download UX with explicit authorisation and safe content handling; metadata preview is complete.
-7. Controlled design-system consolidation after the proven assurance, Evidence and oversight patterns are stable.
+3. Production-like large-tenant Action, Quick Find and Management Oversight baselines plus operational monitoring.
+4. Evidence file preview/download UX with explicit authorisation and safe content handling; metadata preview is complete.
+5. A privacy/retention decision before implementing recently viewed records.
+6. Controlled design-system consolidation after the proven assurance, Evidence, profile and oversight patterns are stable.
 
 ## Product judgement and pushback
 
@@ -549,4 +756,4 @@ Screenshots were written to a temporary local test directory and are not part of
 
 ## Next recommended frontend slice
 
-The next frontend slice should address **Client and Staff profile usability**—including controlled photo presentation and faster navigation from governed records—without introducing free-text identities or weakening directory, tenant or location security. Global quick find should remain separate until the typed governance-relationship architecture is ready.
+The next frontend slice should address **controlled Evidence file preview/download**. It should retain explicit authorisation, safe content handling, provenance/currentness context and canonical storage. Recently viewed records and a broad relationship drawer remain deferred until their privacy and referential-integrity designs are agreed.

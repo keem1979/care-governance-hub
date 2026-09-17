@@ -5,12 +5,14 @@ import {
   EVIDENCE_CONFIDENTIALITY, MAX_EVIDENCE_FILES,
   titleFromFileName, validateEvidenceFile,
 } from "@/lib/evidence";
-import { PERMISSIONS } from "@/lib/permissions";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { parseOptionalDate, splitList } from "@/lib/policies";
 import { deletePrivateFile, putPrivateFile } from "@/lib/private-storage";
 import { evidenceRequirementByKey } from "@/lib/evidence-requirements";
 import { EVIDENCE_SOURCE_TYPES } from "@/lib/evidence-assurance";
 import { taxonomyLabels } from "@/lib/evidence-taxonomy";
+import { clientScopeWhere } from "@/lib/clients";
+import { workforceScopeWhere } from "@/lib/workforce";
 
 function text(form: FormData, key: string) { return String(form.get(key) ?? "").trim(); }
 async function checksum(bytes: ArrayBuffer) {
@@ -51,6 +53,20 @@ export async function POST(request: Request) {
         if (!policy) throw new Error("The related policy could not be found.");
       }
       if (relatedModule === "EvidenceRequirement" && !evidenceRequirementByKey(relatedRecordId)) throw new Error("The evidence requirement could not be found.");
+      if (relatedModule === "Client") {
+        if (!hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_VIEW)) throw new Error("You are not authorised to link Evidence to a Client profile.");
+        if (!relatedRecordId) throw new Error("Choose the related Client profile.");
+        const client = await db.client.findFirst({ where: { id: relatedRecordId, ...clientScopeWhere(context) }, select: { locationId: true } });
+        if (!client) throw new Error("The related Client profile could not be found in your authorised scope.");
+        if (client.locationId && locationId !== client.locationId) throw new Error("Client Evidence must use the Client profile's service location.");
+      }
+      if (relatedModule === "StaffMember") {
+        if (![PERMISSIONS.WORKFORCE_VIEW, PERMISSIONS.WORKFORCE_MANAGE].some((permission) => hasPermission(context.permissions, permission))) throw new Error("You are not authorised to link Evidence to a staff profile.");
+        if (!relatedRecordId) throw new Error("Choose the related staff profile.");
+        const staff = await db.staffMember.findFirst({ where: { id: relatedRecordId, ...workforceScopeWhere(context) }, select: { locationId: true } });
+        if (!staff) throw new Error("The related staff profile could not be found in your authorised scope.");
+        if (staff.locationId && locationId !== staff.locationId) throw new Error("Staff Evidence must use the staff profile's service location.");
+      }
       const sourceType = text(form, "sourceType");
       const sourceName = text(form, "sourceName");
       const sourceUrl = text(form, "sourceUrl") || null;

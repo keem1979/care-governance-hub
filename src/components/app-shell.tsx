@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { GovernanceAssistant } from "@/components/governance-assistant";
+import { GlobalQuickFind } from "@/components/global-quick-find";
 import type { AuthorisedContext } from "@/lib/auth/dal";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -368,16 +369,19 @@ export function AppShell({
               ) : null}
             </div>
           </div>
-          <button
-            className="flex max-w-[46%] items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-left text-sm"
-            type="button"
-            aria-label="Current service location"
-            title="Location switching will be enabled when multiple locations are configured."
-          >
-            <SignpostBig className="shrink-0 text-brand" size={17} />
-            <span className="truncate">{location?.name ?? "All locations"}</span>
-            <ChevronDown className="shrink-0 text-muted" size={15} />
-          </button>
+          <div className="ml-2 flex shrink-0 items-center gap-2">
+            <GlobalQuickFind />
+            <button
+              className="hidden max-w-48 items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-left text-sm sm:flex"
+              type="button"
+              aria-label="Current service location"
+              title="Location switching will be enabled when multiple locations are configured."
+            >
+              <SignpostBig className="shrink-0 text-brand" size={17} />
+              <span className="truncate">{location?.name ?? "All locations"}</span>
+              <ChevronDown className="shrink-0 text-muted" size={15} />
+            </button>
+          </div>
         </header>
         {connections ? (
           <section className="border-b border-emerald-100 bg-emerald-50/70 px-4 py-3 sm:px-6 lg:px-8" aria-label="Module data and related views">
