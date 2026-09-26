@@ -45,6 +45,6 @@ test("Safeguarding first save requires an authorised Client result", async ({ pa
   await page.getByRole("textbox", { name: "What is the safeguarding concern? *" }).fill("Fictional concern without a selected Client.");
   await page.getByRole("combobox", { name: "Person/client this concerns *" }).fill("Someone not in the authorised directory");
   await page.getByRole("button", { name: "Save safeguarding concern" }).click();
-  await expect(page.getByRole("alert")).toContainText("client");
+  await expect(page.locator('form [role="alert"]')).toHaveText("Choose the client this safeguarding concern relates to.");
   await expect(page).toHaveURL(/\/registers\/safeguarding\/new$/);
 });
