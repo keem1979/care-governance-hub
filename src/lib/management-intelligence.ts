@@ -44,7 +44,7 @@ export type ManagementQueueItem = {
   locationId: string | null;
   locationName: string;
   ownerName: string;
-  severity: "CRITICAL" | "HIGH" | "MEDIUM";
+  severity: "CRITICAL" | "HIGH" | "UNASSESSED" | "MEDIUM";
   state: string;
   reason: string;
   dueAt: Date | null;

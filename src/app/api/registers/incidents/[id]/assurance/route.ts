@@ -6,7 +6,7 @@ import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { incidentAssuranceReadiness, incidentClosureAuthority } from "@/lib/incident-assurance";
 import { PERMISSIONS } from "@/lib/permissions";
-import { registerScopeWhere } from "@/lib/registers";
+import { assertRegisterWriteScope, registerScopeWhere } from "@/lib/registers";
 
 const DECISIONS = ["NOT_ASSURED", "ASSURED_CLOSED", "REOPENED"] as const;
 
@@ -22,6 +22,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (rationale.length < 12 || rationale.length > 5000) throw new Error("Record a clear decision rationale of at least 12 characters.");
     const incident = await db.registerEntry.findFirst({ where: { id, ...registerScopeWhere(context), definition: { key: "incidents" }, archivedAt: null }, include: { incidentInvestigation: true } });
     if (!incident) return NextResponse.json({ error: "Incident not found." }, { status: 404 });
+    assertRegisterWriteScope(context, incident.locationId);
+    if (incident.riskLevel === "UNASSESSED") throw new Error("Assess the Incident risk before recording management assurance or closure.");
     const evidenceIds = [...new Set(form.getAll("evidenceIds").map(String).filter(Boolean))];
     const evidenceCount = evidenceIds.length ? await db.evidence.count({ where: { id: { in: evidenceIds }, ...evidenceScopeWhere(context), status: "ACTIVE" } }) : 0;
     if (evidenceCount !== evidenceIds.length) throw new Error("One or more selected Evidence records are unavailable or outside your authorised scope.");

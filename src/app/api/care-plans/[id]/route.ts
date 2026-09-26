@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { requirePermission } from "@/lib/auth/dal";
 import { ensureCarePlanActions } from "@/lib/care-plan-actions";
-import { CARE_PLAN_SCHEMA_VERSION, carePlanScopeWhere, compareCarePlanSnapshots, materialSectionLabels, parseCarePlanSnapshot, validateCarePlan } from "@/lib/care-plans";
+import { assertAssessedCarePlanRisk, CARE_PLAN_SCHEMA_VERSION, carePlanScopeWhere, compareCarePlanSnapshots, materialSectionLabels, parseCarePlanSnapshot, validateCarePlan } from "@/lib/care-plans";
 import { clientScopeWhere } from "@/lib/clients";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
@@ -15,6 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const plan = await db.carePlan.findFirst({ where: { id, ...carePlanScopeWhere(context) }, include: { versions: { orderBy: { versionNumber: "desc" }, take: 2 } } });
     if (!plan) return NextResponse.json({ error: "Care plan not found." }, { status: 404 });
     const data = fields(form), snapshot = parseSnapshot(form), evidenceIds = unique(form,"evidenceIds"), staffIds = unique(form,"staffIds");
+    assertAssessedCarePlanRisk(data.overallRisk);
     validateCarePlan({ snapshot, clientId: data.clientId, locationId: data.locationId, careCoordinatorId: data.careCoordinatorId, registeredManagerId: data.registeredManagerId, nextReviewDate: data.nextReviewDate });
     await validateLinks(db,context,{...data,evidenceIds,staffIds});
     const live = plan.currentVersionId ? await db.carePlanVersion.findUnique({ where: { id: plan.currentVersionId } }) : null;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { requirePermission } from "@/lib/auth/dal";
 import { ensureCarePlanActions } from "@/lib/care-plan-actions";
-import { CARE_PLAN_SCHEMA_VERSION, makeCarePlanReference, parseCarePlanSnapshot, validateCarePlan } from "@/lib/care-plans";
+import { assertAssessedCarePlanRisk, CARE_PLAN_SCHEMA_VERSION, makeCarePlanReference, parseCarePlanSnapshot, validateCarePlan } from "@/lib/care-plans";
 import { clientScopeWhere } from "@/lib/clients";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
@@ -13,6 +13,7 @@ export async function POST(request: Request) {
   const form = await request.formData(); const db = createDb();
   try {
     const data = fields(form), snapshot = parseSnapshot(form), evidenceIds = unique(form, "evidenceIds"), staffIds = unique(form, "staffIds");
+    assertAssessedCarePlanRisk(data.overallRisk);
     validateCarePlan({ snapshot, clientId: data.clientId, locationId: data.locationId, careCoordinatorId: data.careCoordinatorId, registeredManagerId: data.registeredManagerId, nextReviewDate: data.nextReviewDate });
     await validateLinks(db, context, { ...data, evidenceIds, staffIds });
     const reference = data.reference || makeCarePlanReference();

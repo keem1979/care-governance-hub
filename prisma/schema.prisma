@@ -204,6 +204,7 @@ enum RegisterEntryStatus {
 }
 
 enum RegisterRiskLevel {
+  UNASSESSED
   LOW
   MEDIUM
   HIGH
@@ -1929,7 +1930,7 @@ model RegisterEntry {
   eventDate       DateTime
   title           String
   summary         String
-  riskLevel       RegisterRiskLevel   @default(LOW)
+  riskLevel       RegisterRiskLevel   @default(UNASSESSED)
   status          RegisterEntryStatus @default(OPEN)
   ownerId         String?             @db.Uuid
   data            Json

@@ -40,6 +40,7 @@ export function incidentAssuranceReadiness(input: {
   };
   const hasText = (value: string | null | undefined) => Boolean(value?.trim());
   const checks: IncidentAssuranceCheck[] = [
+    { key: "risk-assessed", label: "Professional risk level assessed", met: input.riskLevel !== "UNASSESSED", reason: "Record an accountable risk judgement before management assurance or closure. Unassessed does not mean Low." },
     {
       key: "immediate-response",
       label: "Immediate safety response recorded",

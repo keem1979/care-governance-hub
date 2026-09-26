@@ -7,7 +7,7 @@ import { evidenceScopeWhere, titleFromFileName, validateEvidenceFile } from "@/l
 import { taxonomyLabels } from "@/lib/evidence-taxonomy";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { deletePrivateFile, putPrivateFile } from "@/lib/private-storage";
-import { registerScopeWhere } from "@/lib/registers";
+import { assertRegisterWriteScope, registerScopeWhere } from "@/lib/registers";
 
 const REGISTER_KEYS = { INCIDENT: "incidents", COMPLAINT: "complaints", SAFEGUARDING: "safeguarding" } as const;
 type RegisterSource = keyof typeof REGISTER_KEYS;
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       ? await db.action.findFirst({ where: { id: sourceId, ...actionScopeWhere(context) }, select: { id: true, locationId: true, reference: true, status: true, closedAt: true, archivedAt: true, clientId: true, staffMemberId: true } })
       : await db.registerEntry.findFirst({ where: { id: sourceId, ...registerScopeWhere(context), definition: { key: REGISTER_KEYS[sourceType as RegisterSource] } }, select: { id: true, locationId: true, reference: true, status: true, clientId: true, staffMemberId: true } });
     if (!source) return NextResponse.json({ error: "Source record not found." }, { status: 404 });
+    if (!isAction) assertRegisterWriteScope(context, source.locationId);
     if (isAction
       ? "closedAt" in source && (source.closedAt || source.archivedAt || ["COMPLETED", "CANCELLED", "ARCHIVED"].includes(source.status))
       : "status" in source && ["CLOSED", "ARCHIVED"].includes(source.status)) {

@@ -7,7 +7,7 @@ import { complaintAssuranceReadiness, complaintClosureAuthority } from "@/lib/co
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
-import { registerScopeWhere } from "@/lib/registers";
+import { assertRegisterWriteScope, registerScopeWhere } from "@/lib/registers";
 
 const schema = z.object({ decision: z.enum(["NOT_ASSURED", "ASSURED_CLOSED", "REOPENED"]), rationale: z.string().trim().min(12).max(5000), newInformation: z.string().trim().max(5000) });
 
@@ -20,6 +20,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const input = schema.parse({ decision: String(form.get("decision") ?? ""), rationale: String(form.get("rationale") ?? ""), newInformation: String(form.get("newInformation") ?? "") });
     const complaint = await db.registerEntry.findFirst({ where: { id, ...registerScopeWhere(context), definition: { key: "complaints" }, archivedAt: null }, include: { complaintInvestigation: true, complaintIssues: { include: { _count: { select: { evidenceLinks: true } } } }, complaintCommunications: { orderBy: { occurredAt: "asc" } } } });
     if (!complaint) return NextResponse.json({ error: "Complaint not found." }, { status: 404 });
+    assertRegisterWriteScope(context, complaint.locationId);
+    if (complaint.riskLevel === "UNASSESSED") throw new Error("Assess the Complaint risk before recording management assurance or closure.");
     const evidenceIds = [...new Set(form.getAll("evidenceIds").map(String).filter(Boolean))];
     const evidenceCount = evidenceIds.length ? await db.evidence.count({ where: { id: { in: evidenceIds }, ...evidenceScopeWhere(context), status: "ACTIVE" } }) : 0;
     if (evidenceCount !== evidenceIds.length) throw new Error("One or more selected Evidence records are unavailable or outside your authorised scope.");

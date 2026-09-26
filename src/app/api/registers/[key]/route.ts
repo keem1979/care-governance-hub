@@ -16,14 +16,22 @@ export async function POST(request:Request,{params}:{params:Promise<{key:string}
   try{
     const definition=await db.registerDefinition.findFirst({where:{key,isPublished:true,OR:[{organisationId:null},{organisationId:context.organisation.id}]}});
     if(!definition)return NextResponse.json({error:"Register not found."},{status:404});
-    const title=String(form.get("title")??"").trim(),summary=String(form.get("summary")??"").trim(),locationId=String(form.get("locationId")??"")||null,ownerId=String(form.get("ownerId")??"")||null,clientId=String(form.get("clientId")??"")||null,staffMemberId=String(form.get("staffMemberId")??"")||null,riskLevel=String(form.get("riskLevel")??"LOW"),status=String(form.get("status")??"OPEN");
+    const assured=["incidents","complaints","safeguarding"].includes(key);
+    const title=String(form.get("title")??"").trim(),summary=String(form.get("summary")??"").trim(),submittedLocationId=String(form.get("locationId")??"")||null,ownerId=String(form.get("ownerId")??"")||null,clientId=String(form.get("clientId")??"")||null,staffMemberId=String(form.get("staffMemberId")??"")||null,riskLevel=String(form.get("riskLevel")??"UNASSESSED"),status=String(form.get("status")??"OPEN");
+    const locationId=!context.allLocations&&context.locations.length===1&&!submittedLocationId?context.locations[0].id:submittedLocationId;
     if(title.length<3||summary.length<3)throw new Error("Enter a title and summary.");
+    if(form.has("organisationId")&&String(form.get("organisationId"))!==context.organisation.id)throw new Error("Organisation scope is not authorised.");
+    if(assured&&status!=="OPEN")throw new Error("New governed records must start open; closure and archival require their governed workflows.");
+    if(assured&&String(form.get("closureDate")??"").trim())throw new Error("A new governed record cannot have a closure date.");
+    if(!context.allLocations&&!locationId)throw new Error("Choose an authorised location.");
     if(locationId&&!context.locations.some((item)=>item.id===locationId))throw new Error("Choose an authorised location.");
     if(!REGISTER_RISK_LEVELS.includes(riskLevel as never)||!REGISTER_STATUSES.includes(status as never))throw new Error("Choose valid status and risk values.");
+    if(riskLevel==="UNASSESSED"&&status==="CLOSED")throw new Error("Assess the risk before closing this record.");
     if(ownerId&&!(await db.organisationMembership.findFirst({where:{organisationId:context.organisation.id,userId:ownerId,status:"ACTIVE"}})))throw new Error("Choose an active owner.");
     if(clientId&&!(await db.client.findFirst({where:{id:clientId,...clientScopeWhere(context)}})))throw new Error("Choose an authorised client record.");
     if(staffMemberId&&!(await db.staffMember.findFirst({where:{id:staffMemberId,...workforceScopeWhere(context)}})))throw new Error("Choose an authorised staff record.");
     if(assessmentType(key)?.stage!=="SERVICE"&&key.startsWith("assessment-")&&!clientId)throw new Error("Choose the client this assessment relates to.");
+    if(key==="safeguarding"&&!clientId)throw new Error("Choose the client this safeguarding concern relates to.");
     const evidenceIds=form.getAll("evidenceIds").map(String).filter(Boolean);
     for(const evidenceId of evidenceIds)if(!(await db.evidence.findFirst({where:{id:evidenceId,...evidenceScopeWhere(context)}})))throw new Error("Linked evidence could not be found.");
     const reference=String(form.get("reference")??"").trim()||makeRegisterReference(key);
@@ -37,7 +45,7 @@ export async function POST(request:Request,{params}:{params:Promise<{key:string}
     if(Object.keys(prerequisiteReferences).length)data.prerequisiteReferences=prerequisiteReferences;
     const eventDate=parseOptionalDate(form.get("eventDate"))??new Date();
     const entry=await db.$transaction(async(tx)=>{
-      const created=await tx.registerEntry.create({data:{organisationId:context.organisation.id,definitionId:definition.id,locationId,clientId,staffMemberId,reference,eventDate,title,summary,riskLevel:riskLevel as never,status:status as never,ownerId,data:data as Prisma.InputJsonValue,closureDate:["complaints","safeguarding"].includes(key)?null:parseOptionalDate(form.get("closureDate")),createdById:context.user.id,evidenceLinks:{create:evidenceIds.map((evidenceId)=>({evidenceId}))},...(key==="complaints"?{complaintInvestigation:{create:{organisationId:context.organisation.id,locationId,investigatorId:ownerId??context.user.id,complainantName:text(data.complainantName)||null,complainantRelationship:text(data.complainantRelationship)||null,contactPreference:text(data.contactPreference)||null,accessibilityNeeds:text(data.accessibilityNeeds)||null,category:text(data.category)||null,immediateSafetyConcern:text(data.immediateSafetyConcern)||null,immediateSafetyResponse:text(data.immediateSafetyResponse)||null}}}:{})}});
+      const created=await tx.registerEntry.create({data:{organisationId:context.organisation.id,definitionId:definition.id,locationId,clientId,staffMemberId,reference,eventDate,title,summary,riskLevel:riskLevel as never,status:status as never,ownerId,data:data as Prisma.InputJsonValue,closureDate:assured?null:parseOptionalDate(form.get("closureDate")),createdById:context.user.id,evidenceLinks:{create:evidenceIds.map((evidenceId)=>({evidenceId}))},...(key==="complaints"?{complaintInvestigation:{create:{organisationId:context.organisation.id,locationId,investigatorId:ownerId??context.user.id,complainantName:text(data.complainantName)||null,complainantRelationship:text(data.complainantRelationship)||null,contactPreference:text(data.contactPreference)||null,accessibilityNeeds:text(data.accessibilityNeeds)||null,category:text(data.category)||null,immediateSafetyConcern:text(data.immediateSafetyConcern)||null,immediateSafetyResponse:text(data.immediateSafetyResponse)||null}}}:{})}});
       if(key==="safeguarding"){
         const safetyPosition=safeguardingSafety(text(data.safetyPosition));
         await tx.safeguardingCase.create({data:{organisationId:context.organisation.id,locationId,safeguardingId:created.id,investigatorId:ownerId??context.user.id,safetyPosition,immediateControl:text(data.immediateResponse)||null}});

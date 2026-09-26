@@ -113,3 +113,42 @@ The existing API already checks organisation-scoped definitions, `GOVERNANCE_EDI
 - `outputs/WP-003_GATE_A/incident-current-save-error.png`
 
 All seven PNG files were verified non-zero. The desktop and mobile screenshots contain fictional test data only. The optional disclosure and mobile screenshot stitching can repeat page fragments in full-page captures; these were not counted as duplicate controls.
+
+## WP-003A — Capture integrity hardening
+
+**Status:** Complete for architecture and security review. WP-003B visual capture simplification has not started.
+
+The shared capture form now sends canonical risk values. New governed register entries default to explicit `UNASSESSED`, while existing assessed values remain unchanged. `UNASSESSED` is shown distinctly in register details, lists, My Work and management queues, and cannot be treated as Low. Incident, Complaint and Safeguarding assurance and relevant investigation/final-response milestones reject unassessed risk. Care Plans continue to require an assessed risk; a new Action linked from an unassessed source requires a human priority choice.
+
+The server now enforces open initial status, closed-record write protection, authorised tenant/location/Client relationships, and Safeguarding's required Client link. A location-restricted user with one authorised location gets that scope automatically. An organisation-wide record requires authority for that scope. The register create transaction still creates one canonical record, history, ActivityLog and the existing Evidence relationship. WP-002 contextual Evidence behaviour was not redesigned.
+
+### Schema and migration
+
+- `RegisterRiskLevel` adds `UNASSESSED`; the `RegisterEntry.riskLevel` default becomes `UNASSESSED`. The Care Plan default remains `LOW` and Care Plan APIs reject `UNASSESSED`.
+- Two ordered migrations are required because PostgreSQL cannot use the newly added enum value in the same migration transaction: `20260926090000_wp003_add_unassessed_register_risk` and `20260926090100_wp003_default_unassessed_register_risk`.
+- Upgrade migration on the named disposable local database passed: 65 migrations total, with both WP-003A migrations applied. Fresh migration in a newly created isolated schema within that disposable database passed all 65 migrations, verified the new register default, then dropped the isolated schema. No production database was contacted.
+
+### Successful current-form baseline
+
+On 26 September 2026, the existing full forms were completed in an authenticated local browser against fictional data in the disposable database. Counts use the same visible-control method as Gate A; interactions count fills, selector choices and Save after the form is open. The three saves produced canonical detail pages. The clean Incident run followed the correction to an unrelated assessment-prerequisite helper that had prevented register saves.
+
+| Current form | Visible controls | Required controls | Free-text content fields | Interactions to successful Save | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Incident | 16 | 10 | 3 | 10: 3 fills, 6 selections, Save | Saved `/registers/incidents/ec80e3d2-f29f-4358-83f5-601052125658` |
+| Complaint | 11 | 5 | 2 | 5: 2 fills, 2 selections, Save | Saved `/registers/complaints/6f9b33e4-2273-4be1-b604-f48bd3017316` |
+| Safeguarding | 10 | 5 | 2 | 5: 2 fills, authorised Client link, safety selection, Save | Saved `/registers/safeguarding/7825304a-ece0-4346-88c2-802c1e5a4fe9` |
+
+These are the measured **before** values for WP-003B, not a claim of burden reduction. The date, owner, location and unassessed risk defaults required no interaction. Client/Staff and Evidence search boxes are visible controls but are not counted as narrative fields. The Safeguarding Client choice had one exact fictional match.
+
+### WP-003A assurance
+
+- `npm.cmd run typecheck`: PASS.
+- `npm.cmd run lint`: PASS.
+- `npm.cmd run db:validate`: PASS.
+- `npm.cmd run test`: 76 files, 379/379 tests PASS.
+- Direct authenticated HTTP gate using fictional accounts and the disposable database: 27/27 PASS. It covered invalid risk, forged closed status/closure date, closed record writes, assessed-open archive, missing/unauthorised Safeguarding Client, forged tenant/location/organisation-wide scope, cross-tenant IDs, single-location derivation, contextual Evidence scope and unassessed Incident/Complaint/Safeguarding progression.
+- Authenticated browser form saves: Incident, Complaint and Safeguarding PASS. An attempted Chromium Playwright run could not launch its browser in the restricted sandbox (`spawn EPERM`); no Playwright assertion result is claimed for WP-003A. Full desktop/mobile automation belongs to the combined Gate B after WP-003B.
+- Security/Tenancy Reviewer: **PASS** after 27/27 direct-request results and code review.
+- Solution Architect: **PASS** after downstream `UNASSESSED` review and migration review.
+
+WP-003B may begin only after the Product Owner/ChatGPT review of this WP-003A report. No merge, push or deployment was performed.

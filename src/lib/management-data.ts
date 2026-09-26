@@ -60,7 +60,7 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
           complaintCommunications: { where: { type: "FINAL_RESPONSE" }, orderBy: { occurredAt: "desc" }, take: 1, select: { occurredAt: true } },
           safeguardingCase: { select: { status: true, safetyPosition: true, externalResponseDueAt: true } },
         },
-        orderBy: [{ riskLevel: "desc" }, { eventDate: "asc" }],
+        orderBy: [{ eventDate: "asc" }],
         take: 250,
       }) : Promise.resolve([]),
       db.externalDependency.findMany({
@@ -153,8 +153,10 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
             ? record.complaintInvestigation?.status === "COMPLETED" && Boolean(finalResponse)
             : record.safeguardingCase?.status === "READY_FOR_ASSURANCE";
         const immediateSafety = source === "SAFEGUARDING" && ["UNRESOLVED_IMMEDIATE_RISK", "UNKNOWN_EVIDENCE_REQUIRED"].includes(record.safeguardingCase?.safetyPosition ?? "");
-        if (!["HIGH", "CRITICAL"].includes(record.riskLevel) && !overdue && !awaitingAssurance && !immediateSafety) return [];
-        const reason = immediateSafety
+        if (!["UNASSESSED", "HIGH", "CRITICAL"].includes(record.riskLevel) && !overdue && !awaitingAssurance && !immediateSafety) return [];
+        const reason = record.riskLevel === "UNASSESSED"
+          ? "Professional risk assessment is outstanding; this is not a Low risk judgement."
+          : immediateSafety
           ? "The current safety position needs management intervention."
           : overdue
             ? source === "COMPLAINT" ? "The Complaint response deadline is overdue." : "The external safeguarding response is overdue; review the interim control and escalation."
@@ -169,7 +171,7 @@ export async function getManagementCommandData(context: AuthorisedContext, filte
           locationId: record.locationId,
           locationName: record.location?.name ?? "Organisation-wide",
           ownerName: record.owner?.name ?? "Unassigned",
-          severity: record.riskLevel === "CRITICAL" ? "CRITICAL" : record.riskLevel === "HIGH" || immediateSafety ? "HIGH" : "MEDIUM",
+          severity: record.riskLevel === "CRITICAL" ? "CRITICAL" : record.riskLevel === "HIGH" || immediateSafety ? "HIGH" : record.riskLevel === "UNASSESSED" ? "UNASSESSED" : "MEDIUM",
           state: record.status,
           reason,
           dueAt,
@@ -258,7 +260,7 @@ export async function getDefaultManagementFilters(context: AuthorisedContext): P
 }
 
 function compareQueue(a: ManagementQueueItem, b: ManagementQueueItem): number {
-  const severity = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 };
+  const severity = { CRITICAL: 0, HIGH: 1, UNASSESSED: 2, MEDIUM: 3 };
   return severity[a.severity] - severity[b.severity] || Number(b.overdue) - Number(a.overdue) || (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER);
 }
 

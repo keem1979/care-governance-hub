@@ -8,7 +8,7 @@ import { parseOptionalDate } from "@/lib/policies";
 import { syncRegisterEvidence } from "@/lib/register-evidence";
 import { assessmentPrerequisites, assessmentType } from "@/lib/assessments";
 import { clientScopeWhere } from "@/lib/clients";
-import { collectRegisterData, parseRegisterFields, registerScopeWhere, REGISTER_RISK_LEVELS, REGISTER_STATUSES } from "@/lib/registers";
+import { assertRegisterWriteScope, collectRegisterData, parseRegisterFields, registerScopeWhere, REGISTER_RISK_LEVELS, REGISTER_STATUSES } from "@/lib/registers";
 import { workforceScopeWhere } from "@/lib/workforce";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ key: string; id: string }> }) {
@@ -20,9 +20,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ke
   try {
     const entry = await db.registerEntry.findFirst({ where: { id, ...registerScopeWhere(context), definition: { key } }, include: { definition: true, evidenceLinks: true } });
     if (!entry) return NextResponse.json({ error: "Entry not found." }, { status: 404 });
+    assertRegisterWriteScope(context, entry.locationId);
+    const assured = ["incidents", "complaints", "safeguarding"].includes(key);
+    if (form.has("organisationId") && String(form.get("organisationId")) !== context.organisation.id) throw new Error("Organisation scope is not authorised.");
+    if (!["update", "archive", "restore"].includes(intent)) throw new Error("Choose a valid record action.");
 
     if (intent === "archive" || intent === "restore") {
       const archive = intent === "archive";
+      if (archive && entry.status === "ARCHIVED") throw new Error("This record is already archived.");
+      if (!archive && entry.status !== "ARCHIVED") throw new Error("Only an archived record can be restored.");
+      if (assured && archive) throw new Error("Governed records cannot be archived through the general record action.");
+      if (assured && !archive && entry.closureDate) throw new Error("A previously closed governed record cannot be restored to Open without its authorised reopening workflow.");
       await db.$transaction(async (tx) => {
         const updated = await tx.registerEntry.update({ where: { id }, data: { status: archive ? "ARCHIVED" : "OPEN", archivedAt: archive ? new Date() : null } });
         await syncRegisterEvidence(tx, {
@@ -39,21 +47,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ke
 
     const title = String(form.get("title") ?? "").trim();
     const summary = String(form.get("summary") ?? "").trim();
-    const locationId = String(form.get("locationId") ?? "") || null;
+    const submittedLocationId = String(form.get("locationId") ?? "") || null;
+    const locationId = !context.allLocations && context.locations.length === 1 && !submittedLocationId ? context.locations[0].id : submittedLocationId;
     const ownerId = String(form.get("ownerId") ?? "") || null;
     const clientId = String(form.get("clientId") ?? "") || null;
     const staffMemberId = String(form.get("staffMemberId") ?? "") || null;
-    const riskLevel = String(form.get("riskLevel") ?? "LOW");
-    const status = String(form.get("status") ?? "OPEN");
+    const riskLevel = String(form.get("riskLevel") ?? entry.riskLevel);
+    const status = String(form.get("status") ?? entry.status);
     if (title.length < 3 || summary.length < 3) throw new Error("Enter a title and summary.");
+    if (!context.allLocations && !locationId) throw new Error("Choose an authorised location.");
     if (locationId && !context.locations.some((item) => item.id === locationId)) throw new Error("Choose an authorised location.");
     if (!REGISTER_RISK_LEVELS.includes(riskLevel as never) || !REGISTER_STATUSES.includes(status as never)) throw new Error("Choose valid values.");
-    if (["incidents", "complaints", "safeguarding"].includes(key) && status === "CLOSED" && entry.status !== "CLOSED") throw new Error("Close this governed record through its Management Assurance Test, not the general status field.");
-    if (["incidents", "complaints", "safeguarding"].includes(key) && entry.status === "CLOSED") throw new Error("Reopen this governed record through its recorded assurance decision before making changes.");
+    if (riskLevel === "UNASSESSED" && status === "CLOSED") throw new Error("Assess the risk before closing this record.");
+    if (assured && ["CLOSED", "ARCHIVED"].includes(status)) throw new Error("Close or archive this governed record through its controlled lifecycle, not the general status field.");
+    if (assured && (entry.status === "CLOSED" || entry.status === "ARCHIVED" || entry.archivedAt)) throw new Error("Reopen or restore this governed record through its controlled workflow before making changes.");
+    if (assured && String(form.get("closureDate") ?? "").trim()) throw new Error("Closure dates are recorded only by Management Assurance.");
     if (ownerId && !(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: ownerId, status: "ACTIVE" } }))) throw new Error("Choose an active owner.");
     if (clientId && !(await db.client.findFirst({ where: { id: clientId, ...clientScopeWhere(context) } }))) throw new Error("Choose an authorised client record.");
     if (staffMemberId && !(await db.staffMember.findFirst({ where: { id: staffMemberId, ...workforceScopeWhere(context) } }))) throw new Error("Choose an authorised staff record.");
     if (assessmentType(key)?.stage !== "SERVICE" && key.startsWith("assessment-") && !clientId) throw new Error("Choose the client this assessment relates to.");
+    if (key === "safeguarding" && !clientId) throw new Error("Choose the client this safeguarding concern relates to.");
     const evidenceIds = form.getAll("evidenceIds").map(String).filter(Boolean);
     for (const evidenceId of evidenceIds) if (!(await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context) } }))) throw new Error("Linked evidence could not be found.");
     const data: Record<string, unknown> = collectRegisterData(form, parseRegisterFields(entry.definition.fieldSchema));
