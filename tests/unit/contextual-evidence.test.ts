@@ -29,7 +29,7 @@ const register = {
   clientId: "client-a", staffMemberId: null,
 };
 const action = {
-  id: "action-a", locationId: "location-a", reference: "ACT-001", closedAt: null,
+  id: "action-a", locationId: "location-a", reference: "ACT-001", status: "OPEN", closedAt: null, archivedAt: null,
   clientId: null, staffMemberId: "staff-a",
 };
 
@@ -142,6 +142,20 @@ describe("contextual Evidence boundary", () => {
     expect(response.status).toBe(400);
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(mocks.putPrivateFile).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["completed", { status: "COMPLETED" }],
+    ["cancelled", { status: "CANCELLED" }],
+    ["archived status", { status: "ARCHIVED", closedAt: null }],
+    ["archived timestamp", { status: "OPEN", archivedAt: new Date("2026-01-01"), closedAt: null }],
+  ])("rejects %s Action before upload or link", async (_label, change) => {
+    db.action.findFirst.mockResolvedValueOnce({ ...action, ...change });
+    const response = await POST(request({ sourceType: "ACTION", sourceId: action.id, role: "COMPLETION" }, document()));
+    expect(response.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(mocks.putPrivateFile).not.toHaveBeenCalled();
+    expect(mocks.linkActionEvidence).not.toHaveBeenCalled();
   });
 
   it("requires exactly one new file or existing Evidence id", async () => {
