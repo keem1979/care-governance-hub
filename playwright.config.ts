@@ -32,7 +32,10 @@ export default defineConfig({
     // an otherwise completed E2E run hanging during shutdown.
     command: "node scripts/playwright-web-server.mjs",
     url: `${baseURL}/login`,
-    reuseExistingServer: !process.env.CI,
+    // The setup route accepts a token only from the server environment below.
+    // Reusing an unrelated local server can pass the /login readiness check
+    // while the authenticated fixture setup returns 404.
+    reuseExistingServer: false,
     gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
     env: {
       ...process.env,
