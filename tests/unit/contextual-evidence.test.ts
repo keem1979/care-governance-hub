@@ -107,6 +107,16 @@ describe("contextual Evidence boundary", () => {
     expect(mocks.putPrivateFile).not.toHaveBeenCalled();
   });
 
+  it("uploads into an Action using its canonical Evidence role without making an assurance decision", async () => {
+    const response = await POST(request({ sourceType: "ACTION", sourceId: action.id, role: "COMPLETION" }, document("completion.pdf")));
+    expect(response.status).toBe(201);
+    expect(db.tx.evidence.create).toHaveBeenCalledWith({ data: expect.objectContaining({ relatedModule: "Action", relatedRecordId: action.id, locationId: action.locationId }) });
+    expect(mocks.linkActionEvidence).toHaveBeenCalledWith(db.tx, expect.objectContaining({ role: "COMPLETION", evidenceIds: ["evidence-new"] }));
+    expect(db.tx.activityLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ afterValue: expect.objectContaining({ role: "COMPLETION", staffMemberId: "staff-a" }) }) });
+    expect(db.tx.evidence.create.mock.calls[0][0].data).not.toHaveProperty("verification");
+    expect(db.tx.evidence.create.mock.calls[0][0].data).not.toHaveProperty("effectiveness");
+  });
+
   it.each([
     ["foreign tenant or unscoped source", null, 404],
     ["closed source", { ...register, status: "CLOSED" }, 400],
@@ -124,6 +134,28 @@ describe("contextual Evidence boundary", () => {
     const response = await POST(request({ sourceType: "INCIDENT", sourceId: register.id, evidenceId: "evidence-existing" }));
     expect(response.status).toBe(404);
     expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a closed Action before upload", async () => {
+    db.action.findFirst.mockResolvedValueOnce({ ...action, closedAt: new Date("2026-01-01") });
+    const response = await POST(request({ sourceType: "ACTION", sourceId: action.id, role: "SOURCE" }, document()));
+    expect(response.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(mocks.putPrivateFile).not.toHaveBeenCalled();
+  });
+
+  it("requires exactly one new file or existing Evidence id", async () => {
+    const both = await POST(request({ sourceType: "INCIDENT", sourceId: register.id, evidenceId: "evidence-existing" }, document()));
+    const neither = await POST(request({ sourceType: "INCIDENT", sourceId: register.id }));
+    expect(both.status).toBe(400);
+    expect(neither.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("does not accept Action role escalation on a Register attachment", async () => {
+    const response = await POST(request({ sourceType: "INCIDENT", sourceId: register.id, role: "VERIFICATION" }, document()));
+    expect(response.status).toBe(400);
+    expect(mocks.putPrivateFile).not.toHaveBeenCalled();
   });
 
   it.each([
