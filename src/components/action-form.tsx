@@ -47,7 +47,7 @@ export function ActionForm({ locations, owners, oversightOwners, clients, eviden
         <AuthorisedAsyncCombobox name="ownerId" label="Who owns this Action?" kind="OWNER" initialOptions={owners} defaultValue={value("ownerId") ?? ""} locationId={locationId} placeholder="Search authorised users" required />
         <Field label="When is it due?"><input className={cls} type="date" name="dueDate" required defaultValue={value("dueDate") ?? ""} /></Field>
         <AuthorisedAsyncCombobox name="oversightOwnerId" label="RM / senior oversight" kind="OVERSIGHT" initialOptions={oversightOwners} defaultValue={value("oversightOwnerId") ?? ""} locationId={locationId} placeholder="Search authorised oversight leads" required />
-        <Field label="Priority"><select className={cls} name="priority" defaultValue={value("priority") ?? "MEDIUM"}>{ACTION_PRIORITIES.map((item) => <option key={item} value={item}>{actionLabel(item)}</option>)}</select></Field>
+          <Field label="Priority"><select className={cls} name="priority" required defaultValue={value("priority") === "UNASSESSED" ? "" : value("priority") ?? "MEDIUM"}>{value("priority") === "UNASSESSED" ? <option value="" disabled>Choose an assessed Action priority</option> : null}{ACTION_PRIORITIES.map((item) => <option key={item} value={item}>{actionLabel(item)}</option>)}</select></Field>
       </div>
     </Section>
 

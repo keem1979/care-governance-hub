@@ -21,6 +21,7 @@ export function safeguardingAssuranceReadiness(input:{riskLevel:string;caseRecor
   const unresolvedSafety=input.caseRecord?.safetyPosition==="UNRESOLVED_IMMEDIATE_RISK"||input.caseRecord?.safetyPosition==="UNKNOWN_EVIDENCE_REQUIRED";
   const referralAddressed=input.caseRecord?.referralDecision==="NOT_REQUIRED"||(input.caseRecord?.referralDecision==="MADE"&&Boolean(input.caseRecord.referralDate)&&input.caseRecord.referredTo.length>0);
   const checks=[
+    {key:"risk-assessed",label:"Professional risk level assessed",met:input.riskLevel!=="UNASSESSED",reason:"Record an accountable risk judgement before management assurance or closure. Unassessed does not mean Low."},
     {key:"current-safety",label:"Person's current safety is established",met:Boolean(input.caseRecord)&&!unresolvedSafety,reason:"Confirm the current safety position. An unresolved or unknown immediate risk prevents assurance."},
     {key:"immediate-control",label:"Immediate protection is recorded where required",met:input.caseRecord?.safetyPosition==="SAFE_NOW"||has(input.caseRecord?.immediateControl),reason:"Record the immediate protection or control when a risk required intervention."},
     {key:"triage",label:"Concern is proportionately triaged",met:Boolean(input.caseRecord?.concernCategories.length)&&has(input.caseRecord?.triageRationale),reason:"An authorised professional must classify the concern and record the triage rationale."},

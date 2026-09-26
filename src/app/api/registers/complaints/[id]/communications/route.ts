@@ -6,7 +6,7 @@ import { COMPLAINT_COMMUNICATION_DIRECTIONS, COMPLAINT_COMMUNICATION_TYPES } fro
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
-import { registerScopeWhere } from "@/lib/registers";
+import { assertRegisterWriteScope, registerScopeWhere } from "@/lib/registers";
 
 const schema = z.object({
   type: z.enum(COMPLAINT_COMMUNICATION_TYPES),
@@ -24,11 +24,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const input = schema.parse({ type: String(form.get("type") ?? ""), direction: String(form.get("direction") ?? ""), participants: String(form.get("participants") ?? ""), summary: String(form.get("summary") ?? "") });
     const complaint = await db.registerEntry.findFirst({ where: { id, ...registerScopeWhere(context), definition: { key: "complaints" }, archivedAt: null }, include: { complaintInvestigation: true, complaintIssues: true } });
     if (!complaint) return NextResponse.json({ error: "Complaint not found." }, { status: 404 });
+    assertRegisterWriteScope(context, complaint.locationId);
     if (complaint.status === "CLOSED") throw new Error("Reopen the Complaint before adding material new communication.");
     const evidenceId = String(form.get("evidenceId") ?? "") || null;
     if (evidenceId && !(await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context), status: "ACTIVE" } }))) throw new Error("The selected Evidence is unavailable or outside your authorised scope.");
     const occurredAt = timestamp(form.get("occurredAt"));
     if (input.type === "FINAL_RESPONSE") {
+      if (complaint.riskLevel === "UNASSESSED") throw new Error("Assess the Complaint risk before issuing a final response.");
       if (!complaint.complaintInvestigation?.responsePreparedAt || !complaint.complaintInvestigation.responseSummary) throw new Error("Prepare and record the final response before issuing it.");
       if (complaint.complaintIssues.some((issue) => !issue.finding || !issue.reasoning)) throw new Error("Complete every issue finding before issuing the final response.");
       if (["HIGH", "CRITICAL"].includes(complaint.riskLevel) && !complaint.complaintInvestigation.responseApprovedAt) throw new Error("This serious Complaint response requires accountable approval before issue.");

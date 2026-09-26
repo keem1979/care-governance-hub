@@ -22,12 +22,12 @@ test("RM safeguarding experience is exception-led and progressively disclosed", 
   await capture(page, "desktop-safeguarding-worklist.png");
 
   await e2eGoto(page, "/registers/safeguarding/new");
-  await expect(page.getByText("Required now", { exact: true })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Known record context" })).toBeVisible();
+  await expect(page.getByText("Initial capture", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Recorded by .*Risk unassessed until reviewed/)).toBeVisible();
   await expect(page.getByLabel("Reference", { exact: true })).toHaveCount(0);
   const required = await page.locator("input[required], textarea[required], select[required]").count();
   expect(required).toBeLessThanOrEqual(5);
-  expect(await page.getByLabel("Person/client this record relates to *").count()).toBe(1);
+  expect(await page.getByRole("combobox", { name: "Person/client this concerns *" }).count()).toBe(1);
   await capture(page, "desktop-safeguarding-capture.png");
 
   await e2eGoto(page, `/registers/safeguarding/${setup.safeguarding["E2E-SG-READY"].id}`);

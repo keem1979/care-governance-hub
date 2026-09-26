@@ -189,3 +189,6 @@ function riskScore(value: unknown) {
   const items = Array.isArray(value) ? value : [];
   return Math.max(0, ...items.map((item) => item && typeof item === "object" ? ({ LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 }[String((item as Record<string, unknown>).riskLevel)] ?? 0) : 0));
 }
+export function assertAssessedCarePlanRisk(value: string) {
+  if (!["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(value)) throw new Error("Choose an assessed care-plan risk level.");
+}

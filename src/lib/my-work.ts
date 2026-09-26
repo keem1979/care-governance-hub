@@ -2,7 +2,7 @@ export const MY_WORK_VIEWS = ["ALL", "OVERDUE", "DUE_SOON", "UPCOMING", "NEEDS_T
 
 export type MyWorkView = (typeof MY_WORK_VIEWS)[number];
 export type MyWorkUrgency = Exclude<MyWorkView, "ALL">;
-export type MyWorkPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+export type MyWorkPriority = "CRITICAL" | "HIGH" | "UNASSESSED" | "MEDIUM" | "LOW";
 
 export type MyWorkItem = {
   key: string;
@@ -57,7 +57,7 @@ export function extractWorkTarget(data: unknown): Date | null {
 
 function compareMyWork(a: MyWorkItem, b: MyWorkItem, now: Date): number {
   const urgency = { OVERDUE: 0, DUE_SOON: 1, NEEDS_TARGET: 2, UPCOMING: 3 } as const;
-  const priority = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 } as const;
+  const priority = { CRITICAL: 0, HIGH: 1, UNASSESSED: 2, MEDIUM: 3, LOW: 4 } as const;
   return urgency[myWorkUrgency(a.targetAt, now)] - urgency[myWorkUrgency(b.targetAt, now)]
     || priority[a.priority] - priority[b.priority]
     || (a.targetAt?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.targetAt?.getTime() ?? Number.MAX_SAFE_INTEGER)

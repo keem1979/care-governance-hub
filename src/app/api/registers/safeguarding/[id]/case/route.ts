@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
-import { registerScopeWhere } from "@/lib/registers";
+import { assertRegisterWriteScope, registerScopeWhere } from "@/lib/registers";
 
 const text = z.string().max(10_000).default("");
 const sourceId = z.string().uuid().or(z.literal("")).default("");
@@ -45,9 +45,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       include: { safeguardingCase: true },
     });
     if (!record) return NextResponse.json({ error: "Safeguarding record not found." }, { status: 404 });
+    assertRegisterWriteScope(context, record.locationId);
     if (record.status === "CLOSED") throw new Error("Reopen the safeguarding record before adding material changes.");
 
     const input = schema.parse(Object.fromEntries([...form.entries()].filter(([key]) => !["concernCategories", "referredTo", "referralDate", "externalResponseDueAt"].includes(key))));
+    if (input.status === "READY_FOR_ASSURANCE" && record.riskLevel === "UNASSESSED") throw new Error("Assess the safeguarding risk before marking the enquiry ready for assurance.");
     const concernCategories = form.getAll("concernCategories").map(String).filter(Boolean);
     const referredTo = form.getAll("referredTo").map(String).filter(Boolean);
     const referralDate = parseDate(form.get("referralDate"));

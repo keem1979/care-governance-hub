@@ -30,10 +30,10 @@ function useAuthorisedOptions(kind: Kind, query: string, locationId: string, ope
   return { items, loading, error };
 }
 
-export function AuthorisedAsyncCombobox({ name, label, kind, initialOptions, defaultValue = "", locationId = "", placeholder, required = false, emptyLabel = "No authorised match" }: { name: string; label: string; kind: Exclude<Kind, "EVIDENCE">; initialOptions: AsyncAuthorisedOption[]; defaultValue?: string; locationId?: string; placeholder: string; required?: boolean; emptyLabel?: string }) {
+export function AuthorisedAsyncCombobox({ name, label, kind, initialOptions, defaultValue = "", locationId = "", placeholder, required = false, emptyLabel = "No authorised match", endpoint = "/api/actions/authorised-options" }: { name: string; label: string; kind: Exclude<Kind, "EVIDENCE">; initialOptions: AsyncAuthorisedOption[]; defaultValue?: string; locationId?: string; placeholder: string; required?: boolean; emptyLabel?: string; endpoint?: string }) {
   const id = useId(), initial = initialOptions.find((option) => option.id === defaultValue);
   const [selected, setSelected] = useState(initial?.id ?? ""), [selectedOption, setSelectedOption] = useState<AsyncAuthorisedOption | null>(initial ?? null), [query, setQuery] = useState(initial?.name ?? ""), [open, setOpen] = useState(false), [active, setActive] = useState(0);
-  const { items, loading, error } = useAuthorisedOptions(kind, selectedOption && query === selectedOption.name ? "" : query, locationId, open, initialOptions, "/api/actions/authorised-options");
+  const { items, loading, error } = useAuthorisedOptions(kind, selectedOption && query === selectedOption.name ? "" : query, locationId, open, initialOptions, endpoint);
   function choose(option: AsyncAuthorisedOption) { setSelected(option.id); setSelectedOption(option); setQuery(option.name); setOpen(false); setActive(0); }
   function change(value: string) { setQuery(value); setOpen(true); setActive(0); if (selectedOption?.name !== value) { setSelected(""); setSelectedOption(null); } }
   function clear() { setSelected(""); setSelectedOption(null); setQuery(""); setOpen(true); }

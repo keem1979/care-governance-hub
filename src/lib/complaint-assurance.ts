@@ -56,6 +56,7 @@ export function complaintAssuranceReadiness(input: {
   const ineffective = input.actions.filter((action) => action.closedAt && action.effectivenessOutcome !== "EFFECTIVE");
   const actionIssues = input.issues.filter((issue) => issue.actionRequired === true);
   const checks = [
+    { key: "risk-assessed", label: "Professional risk level assessed", met: input.riskLevel !== "UNASSESSED", reason: "Record an accountable risk judgement before management assurance or closure. Unassessed does not mean Low." },
     { key: "safety", label: "Immediate safety position addressed", met: has(input.investigation?.immediateSafetyConcern) && (!String(input.investigation?.immediateSafetyConcern).includes("requiring action") || has(input.investigation?.immediateSafetyResponse)), reason: "Record the immediate safety position and any interim control without inventing an outcome." },
     { key: "triage", label: "Complaint understood and triaged", met: has(input.investigation?.triageSummary), reason: "Summarise the complaint scope, seriousness and proportionate investigation approach." },
     { key: "acknowledgement", label: "Acknowledgement recorded", met: input.acknowledged, reason: "Add the acknowledgement as a governed communication event." },

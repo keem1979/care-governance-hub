@@ -148,7 +148,7 @@ function work(input: Omit<MyWorkItem, "locationName" | "priority"> & { locationN
 }
 
 function priority(value: string | null | undefined): MyWorkPriority {
-  if (value === "CRITICAL" || value === "HIGH" || value === "LOW") return value;
+  if (value === "CRITICAL" || value === "HIGH" || value === "LOW" || value === "UNASSESSED") return value;
   return "MEDIUM";
 }
 

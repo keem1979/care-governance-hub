@@ -119,7 +119,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
             <summary className="cursor-pointer text-sm font-bold text-emerald-800">More filters and exports</summary>
             <div className="mt-3 grid gap-3 border-t border-slate-200 pt-4 md:grid-cols-3 xl:grid-cols-5">
               <select name="status" defaultValue={status} className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">All statuses</option>{["OPEN", "IN_REVIEW", "AWAITING_ACTION", "CLOSED", "ARCHIVED"].map((value) => <option key={value} value={value}>{registerStatusLabel(value)}</option>)}</select>
-              <select name="risk" defaultValue={risk} className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">All risk levels</option>{["LOW", "MEDIUM", "HIGH", "CRITICAL"].map((value) => <option key={value}>{registerStatusLabel(value)}</option>)}</select>
+              <select name="risk" defaultValue={risk} className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">All risk levels</option>{["UNASSESSED", "LOW", "MEDIUM", "HIGH", "CRITICAL"].map((value) => <option key={value} value={value}>{registerStatusLabel(value)}</option>)}</select>
               <select name="sort" defaultValue={sort} className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="reference">Reference</option></select>
               <div className="flex flex-wrap gap-2 md:col-span-3 xl:col-span-2"><Link href={`/api/registers/${key}/export`} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-bold">CSV</Link><Link href={`/api/registers/${key}/export?format=xls`} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-bold">Excel</Link><Link href={`/registers/${key}/report`} target="_blank" className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-bold">Print / PDF</Link></div>
               {!mature ? <fieldset className="flex flex-wrap gap-4 text-xs md:col-span-3 xl:col-span-5"><legend className="mr-2 font-semibold">Visible columns</legend>{allowedColumns.map((column) => <label key={column} className="capitalize"><input type="checkbox" name="columns" value={column} defaultChecked={columns.includes(column)} /> {column}</label>)}</fieldset> : null}
@@ -144,9 +144,9 @@ function registerViewWhere(view: View, key: string, userId: string): Prisma.Regi
   if (view === "CRITICAL") return { riskLevel: "CRITICAL", status: { notIn: ["CLOSED", "ARCHIVED"] } };
   if (view === "CLOSED") return { status: "CLOSED" };
   if (view !== "NEEDS_ATTENTION") return {};
-  if (key === "complaints") return { status: { notIn: ["CLOSED", "ARCHIVED"] }, OR: [{ riskLevel: { in: ["HIGH", "CRITICAL"] } }, { complaintInvestigation: { status: "COMPLETED" } }, { status: "AWAITING_ACTION" }] };
-  if (key === "safeguarding") return { status: { notIn: ["CLOSED", "ARCHIVED"] }, OR: [{ riskLevel: { in: ["HIGH", "CRITICAL"] } }, { safeguardingCase: { OR: [{ safetyPosition: { in: ["UNRESOLVED_IMMEDIATE_RISK", "UNKNOWN_EVIDENCE_REQUIRED"] } }, { referralDecision: { in: ["AWAITING_DECISION", "REQUIRED"] } }, { status: "READY_FOR_ASSURANCE" }] } }] };
-  if (key === "incidents") return { status: { notIn: ["CLOSED", "ARCHIVED"] }, OR: [{ riskLevel: { in: ["HIGH", "CRITICAL"] } }, { incidentInvestigation: { is: null } }, { incidentInvestigation: { status: { not: "COMPLETED" } } }, { status: "AWAITING_ACTION" }] };
+  if (key === "complaints") return { status: { notIn: ["CLOSED", "ARCHIVED"] }, OR: [{ riskLevel: { in: ["UNASSESSED", "HIGH", "CRITICAL"] } }, { complaintInvestigation: { status: "COMPLETED" } }, { status: "AWAITING_ACTION" }] };
+  if (key === "safeguarding") return { status: { notIn: ["CLOSED", "ARCHIVED"] }, OR: [{ riskLevel: { in: ["UNASSESSED", "HIGH", "CRITICAL"] } }, { safeguardingCase: { OR: [{ safetyPosition: { in: ["UNRESOLVED_IMMEDIATE_RISK", "UNKNOWN_EVIDENCE_REQUIRED"] } }, { referralDecision: { in: ["AWAITING_DECISION", "REQUIRED"] } }, { status: "READY_FOR_ASSURANCE" }] } }] };
+  if (key === "incidents") return { status: { notIn: ["CLOSED", "ARCHIVED"] }, OR: [{ riskLevel: { in: ["UNASSESSED", "HIGH", "CRITICAL"] } }, { incidentInvestigation: { is: null } }, { incidentInvestigation: { status: { not: "COMPLETED" } } }, { status: "AWAITING_ACTION" }] };
   return { status: { notIn: ["CLOSED", "ARCHIVED"] } };
 }
 
@@ -184,6 +184,7 @@ function toWorklistItem(key: string, entry: Entry, actionCount: { total: number;
 function attentionFor(key: string, entry: Entry, now: Date): { message: string; tone: WorklistTone } {
   if (entry.status === "CLOSED" || entry.status === "ARCHIVED") return { message: entry.status === "CLOSED" ? "Closed by a governed decision" : "Archived record", tone: "closed" };
   if (entry.riskLevel === "CRITICAL") return { message: "Critical — senior governance oversight required", tone: "critical" };
+  if (entry.riskLevel === "UNASSESSED") return { message: "Professional risk assessment required", tone: "attention" };
   if (key === "safeguarding") {
     const record = entry.safeguardingCase;
     if (!record || ["UNRESOLVED_IMMEDIATE_RISK", "UNKNOWN_EVIDENCE_REQUIRED"].includes(record.safetyPosition)) return { message: "Immediate safety confirmation required", tone: "critical" };
@@ -219,5 +220,5 @@ function formatDate(value: Date) {
 }
 
 function Risk({ value }: { value: string }) {
-  return <span className={`rounded-full px-2 py-1 text-xs font-bold ${["HIGH", "CRITICAL"].includes(value) ? "bg-red-100 text-red-800" : "bg-slate-100"}`}>{registerStatusLabel(value)}</span>;
+  return <span className={`rounded-full px-2 py-1 text-xs font-bold ${value === "UNASSESSED" ? "bg-violet-100 text-violet-900" : ["HIGH", "CRITICAL"].includes(value) ? "bg-red-100 text-red-800" : "bg-slate-100"}`}>{registerStatusLabel(value)}</span>;
 }

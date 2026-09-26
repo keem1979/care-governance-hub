@@ -3,7 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
-import { registerScopeWhere } from "@/lib/registers";
+import { assertRegisterWriteScope, registerScopeWhere } from "@/lib/registers";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await requirePermission(PERMISSIONS.GOVERNANCE_EDIT);
@@ -19,10 +19,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
     });
     if (!incident) return NextResponse.json({ error: "Incident not found." }, { status: 404 });
+    assertRegisterWriteScope(context, incident.locationId);
     const intent = String(form.get("intent") ?? "draft");
     if (!["draft", "complete"].includes(intent)) throw new Error("Choose save draft or complete investigation.");
     if (incident.status === "CLOSED") throw new Error("Reopen the Incident through Management Assurance before changing its investigation.");
     const complete = intent === "complete";
+    if (complete && incident.riskLevel === "UNASSESSED") throw new Error("Assess the Incident risk before completing its investigation.");
     const data = {
       factualChronology: optional(form, "factualChronology", 8000),
       informationSources: optional(form, "informationSources", 4000),

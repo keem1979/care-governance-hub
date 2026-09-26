@@ -53,6 +53,7 @@ export const ASSESSMENT_KEYS = ASSESSMENT_TYPES.map(({key})=>key);
 export function assessmentType(key:string){return ASSESSMENT_TYPES.find((item)=>item.key===key)}
 export function isAssessmentKey(key:string){return key.startsWith("assessment-")}
 export function assessmentPrerequisites(key:string){
+  if(!isAssessmentKey(key))return[];
   if(key==="assessment-initial-needs")return[];
   if(assessmentType(key)?.stage==="SERVICE")return[];
   const required=[{key:"assessment-initial-needs",label:"Initial assessment"}];
