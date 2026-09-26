@@ -4,7 +4,9 @@
 
 **Protected WP-003A baseline:** `3d73f44725920725a99a4611df5bdea3d4802a02`
 
-**Release verdict:** **BLOCKED** pending the unrestricted Chromium and mobile Playwright gate. No merge, push, deployment, production database access, or WP-003B schema migration occurred.
+**Release verdict:** **READY FOR PRODUCT OWNER REVIEW**. No merge, push, deployment, production database access, or WP-003B schema migration occurred.
+
+**Final browser-gate update (`510d1bfd30e41162862cf46d0f03094afc9c94e0`):** The only new committed change is a test locator for the Safeguarding Client validation message. No Incident or other product code changed.
 
 ## Delivered flow
 
@@ -38,20 +40,23 @@ The Safeguarding count includes typing a Client query and choosing the authorise
 | WP-003B direct authenticated capture gate | **PASS**, 32/32 including Client/Staff search, restricted location denial, three minimum saves, canonical record/history/ActivityLog/Evidence, required fields and forged closure |
 | Next.js production build | **PASS**, compiled, TypeScript complete, 149 static pages |
 | Sites/Vinext production build | **PASS**, all five build stages complete |
-| Chromium Playwright | **BLOCKED**, 0 passed, 2 launch-blocked before assertions: `browserType.launch: spawn EPERM` in this sandbox |
-| Mobile Playwright and WP-002 browser regression | **NOT RUN** after Chromium launch failure; mandatory before release approval |
+| Isolated Chromium Incident reproduction | **PASS, 1/1**; Incident POST 201, canonical record persisted, and detail-page navigation completed |
+| Final `initial-capture.spec.ts` Chromium | **PASS, 2/2** in the unrestricted local Windows run |
+| Final `initial-capture.spec.ts` mobile | **PASS, 2/2** in the unrestricted local Windows run |
 
-The `.env` destination was checked without printing the connection string or password: only `127.0.0.1:5432/care_governance_hub_test` was used. Browser test setup reached the test stage; the two Chromium cases failed at process launch, not at a product assertion. No Playwright PASS is claimed.
+The `.env` destination was checked without printing the connection string or password: only `127.0.0.1:5432/care_governance_hub_test` was used. The final isolated reproduction, Chromium and mobile output directories each contain `.last-run.json` with `status: passed` and no failed tests. The unrestricted run counts above were confirmed by the executor.
 
-Run the remaining browser gate from an unrestricted local Windows terminal in the repository root. The repository-root `.env` is loaded by Playwright config; confirm its destination privately before running:
+### Targeted browser diagnosis and final gate
 
-```powershell
-$env:PLAYWRIGHT_PORT = '3105'
-$env:NEXT_DIST_DIR = '.next-release-gate-wp003b-e2e'
-npx.cmd playwright test initial-capture.spec.ts safeguarding-rm-burden.spec.ts contextual-evidence.spec.ts evidence-controls-release-gate.spec.ts --project=chromium --project=mobile --reporter=line
-```
+The isolated reproduction trace at `../../outputs/WP-003B_INCIDENT_REPRO_01/initial-capture-minimum-In-f5673-anonical-unassessed-records-chromium/trace.zip` shows the Incident POST with a fictional summary, `2026-09-26` event date, `Care delivery` type, `Unknown / evidence required` harm level, and empty optional Client and location IDs. The response was HTTP 201 with ID `5fed36b0-9f8a-4eb7-9e41-1a026debec3e`. That `OPEN` RegisterEntry was verified in the disposable database. The trace shows navigation to its canonical detail page; no Incident validation or server error appeared. The sign-in HTTP 409 was the expected MFA challenge. The browser reported the previously known wordmark aspect-ratio warning.
 
-Keep the live preview on port 3104 while using the separate E2E build directory. Do not mark Gate B PASS until these tests actually pass.
+**Original Incident failure classification: NON-REPRODUCIBLE — no evidence of product defect; test timing cannot be distinguished conclusively from environment/state because the original trace was overwritten.** No Incident implementation change was made.
+
+Commit `510d1bf` changes only `tests/e2e/initial-capture.spec.ts`: the Safeguarding negative case now asserts the exact “Choose the client this safeguarding concern relates to.” message inside the form's validation alert. This excludes Next.js's separate route-announcer alert. Product markup and server validation are unchanged.
+
+The final passed browser artifacts are preserved in `../../outputs/WP-003B_FINAL_CHROMIUM` and `../../outputs/WP-003B_FINAL_MOBILE`; the isolated reproduction is in `../../outputs/WP-003B_INCIDENT_REPRO_01`. Earlier local setup attempts returned HTML 404 and a duplicate fictional Risk fixture 500 before browser assertions; they were superseded by the passing unrestricted runs and did not involve an Incident product assertion. The 12 previously captured authenticated desktop/mobile screenshots remain in `outputs/WP-003_GATE_C/` as listed below.
+
+The targeted `initial-capture.spec.ts` browser gate is complete on Chromium and mobile.
 
 ## Gate C — rendered experience
 
@@ -77,11 +82,11 @@ All 12 screenshot files are nonzero and are deliberately ignored by Git as local
 | CQC Inspector | PASS | Copy does not imply referral, notification or assurance; urgent known conditions show escalation guidance. |
 | Security/Tenancy Reviewer | PASS for reviewed scope | Server permission/scope controls and 32/32 direct gate; no production access. |
 | Accessibility/Mobile Reviewer | PASS for reviewed scope | Updated unobstructed screenshots and live mobile Client result selection; independent screen-reader session not run. |
-| Test Engineer | CONDITIONAL PASS | 383/383, 32/32 and 27/27 pass; automated browser launch blocked. |
-| Release Manager | HOLD | Chromium/mobile Playwright and WP-002 browser regression remain mandatory. |
+| Test Engineer | PASS | 383/383 automated tests, direct security/capture gates, isolated Incident reproduction 1/1, Chromium 2/2 and mobile 2/2. |
+| Release Manager | PASS | Gate B and Gate C evidence complete for Product Owner review; no merge or deployment. |
 
 ## Known follow-ups and final status
 
 The previously known `atom-wordmark.png` aspect-ratio warning is unrelated to WP-003B. Sites/Vinext reports existing Vite native-config and dynamic-route analysis warnings and a runtime-resolved policy-branding logo asset; the build succeeds. The temporary Next.js dev indicator is disabled for the local preview; this does not affect the production build.
 
-**Final WP-003B status: BLOCKED — not ready for Product Owner review until the unrestricted browser gate passes.**
+**Final WP-003B status: READY FOR PRODUCT OWNER REVIEW.**
