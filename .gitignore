@@ -18,6 +18,7 @@
 # next.js
 /.next/
 /.next-release-gate*/
+/.next-wp002-*/
 /out/
 /src/generated/prisma/
 /src/generated/prisma-node/
