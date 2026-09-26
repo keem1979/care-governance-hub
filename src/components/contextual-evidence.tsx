@@ -118,7 +118,7 @@ export function ContextualEvidence({ sourceType, sourceId, role, linkedIds = [],
         </label> : null}
         {mode === "choose" ? <div className="mt-5 grid gap-3">
           {allowUpload ? <button type="button" onClick={() => setMode("upload")} className="min-h-14 rounded-xl bg-emerald-800 px-4 text-left font-bold text-white">Upload file or photo</button> : null}
-          <button type="button" onClick={() => { setMode("existing"); void search(); }} className="min-h-14 rounded-xl border border-emerald-700 px-4 text-left font-bold text-emerald-800">Use existing Evidence</button>
+          <button type="button" onClick={() => { setMode("existing"); setQuery(""); setResults([]); setPreview(null); setError(""); }} className="min-h-14 rounded-xl border border-emerald-700 px-4 text-left font-bold text-emerald-800">Use existing Evidence</button>
         </div> : null}
         {mode === "upload" ? <div className="mt-5 space-y-3">
           <p className="text-sm text-slate-600">Choose a file or take a photo. Evidence is added to this record automatically.</p>
