@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { AuthorisedAsyncMultiSelect } from "@/components/authorised-async-selector";
+import { useRef, useState } from "react";
+import { AuthorisedAsyncCombobox, AuthorisedAsyncMultiSelect } from "@/components/authorised-async-selector";
+import { isInitialCaptureKey, type InitialCaptureKey } from "@/lib/initial-capture";
 import type { RegisterField } from "@/lib/registers";
 import { REGISTER_RISK_LEVELS, REGISTER_STATUSES, registerFormExperience, registerStatusLabel } from "@/lib/registers";
 
@@ -11,7 +12,7 @@ type Initial = { id: string; reference: string; eventDate: string; title: string
 type KnownContext = { organisationName: string; recordedBy: string; locationName: string };
 type EvidenceOption = { id: string; title: string; category?: string };
 
-export function RegisterEntryForm({ registerKey, registerName, fields, locations, owners, clients, staff, evidence, clientRequired=false, defaultClientId="", defaultLocationId="", defaultOwnerId="", knownContext, initial }: { registerKey: string; registerName: string; fields: RegisterField[]; locations: Option[]; owners: Option[]; clients: Option[]; staff: Option[]; evidence: EvidenceOption[]; clientRequired?: boolean; defaultClientId?: string; defaultLocationId?: string; defaultOwnerId?: string; knownContext?: KnownContext; initial?: Initial }) {
+export function RegisterEntryForm({ registerKey, registerName, fields, locations, owners, clients, staff, evidence, clientRequired=false, defaultClientId="", defaultStaffId="", defaultLocationId="", defaultOwnerId="", allLocations=true, knownContext, initial }: { registerKey: string; registerName: string; fields: RegisterField[]; locations: Option[]; owners: Option[]; clients: Option[]; staff: Option[]; evidence: EvidenceOption[]; clientRequired?: boolean; defaultClientId?: string; defaultStaffId?: string; defaultLocationId?: string; defaultOwnerId?: string; allLocations?: boolean; knownContext?: KnownContext; initial?: Initial }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,6 +23,8 @@ export function RegisterEntryForm({ registerKey, registerName, fields, locations
   const requiredFields = fields.filter((field) => field.required);
   const laterFields = fields.filter((field) => !field.required);
   const cls = "mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm";
+
+  if (!initial && isInitialCaptureKey(registerKey)) return <InitialCaptureForm registerKey={registerKey} registerName={registerName} fields={fields} clients={clients} staff={staff} locations={locations} defaultClientId={defaultClientId} defaultStaffId={defaultStaffId} defaultLocationId={defaultLocationId} allLocations={allLocations} knownContext={knownContext} />;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -82,6 +85,62 @@ export function RegisterEntryForm({ registerKey, registerName, fields, locations
     </FormSection>
 
     <button disabled={busy} className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Saving…" : initial ? `Save changes to ${registerName.toLowerCase()}` : experience.saveLabel}</button>
+  </form>;
+}
+
+function InitialCaptureForm({ registerKey, registerName, fields, clients, staff, locations, defaultClientId, defaultStaffId, defaultLocationId, allLocations, knownContext }: { registerKey: InitialCaptureKey; registerName: string; fields: RegisterField[]; clients: Option[]; staff: Option[]; locations: Option[]; defaultClientId: string; defaultStaffId: string; defaultLocationId: string; allLocations: boolean; knownContext?: KnownContext }) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [locationId, setLocationId] = useState(defaultLocationId);
+  const [safety, setSafety] = useState("Unknown / evidence required");
+  const [actionExpanded, setActionExpanded] = useState(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const incident = registerKey === "incidents", complaint = registerKey === "complaints", safeguarding = registerKey === "safeguarding";
+  const actionNeeded = incident ? ["Moderate harm", "Severe harm", "Death"].includes(safety) : complaint ? ["Immediate safety concern controlled", "Immediate safety concern requiring action"].includes(safety) : ["Immediate risk controlled", "Immediate risk unresolved"].includes(safety);
+  const actionVisible = actionNeeded || actionExpanded;
+  const dateLabel = incident ? "Date incident happened or was identified" : complaint ? "Date complaint received" : "Date concern identified";
+  const dateHint = incident ? "Today is suggested; change it if the incident happened or was identified on another date." : complaint ? "Today is suggested; change it if the complaint was received on another date." : "Today is suggested; change it if the concern was identified on another date.";
+  const accountLabel = incident ? "What happened?" : complaint ? "What was reported?" : "What is the safeguarding concern?";
+  const actionLabel = incident ? "Immediate care or escalation" : complaint ? "Immediate response or interim control" : "Immediate protection or escalation";
+  const inputClass = "mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100";
+  const optionsFor = (key: string) => fields.find((field) => field.key === key)?.options ?? [];
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/registers/${registerKey}`, { method: "POST", body: new FormData(event.currentTarget) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? `Could not save this ${registerName.toLowerCase()} record.`);
+      router.push(`/registers/${registerKey}/${result.id}`);
+      router.refresh();
+    } catch (value) {
+      setError(value instanceof Error ? value.message : "Could not save the record.");
+      setBusy(false);
+      window.requestAnimationFrame(() => errorRef.current?.focus());
+    }
+  }
+
+  return <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <div><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Initial capture</p><h2 className="mt-1 text-xl font-bold text-slate-950">Record what is known now</h2><p className="mt-1 text-sm text-slate-600">Save a factual record first. Risk assessment, investigation, notifications, Evidence and assurance remain follow-up decisions.</p></div>
+    {error ? <div ref={errorRef} tabIndex={-1} role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</div> : null}
+    {knownContext ? <p className="text-xs text-slate-600">{knownContext.organisationName} · Recorded by {knownContext.recordedBy} · Risk unassessed until reviewed</p> : null}
+    <label className="block text-sm font-semibold text-slate-800">{accountLabel} *<textarea name="summary" required minLength={3} rows={4} className={inputClass} placeholder="Write a concise factual account. Avoid conclusions that have not been checked." /></label>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <AuthorisedAsyncCombobox key={`client-${locationId}`} name="clientId" label={`Person/client this concerns${safeguarding ? " *" : " (if known)"}`} kind="CLIENT" initialOptions={clients.map((item) => ({ id: item.id, name: item.name }))} defaultValue={defaultClientId} locationId={locationId} placeholder="Search name or reference" required={safeguarding} endpoint="/api/registers/authorised-options" />
+      <label className="block text-sm font-semibold text-slate-800">{dateLabel} *<input name="eventDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className={inputClass} /><span className="mt-1 block text-xs font-normal text-slate-500">{dateHint}</span></label>
+    </div>
+    {defaultStaffId && staff.some((item) => item.id === defaultStaffId) ? <><input type="hidden" name="staffMemberId" value={defaultStaffId} /><p className="text-xs text-slate-600">Staff context: {staff.find((item) => item.id === defaultStaffId)?.name}. You can review this link after saving.</p></> : null}
+    <div className="grid gap-4 sm:grid-cols-2">
+      {incident ? <label className="block text-sm font-semibold text-slate-800">Incident type *<select name="field_incidentType" required defaultValue="" className={inputClass}><option value="">Choose a type</option>{optionsFor("incidentType").map((item) => <option key={item} value={item}>{item}</option>)}</select></label> : null}
+      {complaint ? <label className="block text-sm font-semibold text-slate-800">Complaint category (if known)<select name="field_category" defaultValue="" className={inputClass}><option value="">Classify after saving</option>{optionsFor("category").map((item) => <option key={item} value={item}>{item}</option>)}</select></label> : null}
+      <label className="block text-sm font-semibold text-slate-800">{incident ? "What harm is known now?" : complaint ? "Is there an immediate safety concern?" : "Is the person safe now?"} *<select name={incident ? "field_harmLevel" : complaint ? "field_immediateSafetyConcern" : "field_safetyPosition"} required value={safety} onChange={(event) => setSafety(event.target.value)} className={inputClass}>{["Unknown / evidence required", ...optionsFor(incident ? "harmLevel" : complaint ? "immediateSafetyConcern" : "safetyPosition").filter((item) => item !== "Unknown / evidence required")].map((item) => <option key={item} value={item}>{item}</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-500">Starts as “Unknown / evidence required”. Change it when you know more; Unknown does not mean people are safe.</span></label>
+    </div>
+    {actionVisible ? <label className="block text-sm font-semibold text-slate-800">{actionLabel}{actionNeeded ? " *" : " (if any)"}<textarea name={complaint ? "field_immediateSafetyResponse" : "field_immediateResponse"} required={actionNeeded} rows={3} className={inputClass} placeholder="Record what was done, who was contacted, or what still needs urgent action." /></label> : <button type="button" onClick={() => setActionExpanded(true)} className="min-h-11 text-sm font-semibold text-emerald-700 underline underline-offset-4">Add immediate action taken (if any)</button>}
+    {safety && (safety.includes("requiring action") || safety.includes("unresolved") || ["Severe harm", "Death"].includes(safety)) ? <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">If someone is in immediate danger, follow your urgent response process now. Saving this record does not make a referral or notification.</p> : null}
+    {locations.length > 1 ? <label className="block text-sm font-semibold text-slate-800">Service location{allLocations ? "" : " *"}<select name="locationId" value={locationId} required={!allLocations} onChange={(event) => setLocationId(event.target.value)} className={inputClass}>{allLocations ? <option value="">Organisation-wide</option> : <option value="">Choose an authorised location</option>}{locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : defaultLocationId ? <input type="hidden" name="locationId" value={defaultLocationId} /> : null}
+    <div className="border-t border-slate-200 pt-4"><button disabled={busy} className="min-h-12 w-full rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white disabled:opacity-60 sm:w-auto">{busy ? "Saving…" : `Save ${incident ? "incident" : complaint ? "complaint" : "safeguarding concern"}`}</button><p className="mt-2 text-xs text-slate-600">After saving, add Evidence and complete professional decisions on the record.</p></div>
   </form>;
 }
 

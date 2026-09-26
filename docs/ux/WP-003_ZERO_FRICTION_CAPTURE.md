@@ -152,3 +152,43 @@ These are the measured **before** values for WP-003B, not a claim of burden redu
 - Solution Architect: **PASS** after downstream `UNASSESSED` review and migration review.
 
 WP-003B may begin only after the Product Owner/ChatGPT review of this WP-003A report. No merge, push or deployment was performed.
+
+## WP-003B — Zero-friction initial capture
+
+The accepted WP-003A integrity layer remains in place. Incident, Complaint and Safeguarding now use a short first-save presentation of the same canonical `RegisterEntry` route. The server derives a neutral title from the factual account, sets an accountable owner, and preserves the existing transaction for history, ActivityLog, module follow-up and one system-generated canonical Evidence record. The full detail editor and governed workflows remain on the saved record. No further schema migration was introduced.
+
+### Field disposition and rationale
+
+| Current control | Disposition at first save | Reason |
+| --- | --- | --- |
+| Title | DERIVE | The factual account supplies a neutral short title; the person can edit it later. |
+| Factual account / summary | TYPE | The event or concern cannot safely be inferred. This is the one routine narrative field. |
+| Event, received or identified date | DERIVE suggestion, SELECT to correct | Today is suggested and explicitly changeable; date-only wording does not claim a verified time. |
+| Client/person | LINK | ID-backed authorised search; required for Safeguarding, optional for Incident and Complaint, profile context carried when authorised. |
+| Staff | MOVE LATER or LINK from authorised profile context | Staff selection is not routine first-save work; known authorised context is retained. |
+| Incident type | SELECT | The short classification supports triage without claiming a finding. |
+| Incident verified harm position | SELECT with explicit Unknown default | Unknown is visible and blocks later assurance; a positive harm judgement is not invented. |
+| Incident immediate response | TYPE conditionally | Required for known moderate or greater harm; otherwise added only when an immediate action has occurred. |
+| Emergency services, safeguarding referral, CQC notification, Duty of Candour | MOVE LATER | These are accountable human decisions in Incident follow-up. They remain blank at first save. |
+| Complaint category | SELECT optionally | Classification can follow the factual report without blocking capture. |
+| Complaint immediate safety | SELECT with explicit Unknown default | Unknown is not a statement of safety; controlled or action-required choices require an immediate response note. |
+| Complaint interim response | TYPE conditionally | Records actual control or action needed without forcing a second narrative routinely. |
+| Complainant name, relationship, contact preference and accessibility details | MOVE LATER | Retained in the saved Complaint investigation rather than guessed on first save. |
+| Safeguarding safety position | SELECT with explicit Unknown default | The Client link and visible safety position remain; unknown/unresolved positions stay open for follow-up. |
+| Safeguarding immediate protection | TYPE conditionally | Controlled or unresolved risk requires a factual protection or escalation note. |
+| Safeguarding reporter | MOVE LATER | The recorder is attributed automatically, but is not assumed to be the person who raised the concern. |
+| Risk, status, organisation, recorder, timestamp, reference and owner | AUTO | Server-authorised `UNASSESSED`, `OPEN`, tenancy, identity, history and accountable owner are not browser judgements. |
+| Location | DERIVE or SELECT | Sole authorised location is applied automatically; multiple authorised locations remain a scoped choice. Organisation-wide is offered only to authorised users. |
+| Evidence search and metadata | MOVE LATER | The saved record retains the WP-002 Add Evidence upload/reuse action. |
+
+### Measured successful first-save burden
+
+The measurements below are from rendered authenticated browser forms with fictional data in the named disposable local database. A step is a fill, selector choice, result choice or Save press after opening the form. The safety control visibly starts at `Unknown / evidence required`, which means follow-up is needed; no safety or risk judgement is inferred. The Safeguarding Client search requires a search fill and one ID-backed result choice. Optional action fields are collapsed unless the selected safety position requires them.
+
+| Module | Before visible / required / free-text / steps | After visible / required / free-text / steps | Successful saved-record evidence |
+| --- | --- | --- | --- |
+| Incident | 16 / 10 / 3 / 10 | 6 / 4 / 1 / 3 | `/registers/incidents/d134cb3e-61cb-4633-a2c8-99e192c1ea15` |
+| Complaint | 11 / 5 / 2 / 5 | 6 / 3 / 1 / 2 | `/registers/complaints/43ac4a26-d602-4216-8251-1d56e4c9ea3e` |
+| Safeguarding | 10 / 5 / 2 / 5 | 5 / 4 / 1 / 4 | `/registers/safeguarding/8d076b6f-aab5-4ca3-addb-9d42bda1868a` |
+
+The form remains one page on mobile, with Save directly after the essential fields. The authorised person search uses IDs and distinguishing references, rather than exact display-name matching. Full-name search, keyboard interaction and mobile rendering require the final browser gate below.

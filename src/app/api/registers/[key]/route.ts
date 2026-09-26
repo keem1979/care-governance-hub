@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { clientScopeWhere } from "@/lib/clients";
 import { evidenceScopeWhere } from "@/lib/evidence";
+import { collectInitialCaptureData, deriveInitialCaptureTitle, isInitialCaptureKey } from "@/lib/initial-capture";
 import { PERMISSIONS } from "@/lib/permissions";
 import { parseOptionalDate } from "@/lib/policies";
 import { syncRegisterEvidence } from "@/lib/register-evidence";
@@ -17,7 +18,7 @@ export async function POST(request:Request,{params}:{params:Promise<{key:string}
     const definition=await db.registerDefinition.findFirst({where:{key,isPublished:true,OR:[{organisationId:null},{organisationId:context.organisation.id}]}});
     if(!definition)return NextResponse.json({error:"Register not found."},{status:404});
     const assured=["incidents","complaints","safeguarding"].includes(key);
-    const title=String(form.get("title")??"").trim(),summary=String(form.get("summary")??"").trim(),submittedLocationId=String(form.get("locationId")??"")||null,ownerId=String(form.get("ownerId")??"")||null,clientId=String(form.get("clientId")??"")||null,staffMemberId=String(form.get("staffMemberId")??"")||null,riskLevel=String(form.get("riskLevel")??"UNASSESSED"),status=String(form.get("status")??"OPEN");
+    const summary=String(form.get("summary")??"").trim(),submittedTitle=String(form.get("title")??"").trim(),title=submittedTitle||(isInitialCaptureKey(key)?deriveInitialCaptureTitle(key,summary):""),submittedLocationId=String(form.get("locationId")??"")||null,ownerId=String(form.get("ownerId")??"")||(assured?context.user.id:null),clientId=String(form.get("clientId")??"")||null,staffMemberId=String(form.get("staffMemberId")??"")||null,riskLevel=String(form.get("riskLevel")??"UNASSESSED"),status=String(form.get("status")??"OPEN");
     const locationId=!context.allLocations&&context.locations.length===1&&!submittedLocationId?context.locations[0].id:submittedLocationId;
     if(title.length<3||summary.length<3)throw new Error("Enter a title and summary.");
     if(form.has("organisationId")&&String(form.get("organisationId"))!==context.organisation.id)throw new Error("Organisation scope is not authorised.");
@@ -35,7 +36,8 @@ export async function POST(request:Request,{params}:{params:Promise<{key:string}
     const evidenceIds=form.getAll("evidenceIds").map(String).filter(Boolean);
     for(const evidenceId of evidenceIds)if(!(await db.evidence.findFirst({where:{id:evidenceId,...evidenceScopeWhere(context)}})))throw new Error("Linked evidence could not be found.");
     const reference=String(form.get("reference")??"").trim()||makeRegisterReference(key);
-    const data:Record<string,unknown>=collectRegisterData(form,parseRegisterFields(definition.fieldSchema));
+    const fields=parseRegisterFields(definition.fieldSchema);
+    const data:Record<string,unknown>=isInitialCaptureKey(key)?collectInitialCaptureData(key,form,fields):collectRegisterData(form,fields);
     const prerequisiteReferences:Record<string,string>={};
     for(const prerequisite of assessmentPrerequisites(key)){
       const exists=clientId&&await db.registerEntry.findFirst({where:{organisationId:context.organisation.id,clientId,status:{not:"ARCHIVED"},definition:{key:prerequisite.key}},select:{reference:true},orderBy:{eventDate:"desc"}});
