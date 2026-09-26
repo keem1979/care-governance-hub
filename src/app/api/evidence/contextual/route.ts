@@ -42,10 +42,12 @@ export async function POST(request: Request) {
     const role = roleValue as ActionEvidenceRole;
 
     const source = isAction
-      ? await db.action.findFirst({ where: { id: sourceId, ...actionScopeWhere(context) }, select: { id: true, locationId: true, reference: true, closedAt: true, clientId: true, staffMemberId: true } })
+      ? await db.action.findFirst({ where: { id: sourceId, ...actionScopeWhere(context) }, select: { id: true, locationId: true, reference: true, status: true, closedAt: true, archivedAt: true, clientId: true, staffMemberId: true } })
       : await db.registerEntry.findFirst({ where: { id: sourceId, ...registerScopeWhere(context), definition: { key: REGISTER_KEYS[sourceType as RegisterSource] } }, select: { id: true, locationId: true, reference: true, status: true, clientId: true, staffMemberId: true } });
     if (!source) return NextResponse.json({ error: "Source record not found." }, { status: 404 });
-    if (isAction ? "closedAt" in source && source.closedAt : "status" in source && ["CLOSED", "ARCHIVED"].includes(source.status)) {
+    if (isAction
+      ? "closedAt" in source && (source.closedAt || source.archivedAt || ["COMPLETED", "CANCELLED", "ARCHIVED"].includes(source.status))
+      : "status" in source && ["CLOSED", "ARCHIVED"].includes(source.status)) {
       throw new Error("Closed records are read-only. Reopen the record before adding Evidence.");
     }
 
