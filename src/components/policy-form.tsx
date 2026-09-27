@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { POLICY_CATEGORIES, POLICY_STATUSES } from "@/lib/policies";
+import { POLICY_CATEGORIES } from "@/lib/policies";
 import { FormPurpose } from "@/components/form-purpose";
 
 type Owner = { id: string; name: string };
@@ -47,9 +47,9 @@ export function PolicyForm({ owners, initial }: { owners: Owner[]; initial?: Ini
           </select>
         </label>
         {initial ? (
-          <label className="text-sm font-medium">Workflow status
+          <label className="text-sm font-medium">Review stage
             <select className={`${inputClass} mt-1`} name="status" defaultValue={initial.status}>
-              {POLICY_STATUSES.map((status) => <option key={status} value={status}>{status.replace("_", " ").toLowerCase()}</option>)}
+              <option value="DRAFT">Draft</option><option value="UNDER_REVIEW">Under review</option>
             </select>
           </label>
         ) : (

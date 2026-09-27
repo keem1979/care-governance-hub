@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { evidenceAssuranceState } from "@/lib/evidence-assurance";
+import { evidenceScopeWhere } from "@/lib/evidence";
 import { decisionImplementationGate, independentDecisionReview } from "@/lib/governance-control";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -15,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (!["RECORDED", "ACTION_REQUIRED"].includes(decision.status)) throw new Error("Only an open decision can be implemented.");
       if (note.length < 12) throw new Error("Record what changed and how the decision was put into practice.");
       const evidenceId = text(form, "evidenceId") || null;
-      const evidence = evidenceId ? await db.evidence.findFirst({ where: { id: evidenceId, organisationId: context.organisation.id, status: "ACTIVE" }, include: { verifications: { orderBy: { verifiedAt: "desc" }, take: 1 } } }) : null;
+      const evidence = evidenceId ? await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context), status: "ACTIVE", ...(decision.locationId ? { OR: [{ locationId: null }, { locationId: decision.locationId }] } : {}) }, include: { verifications: { orderBy: { verifiedAt: "desc" }, take: 1 } } }) : null;
       if (evidenceId && !evidence) throw new Error("Choose an active evidence record in your organisation.");
       const state = evidence ? evidenceAssuranceState({ status: evidence.status, reviewExpiryDate: evidence.reviewExpiryDate, updatedAt: evidence.updatedAt, currentVersionId: evidence.currentVersionId, verification: evidence.verifications[0] }) : null;
       const gate = decisionImplementationGate({ impact: decision.impact, evidenceId, evidenceState: state });

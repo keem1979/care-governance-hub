@@ -27,6 +27,12 @@ export default async function PoliciesPage({ searchParams }: { searchParams: Pro
   const canEdit = hasPermission(context.permissions, PERMISSIONS.GOVERNANCE_EDIT);
   const overdue = policies.filter((p) => policyDisplayStatus(p.status, p.nextReviewDate) === "Overdue").length;
   const due = policies.filter((p) => policyDisplayStatus(p.status, p.nextReviewDate) === "Due for review").length;
+  const currentWork = policies.map((policy) => {
+    const display = policyDisplayStatus(policy.status, policy.nextReviewDate);
+    const reason = display === "Overdue" ? "Review overdue" : display === "Due for review" ? "Review due soon" : policy.status === "UNDER_REVIEW" ? "Review in progress" : policy.status === "DRAFT" ? "Draft needs review" : policy.updateAvailable ? "Policy Studio update available" : null;
+    const priority = display === "Overdue" ? 0 : display === "Due for review" ? 1 : policy.status === "UNDER_REVIEW" ? 2 : policy.status === "DRAFT" ? 3 : 4;
+    return { policy, reason, priority };
+  }).filter((item) => item.reason).sort((a, b) => a.priority - b.priority || (a.policy.nextReviewDate?.getTime() ?? Infinity) - (b.policy.nextReviewDate?.getTime() ?? Infinity));
   return <main className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h1 className="text-3xl font-bold">Policy Library</h1><p className="mt-1 text-slate-600">Keep policies, owners, approvals, review dates and earlier versions together.</p></div>
@@ -36,15 +42,21 @@ export default async function PoliciesPage({ searchParams }: { searchParams: Pro
       <p className="font-bold">You have view-only access</p>
       <p className="mt-1">You can open, search and export policies, but you cannot add or upload one. Ask your organisation administrator to give you <strong>Governance records</strong> editing permission, or sign in with a Registered Manager or Organisation Owner account.</p>
     </section> : null}
+    <section aria-label="Policy current work" className="border-l-4 border-emerald-700 bg-emerald-50/70 px-5 py-4">
+      <h2 className="text-xl font-bold">Policy current work</h2>
+      <p className="mt-1 text-sm text-slate-700">Review due dates and drafts, then make the separate approval decision when the current document is ready.</p>
+      {currentWork.length ? <ul className="mt-4 divide-y divide-emerald-200">{currentWork.slice(0, 6).map(({ policy, reason }) => <li key={policy.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"><div><strong>{policy.title}</strong><span className="ml-2 text-amber-900">{reason}</span><p className="text-xs text-slate-600">Owner {policy.owner.name} · Next review {formatDate(policy.nextReviewDate)}</p></div><Link href={`/policies/${policy.id}`} className="font-bold text-emerald-800 underline underline-offset-2">Review policy →</Link></li>)}</ul> : <p className="mt-3 text-sm text-slate-700">No policy review work is due in this view. Approval and review still require a person.</p>}
+      {currentWork.length > 6 && <p className="mt-2 text-xs text-slate-600">Showing the first six of {currentWork.length} items. The full library remains below.</p>}
+    </section>
     {canEdit ? <Link href="/policies/catalogue" className="block rounded-2xl border border-emerald-200 bg-emerald-50 p-5 transition hover:border-emerald-500"><h2 className="text-xl font-bold text-emerald-950">Prepare policies for your organisation</h2><p className="mt-2 text-sm leading-6 text-emerald-900">Choose policies based on current legislation and official sector guidance. Assign an owner, check each draft against local practice and submit it through your usual approval process.</p></Link> : null}
     <section className="grid gap-3 sm:grid-cols-3">
       {[["Total policies", policies.length], ["Due within 30 days", due], ["Overdue", overdue]].map(([label, value]) =>
         <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">{label}</p><p className="mt-1 text-3xl font-bold">{value}</p></div>)}
     </section>
     <form className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-[2fr_1fr_1fr_auto]">
-      <input name="q" defaultValue={q} placeholder="Search policy title or exact tag" className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm" />
-      <select name="category" defaultValue={category} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm"><option value="">All categories</option>{POLICY_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select>
-      <select name="status" defaultValue={status} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm"><option value="ACTIVE">Active policies</option><option value="DRAFT">Draft</option><option value="UNDER_REVIEW">Under review</option><option value="APPROVED">Approved</option><option value="ARCHIVED">Removed policies</option></select>
+      <input name="q" type="search" aria-label="Search policies" defaultValue={q} placeholder="Search policy title or exact tag" className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm" />
+      <select name="category" aria-label="Policy category" defaultValue={category} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm"><option value="">All categories</option>{POLICY_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select>
+      <select name="status" aria-label="Policy status" defaultValue={status} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm"><option value="ACTIVE">Active policies</option><option value="DRAFT">Draft</option><option value="UNDER_REVIEW">Under review</option><option value="APPROVED">Approved</option><option value="ARCHIVED">Removed policies</option></select>
       <button className="rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white">Filter</button>
       <input type="hidden" name="view" value={view} />
     </form>

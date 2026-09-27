@@ -10,6 +10,20 @@ export function providerControlScopeAllowed(context:{allLocations:boolean;locati
   return locationIds.length>0&&locationIds.every(id=>authorised.has(id));
 }
 
+export function providerControlVersionVisibleToContext(
+  context:{allLocations:boolean;locations:{id:string}[]},
+  version:{scopeType:string;locations:{locationId:string}[]},
+){
+  return providerControlScopeAllowed(context,version.scopeType,version.locations.map(item=>item.locationId));
+}
+
+export function providerControlVisibleToContext(
+  context:{allLocations:boolean;locations:{id:string}[]},
+  versions:{scopeType:string;locations:{locationId:string}[]}[],
+){
+  return Boolean(versions[0]&&providerControlVersionVisibleToContext(context,versions[0]));
+}
+
 export function providerControlApplies(input:{status:string;scopeType:string;locationIds:string[];riskLocationId:string|null;categoryKeys:string[];riskCategory:string}){
   if(input.status!=="EFFECTIVE")return false;
   if(input.scopeType==="SELECTED_LOCATIONS"&&(!input.riskLocationId||!input.locationIds.includes(input.riskLocationId)))return false;
