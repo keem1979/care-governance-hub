@@ -26,7 +26,7 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   const signedInOwnerId = await page.locator('input[name="verifierId"]').inputValue();
   const selfVerification = await verificationRequest(page, high.id, setup.evidenceId, signedInOwnerId);
   expect(selfVerification.status).toBe(400);
-  expect(selfVerification.body.error).toMatch(/other than the action owner/i);
+  expect(selfVerification.body.error).toMatch(/verifier separate from the delivery owner|other than the action owner/i);
 
   const origin = new URL(page.url()).origin;
   const rmContext = await browser.newContext({ baseURL: origin });
