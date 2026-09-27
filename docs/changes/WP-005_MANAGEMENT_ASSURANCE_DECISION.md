@@ -32,24 +32,24 @@
 
 | Check | Result |
 | --- | --- |
-| Automated unit/integration suite | PASS **386/386**, 77 files |
-| TypeScript | PASS |
-| ESLint | PASS |
+| Automated unit/integration suite | PASS **386/386**, 77 files; rerun after the decision-region accessibility correction |
+| TypeScript | PASS after the correction |
+| ESLint | PASS after the correction |
 | Prisma schema validation | PASS |
 | Disposable fresh migrations | PASS, 65 migrations, temporary schema removed |
 | Existing direct security/integrity gate | PASS **27/27** |
 | WP-005 direct assurance gate | PASS **18/18**: guarded fictional setup, role/tenant denial, closure/reopen, reason, reset, immediate stale reclosure denial, renewed work and fresh Low closure, append-only events. Its High Action is manually put into a closed state solely to probe role authority; this is not a complete High lifecycle proof. |
 | Evidence search performance | PASS, 5,000 fictional rows: search **4.552 ms**, page **9.111 ms**, both below 250 ms gate |
-| Next.js production build | PASS |
-| Sites/Vinext build | PASS |
-| Chromium Playwright | BLOCKED: `browserType.launch` returned `spawn EPERM` before an application assertion. The final local attempt reported four test failures at launch (three assurance tests and one WP-004 regression), with **0 application assertions executed**. They cannot be counted as product failures or passes. |
+| Next.js production build | PASS after the correction |
+| Sites/Vinext build | PASS after the correction |
+| Chromium Playwright | The unrestricted local run reached the application: **3 passed, 1 failed**. The failure exposed an accessibility-name mismatch on the new decision region. Its accessible name was the status heading (“Needs attention”), while the visible section label and test intent were “Management assurance decision.” The component now labels the region with that visible section label; the unchanged targeted spec requires a rerun. The earlier sandbox attempt failed four launches with `spawn EPERM` and executed no application assertions. |
 | Mobile Playwright | NOT RUN in this sandbox; same Chromium launcher is restricted. |
 
 No WP-005 Prisma schema change or migration was required. The earlier WP-004 migration evidence is preserved. No production database was used.
 
 ## Gate C rendered review and measured burden
 
-An authenticated fictional Registered Manager viewed the actual production Next.js build at 1280px desktop and 390px mobile through the in-app browser. A separate checkout of the pre-WP-005 baseline used the same fictional fixture state and role. Measurements are document positions from the top of the Action assurance page; they are not click counts.
+An authenticated fictional Registered Manager viewed the actual production Next.js build at 1280px desktop and 390px mobile through the in-app browser. A separate checkout of the pre-WP-005 baseline used the same fictional fixture state and role. Measurements are document positions from the top of the Action assurance page; they are not click counts. The unrestricted Chromium error context confirmed the decision region rendered with its blockers and Evidence; it exposed the region naming defect, since corrected in the component.
 
 | Measure | Before | After | Change |
 | --- | ---: | ---: | ---: |

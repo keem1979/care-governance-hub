@@ -39,8 +39,8 @@ export function ActionAssuranceDecision({
   const status = closed ? "Closed by an authorised decision" : needsAttention ? "Needs attention" : "Ready for management review";
   const tone = closed ? "border-slate-300 bg-slate-50" : needsAttention ? "border-amber-300 bg-amber-50" : "border-emerald-300 bg-emerald-50";
 
-  return <section id="management-assurance-decision" aria-labelledby="management-assurance-heading" className={`scroll-mt-6 rounded-2xl border p-5 shadow-sm ${tone}`}>
-    <p className="text-xs font-black uppercase tracking-widest text-slate-600">Management assurance decision</p>
+  return <section id="management-assurance-decision" aria-labelledby="management-assurance-label" className={`scroll-mt-6 rounded-2xl border p-5 shadow-sm ${tone}`}>
+    <p id="management-assurance-label" className="text-xs font-black uppercase tracking-widest text-slate-600">Management assurance decision</p>
     <h2 id="management-assurance-heading" className="mt-1 text-xl font-black">{status}</h2>
     <p className="mt-2 max-w-3xl text-sm text-slate-700">
       {closed
