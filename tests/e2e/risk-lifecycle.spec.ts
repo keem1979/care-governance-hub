@@ -2,7 +2,6 @@ import { expect, test, type Page } from "@playwright/test";
 import { signIn } from "./auth";
 import { E2E_SOURCE_REFERENCE, E2E_USER, E2E_USERS } from "./fixtures";
 
-const today = dateAfter(0);
 const targetDate = dateAfter(30);
 const nextReviewDate = dateAfter(60);
 
@@ -62,27 +61,27 @@ test("three authenticated people complete the Critical Risk assurance lifecycle"
 
   await page.getByRole("link", { name: "Create treatment action" }).click();
   await expect(page).toHaveURL(new RegExp(`/actions/new\\?sourceType=RISK&sourceId=${riskId}`), { timeout: 60_000 });
-  await expect(page.getByRole("heading", { name: "Review before creating the central Action" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Source context carried forward" })).toBeVisible();
   await expect(page.getByText(/Completing this Action will not change the Risk automatically/)).toBeVisible();
   await expect(page.getByLabel("Source record")).toHaveValue(`RISK:${riskId}`);
   await expect(page.getByLabel("What must be achieved?")).toHaveValue(new RegExp(runKey));
-  await expect(page.getByLabel("Delivery owner")).toHaveValue(/.+/);
-  await expect(page.getByLabel("Registered Manager / senior oversight")).toHaveValue(/.+/);
-  await expect(page.getByLabel("Due date")).toHaveValue(targetDate);
+  await expect(page.getByRole("combobox", { name: "Who owns this Action?" })).toHaveValue(E2E_USER.name);
+  await expect(page.getByRole("combobox", { name: "RM / senior oversight" })).toHaveValue(/.+/);
+  await expect(page.getByLabel("When is it due?")).toHaveValue(targetDate);
   let createActionResponse = page.waitForResponse(
     (response) => response.url().endsWith("/api/actions") && response.request().method() === "POST",
     { timeout: 120_000 },
   );
-  await page.getByRole("button", { name: "Check and create action" }).click();
+  await page.getByRole("button", { name: "Check and create Action" }).click();
   let actionResponse = await createActionResponse;
-  const possibleMatch = page.getByRole("heading", { name: "Review possible existing action" });
+  const possibleMatch = page.getByRole("heading", { name: "A related Action may already exist" });
   if (actionResponse.status() === 409) {
     await expect(possibleMatch).toBeVisible();
     createActionResponse = page.waitForResponse(
       (response) => response.url().endsWith("/api/actions") && response.request().method() === "POST",
       { timeout: 120_000 },
     );
-    await page.getByRole("button", { name: "Reject match" }).first().click();
+    await page.getByRole("button", { name: "Create separate Action" }).first().click();
     actionResponse = await createActionResponse;
   }
   expect([200, 201]).toContain(actionResponse.status());
@@ -90,52 +89,69 @@ test("three authenticated people complete the Critical Risk assurance lifecycle"
   await expect(page).toHaveURL(/\/actions\/(?!new$)[^/]+$/, { timeout: 60_000 });
   const actionUrl = new URL(page.url()).pathname;
   const actionId = actionUrl.split("/").at(-1)!;
-  await expect(page.getByRole("link", { name: "Open source record" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open source" })).toBeVisible();
 
   // A direct closure request must be rejected while the linked Action remains open.
   const premature=await page.evaluate(async riskId=>{const response=await fetch(`/api/risks/${riskId}/closure`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({intent:"propose",rationale:"Premature closure while treatment remains unresolved."})});return{status:response.status,body:await response.json()}},riskId);
   expect(premature.status).toBe(409);
   expect(JSON.stringify(premature.body)).toMatch(/linked treatment Actions remain unresolved/i);
 
-  // Complete the canonical Action, with evidence and signed-in verification.
-  await page.goto(`${actionUrl}/edit`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.getByLabel("Status").selectOption("COMPLETED");
-  await page.getByLabel("Progress completed (%)").fill("100");
-  await page.getByLabel("Management response").fill("The competency reassessment and MAR re-audit were completed.");
-  await page.getByLabel("Completion date").fill(today);
-  await page.getByLabel("Evidence attached").selectOption({ label: "E2E verified governance source" });
-  await page.getByLabel("Action completed summary").fill("Competency reassessment completed and a follow-up MAR sample audited.");
-  await page.getByLabel("Evidence reviewed summary").fill("Verified E2E governance source and the recorded completion evidence were reviewed.");
-  for (const label of ["Immediate risk controlled", "Underlying record corrected", "Staff support or competency completed", "Wider records checked", "Recurrence check completed"]) {
-    await page.getByLabel(label).selectOption("true");
-  }
-  await page.getByLabel("Verified by").selectOption({ label: E2E_USER.name });
-  await page.getByLabel("Verification date").fill(today);
-  await page.getByLabel("Verification and closure rationale").fill("The signed-in manager verified that the work and linked evidence meet the completion test.");
-  await page.getByLabel("Closure outcome").fill("Action completion verified; effectiveness and Risk reassessment remain separate decisions.");
-  await page.getByRole("button", { name: "Save action" }).click();
-  await expect(page).toHaveURL(new RegExp(`${escapeRegExp(actionUrl)}$`), { timeout: 60_000 });
-  await expect(page.getByText("Completed · Closed verified", { exact: false })).toBeVisible({ timeout: 30_000 });
+  // The owner submits completed work and canonical Evidence. Verification,
+  // effectiveness and closure remain later, separate human decisions.
+  const completion = page.locator("#current-work");
+  await completion.getByRole("textbox", { name: "What did you do?" }).fill("Competency reassessment completed and a follow-up MAR sample audited.");
+  await completion.getByRole("combobox", { name: "Evidence supporting completion" }).selectOption({ label: "E2E verified governance source" });
+  const completionResponse = page.waitForResponse(response => response.url().endsWith(`/api/actions/${actionId}/updates`) && response.request().method() === "POST");
+  await completion.getByRole("button", { name: "Submit for verification" }).click();
+  expect((await completionResponse).status()).toBe(200);
+  await expect(page.getByRole("region", { name: "Action lifecycle" })).toContainText("Completed");
+  await expect(page.getByText("Manager verification required", { exact: true })).toBeVisible();
 
   // Completion does not alter the residual Risk or claim that the target is achieved.
-  await page.getByRole("link", { name: "Open source record" }).click();
+  await page.getByRole("link", { name: "Open source" }).click();
   await expect(page).toHaveURL(new RegExp(`${escapeRegExp(riskUrl)}$`), { timeout: 60_000 });
   await expectScore(page, "Current residual", "6");
   await expectScore(page, "Target", "2");
-  await expect(page.getByText(/completed treatment action is awaiting an effectiveness review/i)).toBeVisible();
+  const origin = new URL(page.url()).origin;
+  const actionManagerContext = await browser.newContext({ baseURL: origin });
+  const actionManager = await actionManagerContext.newPage();
+  await signIn(actionManager, E2E_USERS.registeredManager);
+  await actionManager.goto(`${actionUrl}/assurance`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  const verification = actionManager.locator("#verification");
+  await verification.getByLabel("Verification outcome").selectOption("VERIFIED");
+  await verification.getByLabel("Evidence checked").selectOption({ label: "E2E verified governance source" });
+  await verification.getByLabel("Result against the predefined success measure").fill("Completion was checked against the agreed medicine competency and MAR audit criteria.");
+  await verification.getByLabel("Verification rationale").fill("The manager reviewed the completion account and linked Evidence; effectiveness remains a later decision.");
+  const verificationResponse = actionManager.waitForResponse(response => response.url().endsWith(`/api/actions/${actionId}/assurance/verification`) && response.request().method() === "POST");
+  await verification.getByRole("button", { name: "Record verification" }).click();
+  expect((await verificationResponse).status()).toBe(200);
+  await actionManager.reload({ waitUntil: "domcontentloaded" });
+  await expect(actionManager.locator("#verification")).toContainText("Current verification decision");
 
   // Test effectiveness on the Action before the formal Risk reassessment.
-  await page.goto(`${actionUrl}/assurance`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.getByLabel("Effectiveness outcome").selectOption("EFFECTIVE");
-  await page.getByLabel("Review date").last().fill(today);
-  await page.getByLabel("Baseline").fill("One control gap requiring treatment.");
-  await page.getByLabel("Target").fill("No repeat exception in the tested sample.");
-  await page.getByLabel("Observed result").fill("The follow-up sample showed no repeat exception and the control operated as intended.");
-  await page.getByLabel("Supporting evidence").selectOption({ label: "E2E verified governance source" });
-  await page.getByLabel("Recurrence identified?").selectOption("false");
-  await page.getByLabel("Management decision").fill("Effectiveness is supported for this review period; the RM must still reassess the Risk formally.");
-  await page.getByRole("button", { name: "Record effectiveness review" }).click();
-  await expect(page.locator("article").filter({ hasText: "The follow-up sample showed no repeat exception" }).getByText("Effective", { exact: true })).toBeVisible({ timeout: 30_000 });
+  const effectiveness = actionManager.locator("#effectiveness");
+  await effectiveness.getByLabel("Effectiveness outcome").selectOption("EFFECTIVE");
+  await effectiveness.getByLabel("Evidence of the observed result").selectOption({ label: "E2E verified governance source" });
+  await effectiveness.getByRole("textbox", { name: "Observed result", exact: true }).fill("The follow-up sample showed no repeat exception and the control operated as intended.");
+  await effectiveness.getByLabel("Recurrence identified?").selectOption("false");
+  await effectiveness.getByLabel("Management decision").fill("Effectiveness is supported for this review period; the RM must still reassess the Risk formally.");
+  const effectivenessResponse = actionManager.waitForResponse(response => response.url().endsWith(`/api/actions/${actionId}/assurance/effectiveness`) && response.request().method() === "POST");
+  await effectiveness.getByRole("button", { name: "Record effectiveness review" }).click();
+  expect((await effectivenessResponse).status()).toBe(200);
+  await actionManager.reload({ waitUntil: "domcontentloaded" });
+  await expect(actionManager.locator("#effectiveness")).toContainText("The follow-up sample showed no repeat exception");
+
+  // The Action still needs an authorised closure decision; only then does the
+  // linked Risk see a resolved treatment Action.
+  const actionClosure = actionManager.locator("#closure");
+  await actionClosure.getByLabel("Closure evidence").selectOption({ label: "E2E verified governance source" });
+  await actionClosure.getByLabel("Management assurance rationale").fill("Completion, verification and observed effectiveness were each reviewed against the linked Evidence.");
+  const actionClosureResponse = actionManager.waitForResponse(response => response.url().endsWith(`/api/actions/${actionId}/assurance/closure`) && response.request().method() === "POST");
+  await actionClosure.getByRole("button", { name: "Authorise closure" }).click();
+  expect((await actionClosureResponse).status()).toBe(200);
+  await actionManager.reload({ waitUntil: "domcontentloaded" });
+  await expect(actionManager.getByRole("region", { name: "Management assurance decision" })).toContainText("Closed by an authorised decision");
+  await actionManagerContext.close();
 
   // Only the formal Risk review can decide that the effectiveness evidence supports
   // a lower current residual score; Action completion itself made no such change.
@@ -144,8 +160,10 @@ test("three authenticated people complete the Critical Risk assurance lifecycle"
   await review.getByRole("button", { name: "Add E2E verified governance source to evidence checked" }).click();
   await review.getByLabel("Current likelihood").selectOption("1");
   await review.getByLabel("Current impact").selectOption("2");
+  await review.getByLabel("Are controls working?").selectOption("true");
   await review.getByLabel("Risk position").selectOption("IMPROVING");
   await review.getByLabel("Management decision").selectOption("CONTINUE_MONITORING");
+  await review.getByLabel("Was it escalated?").selectOption("false");
   await review.getByLabel("Next review date").fill(nextReviewDate);
   await review.getByLabel("Review conclusion *").fill("Treatment completion and effectiveness were reviewed. The RM decided that the current residual risk is now 2; this was not an automatic target-score update.");
   await review.getByRole("button", { name: "Record formal review" }).click();
@@ -169,7 +187,6 @@ test("three authenticated people complete the Critical Risk assurance lifecycle"
   expect(selfApproval.status).toBe(403);
   expect(JSON.stringify(selfApproval.body)).toMatch(/separation/i);
 
-  const origin=new URL(page.url()).origin;
   const rmContext=await browser.newContext({baseURL:origin});
   const rmPage=await rmContext.newPage();
   await signIn(rmPage,E2E_USERS.registeredManager);

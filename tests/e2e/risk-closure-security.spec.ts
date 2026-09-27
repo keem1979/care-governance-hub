@@ -22,6 +22,10 @@ test("closure API enforces assurance, role, location and tenant boundaries",asyn
   await review.getByLabel("Evidence checked").fill("Historical fictional evidence and the changed tolerance were reviewed.");
   await review.getByLabel("Current likelihood").selectOption("2");
   await review.getByLabel("Current impact").selectOption("4");
+  await review.getByLabel("Are controls working?").selectOption("false");
+  await review.getByLabel("Risk position").selectOption("STABLE");
+  await review.getByLabel("Management decision").selectOption("CONTINUE_MONITORING");
+  await review.getByLabel("Was it escalated?").selectOption("false");
   await review.getByLabel("Next review date").fill("2026-10-01");
   await review.getByLabel("Review conclusion *").fill("The score remains eight. The manager deliberately adopts Framework v2 and records that the governance threshold changed, not the underlying exposure.");
   const reviewResponse=page.waitForResponse(response=>response.url().endsWith(`/api/risks/${frameworkChangeId}/reviews`)&&response.request().method()==="POST");
@@ -34,7 +38,7 @@ test("closure API enforces assurance, role, location and tenant boundaries",asyn
   await page.goto(`/risks/${scenarios["E2E-RSK-SEC-LEGACY"].id}`,{waitUntil:"domcontentloaded"});
   await expect(page.getByText("Residual score 8; tolerance 9.",{exact:false})).toBeVisible();
   await expect(page.getByText(/historical Risk has not been rewritten/)).toBeVisible();
-  await expect(page.getByLabel("Framework decision")).toHaveValue("KEEP");
+  await expect(page.getByLabel("Framework decision")).toHaveValue("");
 
   await expectBlocked(page,scenarios["E2E-RSK-SEC-MISSING-EVIDENCE"].id,/closure evidence is required/i);
   await expectBlocked(page,scenarios["E2E-RSK-SEC-MISSING-VERIFICATION"].id,/verified Evidence is required/i);
@@ -43,7 +47,8 @@ test("closure API enforces assurance, role, location and tenant boundaries",asyn
   await expectBlocked(page,scenarios["E2E-RSK-SEC-UNRESOLVED-ACTION"].id,/Actions remain unresolved/i);
 
   const readyId=scenarios["E2E-RSK-SEC-READY"].id;
-  expect((await closureRequest(page,readyId,"propose","Sufficient fictional assurance exists to test retained withdrawal history.")).status).toBe(200);
+  const firstProposal=await closureRequest(page,readyId,"propose","Sufficient fictional assurance exists to test retained withdrawal history.");
+  expect(firstProposal.status, JSON.stringify(firstProposal.body)).toBe(200);
   expect((await closureRequest(page,readyId,"withdraw","Additional verification was discovered and the proposal must be withdrawn.")).status).toBe(200);
   expect((await closureRequest(page,readyId,"propose","Corrective review is complete and a new proposal is deliberately recorded.")).status).toBe(200);
 

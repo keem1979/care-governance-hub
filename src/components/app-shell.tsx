@@ -395,7 +395,7 @@ export function AppShell({
         ) : null}
         <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
-      {!/^\/registers\/(incidents|complaints|safeguarding)\/new\/?$/.test(pathname) && !/^\/actions\/[^/]+\/assurance\/?$/.test(pathname) ? <GovernanceAssistant /> : null}
+      {!/^\/registers\/(incidents|complaints|safeguarding)\/new\/?$/.test(pathname) && !/^\/actions\/[^/]+\/assurance\/?$/.test(pathname) && !/^\/risks(?:\/|$)/.test(pathname) ? <GovernanceAssistant /> : null}
     </div>
   );
 }
