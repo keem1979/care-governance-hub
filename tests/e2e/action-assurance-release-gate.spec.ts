@@ -79,7 +79,7 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await effectiveness.getByRole("button", { name: "Record effectiveness review" }).click();
   expect((await effectivenessResponse).status()).toBe(200);
   await rm.reload({ waitUntil: "domcontentloaded" });
-  await expect(rm.getByText("Ready for closure", { exact: false }).first()).toBeVisible();
+  await expect(rm.getByRole("region", { name: "Record attention summary" }).getByRole("heading", { name: "Ready for authorised closure review" })).toBeVisible();
 
   // A third person makes the High Action closure decision.
   const ownerContext = await browser.newContext({ baseURL: origin });
