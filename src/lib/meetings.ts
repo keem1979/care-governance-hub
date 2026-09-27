@@ -90,3 +90,21 @@ export function meetingAttention(input: MeetingReadinessInput, now = new Date())
   if (!input.approvedById || !input.approvalDate || input.status !== "APPROVED") return "Minutes need approval";
   return null;
 }
+
+export function meetingCurrentWork(input: MeetingReadinessInput, now = new Date()) {
+  if (input.status === "ARCHIVED" || input.status === "CANCELLED") {
+    return { title: "No current work", description: `This meeting is ${meetingLabel(input.status).toLowerCase()}.`, action: null, target: null };
+  }
+  if (input.status === "APPROVED") {
+    return { title: "Approved minutes available", description: "Read the recorded decisions, actions and approved minutes below.", action: "Read minutes", target: "minutes-record" };
+  }
+  if (input.meetingDate.getTime() > now.getTime()) {
+    return input.agendaCount === 0
+      ? { title: "Prepare the agenda", description: "Add the subjects to review before the meeting.", action: "Edit agenda", target: "agenda" }
+      : { title: "Agenda prepared", description: "Review the agenda and bring forward relevant actions before the meeting.", action: "Review agenda", target: "agenda" };
+  }
+  if (!input.minutes?.trim()) {
+    return { title: "Complete the minutes", description: "Record the discussion and decisions before seeking approval.", action: "Write minutes", target: "minutes" };
+  }
+  return { title: "Review the minutes for approval", description: "An authorised editor must review the minutes and choose Approved. The system records their account and approval date.", action: "Review approval decision", target: "approval" };
+}

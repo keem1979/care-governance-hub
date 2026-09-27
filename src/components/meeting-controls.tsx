@@ -5,9 +5,18 @@ import { useState } from "react";
 import { ACTION_PRIORITIES } from "@/lib/actions";
 
 export function MeetingArchive({ id, archived }: { id: string; archived: boolean }) {
-  const router = useRouter(), [busy, setBusy] = useState(false);
-  async function act() { if (!confirm(`${archived ? "Restore" : "Archive"} this meeting?`)) return; setBusy(true); const response = await fetch(`/api/meetings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ intent: archived ? "restore" : "archive" }) }); setBusy(false); if (response.ok) router.refresh(); }
-  return <button onClick={act} disabled={busy} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">{busy ? "Working…" : archived ? "Restore" : "Archive"}</button>;
+  const router = useRouter(), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  async function act() {
+    if (!confirm(`${archived ? "Restore" : "Archive"} this meeting?`)) return;
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/meetings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ intent: archived ? "restore" : "archive" }) });
+      if (response.ok) router.refresh();
+      else { const result = await response.json().catch(() => ({})); setError(result.error ?? "The meeting could not be changed."); }
+    } catch { setError("The meeting could not be changed. Try again."); }
+    finally { setBusy(false); }
+  }
+  return <div><button onClick={act} disabled={busy} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">{busy ? "Working…" : archived ? "Restore" : "Archive"}</button>{error && <p role="alert" className="mt-2 max-w-xs text-sm text-red-700">{error}</p>}</div>;
 }
 
 export function ExtractActionForm({ meetingId, agendaId, title, owners }: { meetingId: string; agendaId: string; title: string; owners: { id: string; name: string }[] }) {
