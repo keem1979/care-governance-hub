@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { evidenceAssuranceLabel } from "@/lib/evidence-assurance";
 import { evidenceScopeWhere } from "@/lib/evidence";
+import { inspectionScopeWhere } from "@/lib/inspection";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 export default async function MockInspectionPage({
@@ -22,6 +23,7 @@ export default async function MockInspectionPage({
         where: {
           id,
           organisationId: context.organisation.id,
+          samples: { every: { requirement: inspectionScopeWhere(context) } },
           ...(context.allLocations
             ? {}
             : {

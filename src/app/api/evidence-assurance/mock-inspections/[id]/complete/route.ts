@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
+import { inspectionScopeWhere } from "@/lib/inspection";
 import { PERMISSIONS } from "@/lib/permissions";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -8,7 +9,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (summary.length < 20) return NextResponse.json({ error: "Record the overall inspection conclusion and follow-up required." }, { status: 400 });
   const db = createDb();
   try {
-    const inspection = await db.mockInspection.findFirst({ where: { id, organisationId: context.organisation.id, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item) => item.id) } }] }) }, include: { samples: true } });
+    const inspection = await db.mockInspection.findFirst({ where: { id, organisationId: context.organisation.id, samples: { every: { requirement: inspectionScopeWhere(context) } }, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item) => item.id) } }] }) }, include: { samples: true } });
     if (!inspection) return NextResponse.json({ error: "Mock inspection not found." }, { status: 404 });
     if (inspection.status === "COMPLETED" || inspection.status === "CANCELLED") return NextResponse.json({ error: "This mock inspection is already closed." }, { status: 409 });
     if (inspection.samples.some((item) => item.outcome === "NOT_TESTED")) return NextResponse.json({ error: "Complete every sampled requirement before closing the mock inspection." }, { status: 409 });

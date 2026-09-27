@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
+import { evidenceScopeWhere } from "@/lib/evidence";
 import { EVIDENCE_MAPPING_DECISIONS } from "@/lib/evidence-assurance";
 import { CQC_EVIDENCE_CATEGORIES } from "@/lib/inspection-framework";
 import { inspectionScopeWhere } from "@/lib/inspection";
@@ -18,7 +19,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (evidenceCategories.some((item) => !CQC_EVIDENCE_CATEGORIES.includes(item as never))) return NextResponse.json({ error: "Choose valid evidence categories." }, { status: 400 });
   const db = createDb();
   try {
-    const requirement = await db.complianceRequirement.findFirst({ where: { id, ...inspectionScopeWhere(context), evidenceLinks: { some: { evidenceId } } }, select: { id: true, title: true, locationId: true } });
+    const requirement = await db.complianceRequirement.findFirst({ where: { id, ...inspectionScopeWhere(context), evidenceLinks: { some: { evidenceId, evidence: evidenceScopeWhere(context) } } }, select: { id: true, title: true, locationId: true } });
     if (!requirement) return NextResponse.json({ error: "Evidence mapping not found." }, { status: 404 });
     const reviewedAt = decision === "PENDING" ? null : new Date();
     await db.$transaction([

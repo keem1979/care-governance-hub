@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { evidenceScopeWhere } from "@/lib/evidence";
+import { inspectionScopeWhere } from "@/lib/inspection";
 import { PERMISSIONS } from "@/lib/permissions";
 
 const OUTCOMES = ["NOT_TESTED", "ASSURED", "PARTIALLY_ASSURED", "GAP", "NOT_APPLICABLE"];
@@ -12,8 +13,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!OUTCOMES.includes(outcome) || (outcome !== "NOT_TESTED" && observation.length < 10) || (outcome === "GAP" && finding.length < 10)) return NextResponse.json({ error: "Record the tested outcome, observation and any identified gap." }, { status: 400 });
   const db = createDb();
   try {
-    const sample = await db.mockInspectionSample.findFirst({ where: { id: sampleId, mockInspectionId: id, mockInspection: { organisationId: context.organisation.id, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item) => item.id) } }] }) } }, include: { mockInspection: true, requirement: { select: { title: true } } } });
+    const sample = await db.mockInspectionSample.findFirst({ where: { id: sampleId, mockInspectionId: id, requirement: inspectionScopeWhere(context), mockInspection: { organisationId: context.organisation.id, samples: { every: { requirement: inspectionScopeWhere(context) } }, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item) => item.id) } }] }) } }, include: { mockInspection: true, requirement: { select: { title: true } } } });
     if (!sample) return NextResponse.json({ error: "Mock-inspection sample not found." }, { status: 404 });
+    if (["COMPLETED", "CANCELLED"].includes(sample.mockInspection.status)) return NextResponse.json({ error: "This mock inspection is already closed." }, { status: 409 });
     const available = await db.evidence.count({ where: { id: { in: sampledEvidenceIds }, ...evidenceScopeWhere(context), ...(sample.mockInspection.locationId ? { OR: [{ locationId: null }, { locationId: sample.mockInspection.locationId }] } : {}) } });
     if (available !== sampledEvidenceIds.length) return NextResponse.json({ error: "One or more sampled evidence records are unavailable." }, { status: 400 });
     const reviewedAt = outcome === "NOT_TESTED" ? null : new Date();
