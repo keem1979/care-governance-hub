@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { signIn } from "./auth";
 import { E2E_SETUP_TOKEN, E2E_USERS } from "./fixtures";
 
-type Setup = { evidenceId: string; oxfordAuditEvidenceId: string; audit: { template: { id: string } } };
+type Setup = { evidenceId: string; oxfordAuditEvidenceId: string; audit: { template: { id: string }; locationId: string } };
 
 test("unfinished Audit work is visible before score and form history", async ({ page, request }, testInfo) => {
   const setup = await fixture(request);
@@ -89,6 +89,7 @@ async function fixture(request: APIRequestContext): Promise<Setup> {
 async function startAudit(page: Page, setup: Setup) {
   await page.goto(`/audits/new?template=${setup.audit.template.id}`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle");
+  await page.getByLabel("Service / location").selectOption(setup.audit.locationId);
   await page.getByText("Optional setup").click();
   await page.getByLabel("Custom audit title").fill(`E2E-AUDIT-WP007-${Date.now()}`);
   await page.getByRole("button", { name: "Start audit now" }).click();
