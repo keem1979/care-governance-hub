@@ -9,7 +9,7 @@ type Setup = {
   correctedEvidenceId: string;
 };
 
-test("role-aware Action Evidence preserves completion, verification, effectiveness and closure boundaries", async ({ page, browser, request }) => {
+test("role-aware Action Evidence preserves completion, verification, effectiveness and closure boundaries", async ({ page, browser, request }, testInfo) => {
   test.setTimeout(480_000);
   const setup = await resetAndRead(request);
   const high = setup.actions["E2E-ACT-ASSURANCE-HIGH"], ineffective = setup.actions["E2E-ACT-ASSURANCE-INEFFECTIVE"], low = setup.actions["E2E-ACT-ASSURANCE-LOW"];
@@ -33,6 +33,8 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   const rm = await rmContext.newPage();
   await signIn(rm, E2E_USERS.registeredManager);
   await rm.goto(`/actions/${high.id}/assurance`, { waitUntil: "domcontentloaded" });
+  await expect(rm.getByRole("region", { name: "Management assurance decision" })).toContainText("Needs attention");
+  await expect(rm.getByRole("link", { name: "Open Completion verified" })).toHaveAttribute("href", "#verification");
   await expect(rm.getByRole("heading", { name: "Role-aware Evidence" })).toBeVisible();
   await expect(rm.getByText("Completion", { exact: true }).first()).toBeVisible();
   const evidenceSection = section(rm, "3. Role-aware Evidence");
@@ -60,7 +62,7 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await verification.getByRole("button", { name: "Record verification" }).click();
   expect((await verificationResponse).status()).toBe(200);
   await rm.reload({ waitUntil: "domcontentloaded" });
-  await expect(section(rm, "7. Management assurance and closure")).toContainText("Effectiveness demonstrated");
+  await expect(section(rm, "Management assurance and closure")).toContainText("Effectiveness demonstrated");
 
   const prematureClosure = await closureRequest(rm, high.id, setup.evidenceId, "This should be rejected because effectiveness is still outstanding.", E2E_USERS.organisationOwner.name);
   expect(prematureClosure.status).toBe(409);
@@ -80,22 +82,42 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   expect((await effectivenessResponse).status()).toBe(200);
   await rm.reload({ waitUntil: "domcontentloaded" });
   await expect(section(rm, "5. Effectiveness and sustained improvement")).toContainText("The subsequent audit sample found no repeat medicines exception.");
-  await expect(rm.getByRole("region", { name: "Record attention summary" })).toContainText("Closure evidence identified");
-  await expect(rm.getByRole("region", { name: "Record attention summary" })).toContainText("Closer is separate from owner and verifier");
+  await expect(rm.getByRole("region", { name: "Management assurance decision" })).toContainText("Needs attention");
+  await expect(rm.getByRole("region", { name: "Management assurance decision" })).toContainText("Closer is separate from owner and verifier");
 
   // A third person makes the High Action closure decision.
   const ownerContext = await browser.newContext({ baseURL: origin });
   const owner = await ownerContext.newPage();
   await signIn(owner, E2E_USERS.organisationOwner);
   await owner.goto(`/actions/${high.id}/assurance`, { waitUntil: "domcontentloaded" });
-  const closure = section(owner, "7. Management assurance and closure");
+  await expect(owner.getByRole("region", { name: "Management assurance decision" })).toContainText("Ready for management review");
+  await expect(owner.getByRole("region", { name: "Management assurance decision" })).toContainText("Linked Evidence to review");
+  await owner.screenshot({ path: testInfo.outputPath("wp005-ready-desktop.png"), fullPage: true });
+  const closure = section(owner, "Management assurance and closure");
   await closure.getByLabel("Closure evidence").selectOption(setup.evidenceId);
   await closure.getByLabel("Management assurance rationale").fill("Completion, separate verification and observed effectiveness are evidenced, with no unresolved dependency.");
   const closureResponse = owner.waitForResponse(response => response.url().endsWith(`/api/actions/${high.id}/assurance/closure`) && response.request().method() === "POST");
   await closure.getByRole("button", { name: "Authorise closure" }).click();
   expect((await closureResponse).status()).toBe(200);
   await owner.reload({ waitUntil: "domcontentloaded" });
-  await expect(section(owner, "7. Management assurance and closure")).toContainText(E2E_USERS.organisationOwner.name);
+  await expect(section(owner, "Management assurance and closure")).toContainText(E2E_USERS.organisationOwner.name);
+  await expect(owner.getByRole("region", { name: "Management assurance decision" })).toContainText("Closed by an authorised decision");
+  await owner.screenshot({ path: testInfo.outputPath("wp005-closed-desktop.png"), fullPage: true });
+  const adminReopenContext = await browser.newContext({ baseURL: origin });
+  const adminReopenPage = await adminReopenContext.newPage();
+  await signIn(adminReopenPage, E2E_USERS.actionAdministrator);
+  await adminReopenPage.goto(`/actions/${high.id}/assurance`, { waitUntil: "domcontentloaded" });
+  await expect(adminReopenPage.getByRole("button", { name: "Reopen for governance review" })).toHaveCount(0);
+  const unauthorisedReopen = await adminReopenPage.evaluate(async id => {
+    const form = new FormData(); form.set("intent", "reopen"); form.set("rationale", "Attempt to bypass the provider closure policy.");
+    const response = await fetch(`/api/actions/${id}/assurance/closure`, { method: "POST", body: form });
+    return { status: response.status, body: await response.json() };
+  }, high.id);
+  expect(unauthorisedReopen.status).toBe(400);
+  expect(unauthorisedReopen.body.error).toMatch(/not authorised.*closure policy/i);
+  await owner.reload({ waitUntil: "domcontentloaded" });
+  await expect(section(owner, "Management assurance and closure")).toContainText(E2E_USERS.organisationOwner.name);
+  await adminReopenContext.close();
   const afterClosure = await request.get("/api/test/e2e/setup", { headers: { "x-e2e-setup-token": E2E_SETUP_TOKEN } });
   const after = await afterClosure.json() as Setup;
   expect(after.risks["E2E-RSK-SEC-READY"]).toMatchObject({ status: "OPEN", residualScore: 2 });
@@ -120,11 +142,11 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   // A Low manual administration Action is proportionate: completion + closure evidence, no forced verification/effectiveness.
   await page.goto(`/actions/${low.id}/assurance`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "4. Verification" })).toContainText("Verification");
-  await expect(section(page, "7. Management assurance and closure")).not.toContainText("Completion verified:");
+  await expect(section(page, "Management assurance and closure")).not.toContainText("Completion verified:");
   const lowClosure = await closureRequest(page, low.id, setup.evidenceId, "The administrative change is complete and the linked record is sufficient for proportionate closure.", E2E_USERS.organisationOwner.name);
   expect(lowClosure.status).toBe(200);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(section(page, "7. Management assurance and closure")).toContainText(E2E_USERS.riskOwner.name);
+  await expect(section(page, "Management assurance and closure")).toContainText(E2E_USERS.riskOwner.name);
 
   // Location and tenant boundaries apply to search and mutation APIs.
   const restrictedContext = await browser.newContext({ baseURL: origin });
@@ -145,11 +167,26 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await expect(other.getByText(/page could not be found/i)).toBeVisible();
   const crossTenantClosure = await other.evaluate(async id => { const form = new FormData(); form.set("intent", "close"); form.set("rationale", "A deliberately unauthorised cross-tenant closure attempt."); const response = await fetch(`/api/actions/${id}/assurance/closure`, { method: "POST", body: form }); return response.status; }, high.id);
   expect(crossTenantClosure).toBe(404);
+  const crossTenantReopen = await other.evaluate(async id => { const form = new FormData(); form.set("intent", "reopen"); form.set("rationale", "Attempt across a tenant boundary."); return (await fetch(`/api/actions/${id}/assurance/closure`, { method: "POST", body: form })).status; }, high.id);
+  expect(crossTenantReopen).toBe(404);
   const crossTenantDirectory = await other.evaluate(async name => { const response = await fetch(`/api/actions/authorised-options?kind=OWNER&q=${encodeURIComponent(name)}`); return await response.json(); }, E2E_USERS.registeredManager.name);
   expect(crossTenantDirectory.items ?? []).toHaveLength(0);
   const crossTenantEvidence = await other.evaluate(async () => { const response = await fetch("/api/evidence/authorised-options?kind=EVIDENCE&q=E2E"); return await response.json(); });
   expect(crossTenantEvidence.items ?? []).toHaveLength(0);
   await otherContext.close();
+  const authorisedReopen = await owner.evaluate(async id => { const form = new FormData(); form.set("intent", "reopen"); form.set("rationale", "A new concern requires renewed governance review and further work."); const response = await fetch(`/api/actions/${id}/assurance/closure`, { method: "POST", body: form }); return { status: response.status, body: await response.json() }; }, high.id);
+  expect(authorisedReopen.status, authorisedReopen.body.error).toBe(200);
+  await owner.reload({ waitUntil: "domcontentloaded" });
+  await expect(section(owner, "Management assurance and closure")).toContainText("Recent closure and reopening history");
+  await expect(section(owner, "Management assurance and closure")).toContainText("Authorised closure");
+  await expect(section(owner, "Management assurance and closure")).toContainText("A new concern requires renewed governance review");
+  await expect(owner.getByRole("region", { name: "Management assurance decision" })).toContainText("Needs attention");
+  const staleReclosure = await owner.evaluate(async ({ id, evidenceId }) => { const form = new FormData(); form.set("intent", "close"); form.set("rationale", "Attempt to reuse the previous assurance without renewed work."); form.append("evidenceIds", evidenceId); return (await fetch(`/api/actions/${id}/assurance/closure`, { method: "POST", body: form })).status; }, { id: high.id, evidenceId: setup.evidenceId });
+  expect(staleReclosure).toBe(409);
+  const renewedCompletion = await rm.evaluate(async ({ id, evidenceId }) => { const form = new FormData(); form.set("intent", "complete"); form.set("status", "IN_PROGRESS"); form.set("note", "Renewed corrective work completed after the governance concern was reopened."); form.set("evidenceId", evidenceId); return (await fetch(`/api/actions/${id}/updates`, { method: "POST", body: form })).status; }, { id: high.id, evidenceId: setup.evidenceId });
+  expect(renewedCompletion).toBe(200);
+  const oldDecisionsAfterNewWork = await owner.evaluate(async ({ id, evidenceId }) => { const form = new FormData(); form.set("intent", "close"); form.set("rationale", "Attempt to reuse earlier verification and effectiveness decisions."); form.append("evidenceIds", evidenceId); return (await fetch(`/api/actions/${id}/assurance/closure`, { method: "POST", body: form })).status; }, { id: high.id, evidenceId: setup.evidenceId });
+  expect(oldDecisionsAfterNewWork).toBe(409);
   await ownerContext.close();
   await rmContext.close();
 });
@@ -166,7 +203,7 @@ test("rejected Verification remains historical and a later accepted decision gov
   expect(rejected.status).toBe(200);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(section(page, "4. Verification")).toContainText("Failed");
-  await expect(section(page, "7. Management assurance and closure")).toContainText(/not accepted/i);
+  await expect(section(page, "Management assurance and closure")).toContainText(/not accepted/i);
   const blocked = await closureRequest(page, action.id, setup.evidenceId, "Rejected verification means closure must remain blocked.", E2E_USERS.registeredManager.name);
   expect(blocked.status).toBe(409);
   expect(blocked.body.requirements.find((item: { key: string }) => item.key === "verification")?.reason).toMatch(/not accepted/i);
@@ -185,7 +222,7 @@ test("rejected Verification remains historical and a later accepted decision gov
   await expect(history.getByText("Earlier verification decision")).toBeVisible();
   await expect(history.getByText("Verified", { exact: true }).first()).toBeVisible();
   await expect(history.getByText("Failed", { exact: true }).first()).toBeVisible();
-  await expect(section(page, "7. Management assurance and closure")).toContainText("Effectiveness demonstrated");
+  await expect(section(page, "Management assurance and closure")).toContainText("Effectiveness demonstrated");
 });
 
 test("capability, governance authority, active Evidence and external dependencies are independently enforced", async ({ page, browser, request }) => {

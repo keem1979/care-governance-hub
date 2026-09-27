@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
-import { linkActionEvidence } from "@/lib/action-assurance";
+import { currentAssuranceCycle, linkActionEvidence } from "@/lib/action-assurance";
 import { actionEligibleEvidenceWhere, actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { syncFindingFromAction, validateEffectivenessReview } from "@/lib/assurance-improvement";
 import { createDb } from "@/lib/db";
@@ -10,14 +10,16 @@ import { parseOptionalDate } from "@/lib/policies";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await requirePermission(PERMISSIONS.ACTIONS_MANAGE), { id } = await params, form = await request.formData(), db = createDb();
   try {
-    const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) }, include: { verifications: { where: { verificationType: "CLOSURE" }, orderBy: { verifiedAt: "desc" }, take: 1 }, evidenceLinks: { where: { retiredAt: null } } } });
+    const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) }, include: { verifications: { where: { verificationType: "CLOSURE" }, orderBy: { createdAt: "desc" } }, evidenceLinks: { where: { retiredAt: null } } } });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
     assertActionWriteScope(context, action.locationId);
     if (action.closedAt) throw new Error("This Action is already closed. Reopen it before recording a new effectiveness decision.");
     if (action.archivedAt || ["ARCHIVED", "CANCELLED"].includes(action.status)) throw new Error("Archived or cancelled Actions cannot receive an effectiveness decision.");
     const recurrenceValue = String(form.get("recurrenceFound") ?? "");
     if (!["true", "false"].includes(recurrenceValue)) throw new Error("Choose whether a repeat problem was found.");
-    const verification = action.verifications[0] ?? null, reviewDate = parseOptionalDate(form.get("reviewDate")), nextReviewDate = parseOptionalDate(form.get("nextReviewDate")), recurrenceFound = recurrenceValue === "true";
+    const lastReopen = await db.activityLog.findFirst({ where: { organisationId: context.organisation.id, locationId: action.locationId, recordType: "ActionClosure", recordId: id, action: "STATUS_CHANGE" }, orderBy: { createdAt: "desc" }, select: { createdAt: true } });
+    const { verification } = currentAssuranceCycle({ reopenedAt: lastReopen?.createdAt ?? null, completionDate: action.completionDate, verifications: action.verifications, effectivenessReviews: [] });
+    const reviewDate = parseOptionalDate(form.get("reviewDate")), nextReviewDate = parseOptionalDate(form.get("nextReviewDate")), recurrenceFound = recurrenceValue === "true";
     if (verification?.outcome !== "VERIFIED") throw new Error("A verified completion decision is required before effectiveness can be assessed.");
     const input = { outcome: text(form, "outcome"), observedResult: text(form, "observedResult"), decision: text(form, "decision"), recurrenceFound, reviewDate, verifiedAt: verification?.verifiedAt ?? null, nextReviewDate };
     validateEffectivenessReview(input);

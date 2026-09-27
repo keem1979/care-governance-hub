@@ -6,13 +6,13 @@ type Setup = {
   actions: Record<string, { id: string }>;
 };
 
-test("Action assurance remains usable on a mobile viewport", async ({ page, request }) => {
+test("Action assurance remains usable on a mobile viewport", async ({ page, request }, testInfo) => {
   test.setTimeout(300_000);
   const reset = await request.post("/api/test/e2e/setup", { headers: { "x-e2e-setup-token": E2E_SETUP_TOKEN } });
   expect(reset.status()).toBe(200);
   const response = await request.get("/api/test/e2e/setup", { headers: { "x-e2e-setup-token": E2E_SETUP_TOKEN } });
   const setup = await response.json() as Setup;
-  const high = setup.actions["E2E-ACT-ASSURANCE-HIGH"], dependency = setup.actions["E2E-ACT-ASSURANCE-DEPENDENCY"];
+  const high = setup.actions["E2E-ACT-ASSURANCE-HIGH"], dependency = setup.actions["E2E-ACT-ASSURANCE-DEPENDENCY"], low = setup.actions["E2E-ACT-ASSURANCE-LOW"];
 
   await signIn(page, E2E_USERS.registeredManager);
   await page.goto("/actions", { waitUntil: "domcontentloaded" });
@@ -30,6 +30,8 @@ test("Action assurance remains usable on a mobile viewport", async ({ page, requ
   await expectNoOverflow(page);
 
   await page.goto(`/actions/${high.id}/assurance`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("region", { name: "Management assurance decision" })).toContainText("Needs attention");
+  await page.screenshot({ path: testInfo.outputPath("wp005-needs-attention-mobile.png"), fullPage: true });
   await expectNoOverflow(page);
   await expect(page.getByRole("heading", { name: "3. Role-aware Evidence" })).toBeVisible();
 
@@ -52,6 +54,11 @@ test("Action assurance remains usable on a mobile viewport", async ({ page, requ
   await expectPracticalTouchTarget(page.getByRole("button", { name: "Record verification" }));
   await expectPracticalTouchTarget(page.getByRole("button", { name: "Record effectiveness review" }));
   await expectPracticalTouchTarget(page.getByRole("button", { name: "Authorise closure" }));
+
+  await page.goto(`/actions/${low.id}/assurance`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("region", { name: "Management assurance decision" })).toContainText("Ready for management review");
+  await page.screenshot({ path: testInfo.outputPath("wp005-ready-mobile.png"), fullPage: true });
+  await expectNoOverflow(page);
 
   await page.goto(`/actions/${dependency.id}/assurance`, { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Fictional Specialist Service")).toBeVisible();
