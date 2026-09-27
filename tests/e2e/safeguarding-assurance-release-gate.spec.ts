@@ -39,7 +39,7 @@ test("Safeguarding Assurance preserves safety, Action, effectiveness and closure
     return { status: response.status, body: await response.json() };
   }, ready.id);
   expect(generic.status).toBe(400);
-  expect(generic.body.error).toMatch(/Management Assurance Test/i);
+  expect(generic.body.error).toMatch(/controlled lifecycle, not the general status field/i);
 
   const blockedDecision = await decision(page, blocked.id, setup.evidenceId, "ASSURED_CLOSED", "Open improvement means assurance cannot yet be provided.");
   expect(blockedDecision.status).toBe(400);

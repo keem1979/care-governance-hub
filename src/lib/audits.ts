@@ -1,3 +1,5 @@
+import { evidenceScopeWhere } from "@/lib/evidence";
+
 export const AUDIT_STATUSES = ["DRAFT","IN_PROGRESS","AWAITING_REVIEW","COMPLETED","CLOSED","ARCHIVED"] as const;
 export const COMPLIANCE_ANSWERS = ["COMPLIANT","PARTIALLY_COMPLIANT","NON_COMPLIANT","NOT_APPLICABLE"] as const;
 
@@ -60,4 +62,8 @@ export function auditStatusLabel(status: string): string {
 
 export function auditScopeWhere(context: { organisation:{id:string}; allLocations:boolean; locations:{id:string}[] }) {
   return { organisationId: context.organisation.id, ...(context.allLocations ? {} : { locationId: { in: context.locations.map((item)=>item.id) } }) };
+}
+
+export function auditEligibleEvidenceWhere(context: { organisation:{id:string}; allLocations:boolean; locations:{id:string}[] }, auditLocationId: string) {
+  return { AND: [evidenceScopeWhere(context), { status: "ACTIVE" as const, archivedAt: null, OR: [{ locationId: null }, { locationId: auditLocationId }] }] };
 }

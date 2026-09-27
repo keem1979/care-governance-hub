@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
-import { auditScopeWhere } from "@/lib/audits";
+import { auditEligibleEvidenceWhere, auditScopeWhere } from "@/lib/audits";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -11,15 +11,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const finding = await db.auditFinding.findFirst({
       where: { id: findingId, auditId: id, audit: auditScopeWhere(context) },
-      include: { action: { select: { closedAt: true } }, reaudits: { orderBy: { reviewDate: "desc" } }, evidenceLinks: { where: { retiredAt: null }, select: { id: true } }, audit: { select: { locationId: true } } },
+      include: { action: { select: { closedAt: true } }, reaudits: { orderBy: [{ reviewDate: "desc" }, { createdAt: "desc" }] }, audit: { select: { locationId: true, status: true } } },
     });
     if (!finding) return NextResponse.json({ error: "Audit Finding not found." }, { status: 404 });
+    if (["CLOSED", "ARCHIVED"].includes(finding.audit.status)) return NextResponse.json({ error: "This audit is closed to changes." }, { status: 409 });
     const intent = String(form.get("intent") ?? "update"), rationale = String(form.get("rationale") ?? "").trim();
     if (intent === "resolve") {
       if (rationale.length < 12) throw new Error("Record why the finding is ready for resolution.");
       if (finding.actionRequired && !finding.action?.closedAt) throw new Error("The canonical corrective Action must pass its own assurance closure before this finding can be resolved.");
-      if (finding.evidenceLinks.length === 0) throw new Error("Link sufficient appropriate finding evidence before resolution.");
-      if (["HIGH", "CRITICAL"].includes(finding.severity) && !finding.reaudits.some((review) => review.outcome === "RESOLVED")) throw new Error("High and Critical findings require a targeted re-audit outcome of Resolved.");
+      const qualifyingEvidence = await db.auditFindingEvidence.count({ where: { auditFindingId: findingId, retiredAt: null, evidence: auditEligibleEvidenceWhere(context, finding.audit.locationId) } });
+      if (qualifyingEvidence === 0) throw new Error("Link sufficient appropriate finding evidence before resolution.");
+      if (["HIGH", "CRITICAL"].includes(finding.severity)) {
+        const latest = finding.reaudits[0];
+        const reviewEvidence = latest ? await db.auditReauditEvidence.count({ where: { reauditId: latest.id, evidence: auditEligibleEvidenceWhere(context, finding.audit.locationId) } }) : 0;
+        if (latest?.outcome !== "RESOLVED" || reviewEvidence === 0) throw new Error("High and Critical findings require the latest targeted re-audit outcome to be Resolved with eligible Evidence.");
+      }
       const now = new Date();
       await db.$transaction([
         db.auditFinding.update({ where: { id: findingId }, data: { resolvedAt: now, resolvedById: context.user.id, resolutionRationale: rationale } }),
@@ -39,7 +45,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!SEVERITIES.includes(severity)) throw new Error("Choose a valid finding severity.");
     if (severity === "CRITICAL" && (!immediateControl || !escalationRequired || escalationRationale.length < 8)) throw new Error("A Critical finding requires an immediate safety control and a clear escalation route.");
     await db.$transaction([
-      db.auditFinding.update({ where: { id: findingId }, data: { severity: severity as never, recommendation: recommendation || null, immediateControl: immediateControl || null, escalationRequired, escalationRationale: escalationRationale || null, actionRequired: form.get("actionRequired") !== "false" } }),
+      db.auditFinding.update({ where: { id: findingId }, data: { severity: severity as never, recommendation: recommendation || null, immediateControl: immediateControl || null, escalationRequired, escalationRationale: escalationRationale || null, actionRequired: form.has("actionRequired") ? form.get("actionRequired") !== "false" : finding.actionRequired } }),
       db.activityLog.create({ data: { organisationId: context.organisation.id, locationId: finding.audit.locationId, userId: context.user.id, action: "UPDATE", recordType: "AuditFinding", recordId: findingId, summary: `Updated Audit Finding: ${finding.summary}`, beforeValue: { severity: finding.severity }, afterValue: { severity, escalationRequired } } }),
     ]);
     return NextResponse.json({ ok: true });

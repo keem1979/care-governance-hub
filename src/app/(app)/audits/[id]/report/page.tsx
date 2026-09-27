@@ -9,16 +9,19 @@ export default async function AuditReportPage({ params }: { params: Promise<{ id
   const context = await requirePermission(PERMISSIONS.REPORTS_EXPORT);
   const { id } = await params;
   const db = createDb();
-  const audit = await db.audit.findFirst({
+  let audit = await db.audit.findFirst({
     where: { id, ...auditScopeWhere(context) },
     include: {
       template: { include: { sections: { include: { questions: { orderBy: { sortOrder: "asc" } } }, orderBy: { sortOrder: "asc" } } } },
       auditor: { select: { name: true } }, location: { select: { name: true } }, signedOffBy: { select: { name: true } }, fieldworkCompletedBy: { select: { name: true } }, governanceAssuredBy: { select: { name: true } },
-      responses: { include: { evidence: { select: { title: true, category: true, evidenceType: true, sourceReference: true } } } },
-      findings: { include: { action: { select: { reference: true, status: true, closedAt: true } }, evidenceLinks: { where: { retiredAt: null }, include: { evidence: { select: { title: true } } } }, reaudits: { include: { reviewer: { select: { name: true } } }, orderBy: { reviewDate: "desc" } } }, orderBy: [{ severity: "desc" }, { createdAt: "asc" }] },
+      responses: { include: { evidence: { select: { title: true, category: true, evidenceType: true, sourceReference: true, organisationId: true, locationId: true } } } },
+      findings: { include: { action: { select: { reference: true, status: true, closedAt: true } }, evidenceLinks: { where: { retiredAt: null }, include: { evidence: { select: { title: true, organisationId: true, locationId: true } } } }, reaudits: { include: { reviewer: { select: { name: true } } }, orderBy: [{ reviewDate: "desc" }, { createdAt: "desc" }] } }, orderBy: [{ severity: "desc" }, { createdAt: "asc" }] },
     },
   }).finally(() => db.$disconnect());
   if (!audit) notFound();
+  const locationId = audit.locationId;
+  const visibleEvidence = (evidence: { organisationId: string; locationId: string | null }) => evidence.organisationId === context.organisation.id && (evidence.locationId === null || evidence.locationId === locationId);
+  audit = { ...audit, responses: audit.responses.map((response) => ({ ...response, evidence: response.evidence && visibleEvidence(response.evidence) ? response.evidence : null })), findings: audit.findings.map((finding) => ({ ...finding, evidenceLinks: finding.evidenceLinks.filter((link) => visibleEvidence(link.evidence)) })) };
 
   const isBcp = audit.template.key === "business-continuity-audit";
   const documentTitle = isBcp ? "Business continuity assurance plan" : "Audit assurance report";

@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { syncAuditEvidence } from "@/lib/audit-evidence";
 import { requirePermission } from "@/lib/auth/dal";
-import { AUDIT_EVIDENCE_SOURCE_OPTIONS, auditScopeWhere, calculateAuditScore, hasTraceableAuditEvidence, scoreAnswer } from "@/lib/audits";
+import { AUDIT_EVIDENCE_SOURCE_OPTIONS, COMPLIANCE_ANSWERS, auditEligibleEvidenceWhere, auditScopeWhere, calculateAuditScore, hasTraceableAuditEvidence, scoreAnswer } from "@/lib/audits";
 import { createDb } from "@/lib/db";
-import { evidenceScopeWhere } from "@/lib/evidence";
 import { PERMISSIONS } from "@/lib/permissions";
 import { auditCriterionKey } from "@/lib/audit-assurance";
 
@@ -32,14 +31,16 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
       }
       for(const item of submitted) {
         const question=questions.find((candidate)=>candidate.id===item.questionId); if(!question) continue;
+        const allowedAnswers:readonly string[]|null=question.responseType==="COMPLIANCE"?COMPLIANCE_ANSWERS:question.responseType==="YES_NO"?["YES","NO","NOT_APPLICABLE"]:question.responseType==="MULTIPLE_CHOICE"?question.options:null;
+        if(allowedAnswers&&item.answer&&!allowedAnswers.includes(item.answer))throw new Error("Choose a valid answer for this audit check.");
         const evidenceSourceType=item.evidenceSourceType?.trim()||(item.evidenceId?"EVIDENCE_LIBRARY":null);
         const evidenceSourceReference=item.evidenceSourceReference?.trim()||null;
         if(evidenceSourceType && !AUDIT_EVIDENCE_SOURCE_OPTIONS.some((option)=>option.value===evidenceSourceType)) throw new Error("Choose a valid supporting evidence source.");
         if(evidenceSourceReference && evidenceSourceReference.length>220) throw new Error("Keep the supporting evidence reference within 220 characters.");
-        if(item.evidenceId && !(await db.evidence.findFirst({where:{id:item.evidenceId,...evidenceScopeWhere(context)},select:{id:true}}))) throw new Error("Linked evidence could not be found.");
+        if(item.evidenceId && !(await db.evidence.findFirst({where:{id:item.evidenceId,...auditEligibleEvidenceWhere(context,audit.locationId)},select:{id:true}}))) throw new Error("Linked evidence could not be found for this audit location.");
         const response=await db.auditResponse.upsert({where:{auditId_questionId:{auditId:id,questionId:item.questionId}},create:{auditId:id,questionId:item.questionId,answer:item.answer||null,comment:item.comment.trim()||null,evidenceId:item.evidenceId||null,evidenceSourceType,evidenceSourceReference,score:scoreAnswer(item.answer)},update:{answer:item.answer||null,comment:item.comment.trim()||null,evidenceId:item.evidenceId||null,evidenceSourceType,evidenceSourceReference,score:scoreAnswer(item.answer)}});
         if(item.answer==="NON_COMPLIANT" || item.answer==="PARTIALLY_COMPLIANT") {
-          const finding=await db.auditFinding.upsert({where:{responseId:response.id},create:{auditId:id,responseId:response.id,criterionKeySnapshot:criterionKeys.get(question.id)!,severity:item.answer==="NON_COMPLIANT"?"HIGH":"MEDIUM",summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true},update:{summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true}});
+          const finding=await db.auditFinding.upsert({where:{responseId:response.id},create:{auditId:id,responseId:response.id,criterionKeySnapshot:criterionKeys.get(question.id)!,severity:item.answer==="NON_COMPLIANT"?"HIGH":"MEDIUM",summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action.",actionRequired:true},update:{summary:question.text,recommendation:item.comment.trim()||"Create and complete a corrective action."}});
           if(item.evidenceId && !(await db.auditFindingEvidence.findFirst({where:{auditFindingId:finding.id,evidenceId:item.evidenceId,role:"RESPONSE",retiredAt:null},select:{id:true}}))) {
             const evidence=await db.evidence.findUnique({where:{id:item.evidenceId},select:{title:true,currentVersionId:true,taxonomyFamilyKey:true,taxonomyTypeKey:true,category:true,evidenceType:true}});
             await db.auditFindingEvidence.create({data:{auditFindingId:finding.id,evidenceId:item.evidenceId,role:"RESPONSE",linkedById:context.user.id,evidenceSnapshot:evidence??undefined}});

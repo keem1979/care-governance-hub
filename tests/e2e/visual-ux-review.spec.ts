@@ -15,6 +15,8 @@ type Setup = {
 
 const output = resolve(process.env.QCGMS_VISUAL_OUTPUT_DIR ?? "test-results/ui-review");
 
+test.afterEach(() => runVisualFixture("restore"));
+
 test("capture the real QCGMS visual UX evidence set", async ({ page, request }, testInfo) => {
   test.setTimeout(600_000);
   mkdirSync(output, { recursive: true });
@@ -77,14 +79,13 @@ test("capture the real QCGMS visual UX evidence set", async ({ page, request }, 
     await capture(page, "/management", "15-management-oversight-tablet.png");
   }
 
-  runVisualFixture("restore");
   expect(browserErrors, browserErrors.join("\n")).toEqual([]);
   expect(httpErrors, httpErrors.join("\n")).toEqual([]);
 });
 
 function runVisualFixture(mode: "restore" | "prepare", setup?: Setup) {
   const encodedSetup = setup ? Buffer.from(JSON.stringify(setup), "utf8").toString("base64url") : "";
-  return execFileSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/prepare-visual-ux-fixtures.ts", mode, encodedSetup], {
+  return execFileSync(process.execPath, ["--experimental-strip-types", "scripts/prepare-visual-ux-fixtures.ts", mode, encodedSetup], {
     cwd: process.cwd(),
     env: process.env,
     encoding: "utf8",
@@ -120,12 +121,12 @@ async function openQuickFind(page: Page, query: string) {
 
 async function openEvidenceDrawer(page: Page, actionId: string) {
   await e2eGoto(page, `/actions/${actionId}/assurance`);
-  await page.getByRole("button", { name: "Link Evidence" }).click();
-  const drawer = page.getByRole("dialog", { name: "Find, preview and link Evidence" });
+  await page.getByRole("button", { name: "Add Evidence" }).click();
+  const drawer = page.getByRole("dialog", { name: "Add Evidence" });
   await expect(drawer).toBeVisible();
-  await drawer.getByLabel("Search Evidence Library").fill("Medication governance audit");
-  await drawer.getByRole("button", { name: "Search authorised Evidence" }).click();
-  await expect(drawer.getByText("Medication governance audit — July 2026").first()).toBeVisible();
-  await drawer.getByText("Preview governance metadata").first().click();
-  await expect(drawer.locator("dt").filter({ hasText: "Verification" }).first()).toBeVisible();
+  await drawer.getByRole("button", { name: "Use existing Evidence" }).click();
+  await drawer.getByLabel("Search Evidence").fill("Medication governance audit");
+  await drawer.getByRole("button", { name: "Search", exact: true }).click();
+  await drawer.getByRole("button", { name: /Medication governance audit — July 2026/ }).first().click();
+  await expect(drawer.getByRole("heading", { name: "Preview" })).toBeVisible();
 }

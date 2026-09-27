@@ -33,10 +33,10 @@ test("sets browser protections and rejects a cross-site sign-in request", async 
 test("shows the tenant-scoped dashboard after sign-in", async ({ page }) => {
   await signIn(page);
   await expect(
-    page.getByRole("heading", { name: /Good (morning|afternoon|evening), Evelyn/ }),
+    page.getByRole("heading", { name: new RegExp(`Good (morning|afternoon|evening), ${E2E_USER.name.split(" ")[0]}`) }),
   ).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("What needs attention")).toBeVisible();
-  await expect(page.getByText("For your team’s internal oversight")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What requires management attention today?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Quick capture and follow-up" })).toBeVisible();
   await page.goto("/clients", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Client Directory" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Add client" })).toBeVisible();
@@ -47,15 +47,15 @@ test("opens the connected Action Tracker and its natural entry form", async ({ p
   await signIn(page);
   await page.goto("/actions", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/actions$/, { timeout: 15_000 });
-  await expect(page.getByRole("heading", { name: "Action Tracker" })).toBeVisible();
-  await expect(page.getByText("One record from finding through response, evidence, verified closure, recurrence monitoring and sustained improvement.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What needs action now?" })).toBeVisible();
+  await expect(page.getByText("Prioritised by deadline, seriousness and the next governed decision. Completion, verification, effectiveness and closure remain separate.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Create action" })).toBeVisible();
   await page.goto("/actions/new", { waitUntil: "domcontentloaded", timeout: 45_000 });
   await expect(page.getByRole("heading", { name: "Create improvement action" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByLabel("Expected outcome")).toBeVisible();
-  await expect(page.getByLabel("How will success be measured?")).toBeVisible();
+  await expect(page.getByLabel("How will we know it worked?")).toBeVisible();
   await expect(page.getByLabel("Source record")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Check and create action" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check and create Action" })).toBeVisible();
 });
 
 test("shows Care Quality as a connected overview rather than a duplicate register", async ({ page }) => {

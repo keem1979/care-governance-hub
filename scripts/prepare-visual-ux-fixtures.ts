@@ -101,7 +101,7 @@ async function restoreFixtureReferences() {
   }
   await db.query('UPDATE "Client" SET "clientReference"=$1,"updatedAt"=now() WHERE "organisationId"=$2 AND "clientReference"=$3 AND NOT EXISTS (SELECT 1 FROM "Client" WHERE "organisationId"=$2 AND "clientReference"=$1)', ["E2E-CLI-0001", organisation.id, "CLI-1042"]);
   await db.query('UPDATE "StaffMember" SET "employeeReference"=$1,"updatedAt"=now() WHERE "organisationId"=$2 AND "employeeReference"=$3 AND NOT EXISTS (SELECT 1 FROM "StaffMember" WHERE "organisationId"=$2 AND "employeeReference"=$1)', ["E2E-STF-0001", organisation.id, "STF-0218"]);
-  await db.query('UPDATE "Evidence" SET "sourceReference"=$1,"updatedAt"=now() WHERE "organisationId"=$2 AND "sourceReference"=$3', ["E2E-SRC-001", organisation.id, "AUD-MED-2026-07"]);
+  await db.query('UPDATE "Evidence" SET "sourceReference"=$1,"locationId"=NULL,"updatedAt"=now() WHERE "organisationId"=$2 AND "sourceReference"=$3', ["E2E-SRC-001", organisation.id, "AUD-MED-2026-07"]);
 }
 
 async function updateRegister(id: string, reference: string, title: string, summary?: string | null, clientId?: string | null, staffMemberId?: string | null) {
