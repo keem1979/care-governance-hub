@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
-import { actionAssurancePolicy, linkActionEvidence } from "@/lib/action-assurance";
-import { actionScopeWhere } from "@/lib/actions";
+import { linkActionEvidence, resolveActionAssurancePolicy } from "@/lib/action-assurance";
+import { actionEligibleEvidenceWhere, actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { syncFindingFromAction, validateIndependentVerification } from "@/lib/assurance-improvement";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -10,18 +10,25 @@ import { parseOptionalDate } from "@/lib/policies";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await requirePermission(PERMISSIONS.ACTIONS_MANAGE), { id } = await params, form = await request.formData(), db = createDb();
   try {
-    const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) }, include: { evidenceLinks: { where: { retiredAt: null } }, rootCauseReview: true } });
+    const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) }, include: { evidenceLinks: { where: { retiredAt: null }, include: { evidence: { select: { title: true } } } }, rootCauseReview: true } });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
+    assertActionWriteScope(context, action.locationId);
     if (action.closedAt) throw new Error("This Action is already closed. Reopen it before recording a new verification decision.");
-    const policy = actionAssurancePolicy(action.priority, action.sourceType);
+    if (action.archivedAt || ["ARCHIVED", "CANCELLED"].includes(action.status)) throw new Error("Archived or cancelled Actions cannot be verified.");
+    if (action.progressPercent !== 100 || !action.completionDate) throw new Error("Submit completed work before recording a verification decision.");
+    const policy = await resolveActionAssurancePolicy(db, { organisationId: context.organisation.id, priority: action.priority, sourceType: action.sourceType });
     if (policy.rootCauseRequired && !["COMPLETED", "APPROVED"].includes(action.rootCauseReview?.status ?? "")) throw new Error("Complete the structured root-cause review before verifying a high or critical Action.");
     const evidenceIds = [...new Set(form.getAll("evidenceIds").map(String).filter(Boolean))];
+    const eligibleEvidence = await db.evidence.findMany({ where: { id: { in: evidenceIds }, ...actionEligibleEvidenceWhere(context, action.locationId) }, select: { id: true } });
     const authorisedEvidence = new Set(action.evidenceLinks.map((item) => item.evidenceId));
+    if (eligibleEvidence.length !== evidenceIds.length) throw new Error("Verification requires active Evidence in this Action's authorised location or organisation-wide scope.");
     if (evidenceIds.some((evidenceId) => !authorisedEvidence.has(evidenceId))) throw new Error("Verification can use only evidence already linked to this action.");
     const verifierId = text(form, "verifierId"), verifiedAt = parseOptionalDate(form.get("verifiedAt"));
     if (!(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: verifierId, status: "ACTIVE" } }))) throw new Error("Choose an active organisation member as verifier.");
     if (verifierId !== context.user.id) throw new Error("You can record only your own verification decision. The named verifier must sign in and complete this step.");
-    const input = { outcome: text(form, "outcome"), completedWork: text(form, "completedWork"), evidenceSummary: text(form, "evidenceSummary"), evidenceCount: evidenceIds.length, successMeasureResult: text(form, "successMeasureResult"), rationale: text(form, "rationale"), verifierId, ownerId: action.ownerId, priority: action.priority, verifiedAt };
+    if (policy.separateVerifierRequired && verifierId === action.ownerId) throw new Error("The applicable Action policy requires a verifier separate from the delivery owner.");
+    const selectedTitles = action.evidenceLinks.filter((link) => evidenceIds.includes(link.evidenceId)).map((link) => link.evidence.title);
+    const input = { outcome: text(form, "outcome"), completedWork: text(form, "completedWork") || action.progressNote?.trim() || action.completedActionSummary?.trim() || "", evidenceSummary: text(form, "evidenceSummary") || `Selected linked Evidence: ${selectedTitles.join("; ")}`, evidenceCount: evidenceIds.length, successMeasureResult: text(form, "successMeasureResult"), rationale: text(form, "rationale"), verifierId, ownerId: action.ownerId, priority: action.priority, verifiedAt };
     validateIndependentVerification(input);
     const verified = input.outcome === "VERIFIED", status = input.outcome === "FAILED" ? "IN_PROGRESS" : "AWAITING_VERIFICATION";
     const lifecycleStatus = verified ? (policy.effectivenessRequired ? "AWAITING_EFFECTIVENESS" : "READY_FOR_CLOSURE") : input.outcome === "FAILED" ? "ACTION_IN_PROGRESS" : "AWAITING_VERIFICATION";

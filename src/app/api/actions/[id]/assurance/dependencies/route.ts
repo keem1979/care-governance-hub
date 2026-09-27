@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
-import { actionScopeWhere } from "@/lib/actions";
+import { actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { externalDependencyState } from "@/lib/assurance-improvement";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -11,7 +11,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) } });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
+    assertActionWriteScope(context, action.locationId);
     if (action.closedAt) throw new Error("Closed Actions are read-only. Reopen the Action before adding a dependency.");
+    if (action.archivedAt || ["ARCHIVED", "CANCELLED"].includes(action.status)) throw new Error("Archived or cancelled Actions cannot add dependencies.");
     const externalPartyId = text(form, "externalPartyId"), requestText = text(form, "request"), interimControl = text(form, "interimControl"), escalationRoute = text(form, "escalationRoute");
     const requestedAt = parseOptionalDate(form.get("requestedAt")), dueDate = parseOptionalDate(form.get("dueDate")), ownerId = text(form, "ownerId");
     if (!externalPartyId || requestText.length < 8 || interimControl.length < 8 || escalationRoute.length < 8 || !requestedAt || !dueDate || !ownerId) throw new Error("Choose a controlled external party and complete the request, dates, interim control, escalation route and owner.");

@@ -53,13 +53,14 @@ test("an Action owner submits compact completed work while assurance decisions s
   expect(afterCompletion.closedAt).toBeNull();
   expect(afterCompletion.completionEvidenceCount).toBe(1);
 
-  const managerContext = await browser.newContext({ baseURL: origin });
+  const managerContext = await browser.newContext({ baseURL: origin, viewport: page.viewportSize() ?? undefined, isMobile: testInfo.project.name === "mobile", hasTouch: testInfo.project.name === "mobile" });
   const manager = await managerContext.newPage();
   try {
     await signIn(manager, E2E_USERS.registeredManager);
     await e2eGoto(manager, `/actions/${id}/assurance#verification`);
     const verification = manager.locator("#verification");
     await expect(verification.getByRole("combobox", { name: "Verification outcome" })).toHaveValue("");
+    expect(await manager.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
     expect(await prematureClosureRequest(manager, id, fixture.evidenceId)).toBe(409);
     expect((await readAction(id)).closedAt).toBeNull();
 
@@ -75,10 +76,13 @@ test("an Action owner submits compact completed work while assurance decisions s
     const verified = manager.waitForResponse(response => response.url().endsWith(`/api/actions/${id}/assurance/verification`) && response.request().method() === "POST");
     await verification.getByRole("button", { name: "Record verification" }).click();
     expect((await verified).status()).toBe(200);
+    await e2eGoto(manager, `/actions/${id}/assurance#verification`);
+    await manager.screenshot({ path: testInfo.outputPath("wp004-verification-recorded.png"), fullPage: true });
     await e2eGoto(manager, `/actions/${id}/assurance#effectiveness`);
     const effectiveness = manager.locator("#effectiveness");
     await expect(effectiveness.getByRole("combobox", { name: "Effectiveness outcome" })).toHaveValue("");
     await expect(effectiveness.getByRole("combobox", { name: "Recurrence identified?" })).toHaveValue("");
+    expect(await manager.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
     expect(await effectivenessWithoutRecurrenceRequest(manager, id, fixture.evidenceId)).toBe(400);
     await effectiveness.getByRole("combobox", { name: "Effectiveness outcome" }).selectOption("PARTIALLY_EFFECTIVE");
     await effectiveness.getByRole("listbox", { name: "Evidence of the observed result" }).selectOption([fixture.evidenceId]);
@@ -88,6 +92,8 @@ test("an Action owner submits compact completed work while assurance decisions s
     const reviewed = manager.waitForResponse(response => response.url().endsWith(`/api/actions/${id}/assurance/effectiveness`) && response.request().method() === "POST");
     await effectiveness.getByRole("button", { name: "Record effectiveness review" }).click();
     expect((await reviewed).status()).toBe(200);
+    await e2eGoto(manager, `/actions/${id}/assurance#effectiveness`);
+    await manager.screenshot({ path: testInfo.outputPath("wp004-effectiveness-reviewed.png"), fullPage: true });
     expect((await readAction(id)).lifecycleStatus).toBe("AWAITING_EFFECTIVENESS");
     expect((await readAction(id)).closedAt).toBeNull();
   } finally {

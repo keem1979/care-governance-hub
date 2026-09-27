@@ -1,4 +1,4 @@
-import{describe,expect,it}from"vitest";import{ACTION_CATEGORIES,ACTION_SOURCE_TYPES,actionDaysRemaining,actionProgressValue,actionReadiness,effectiveActionStatus,makeActionReference,sourcePath,validateActionClosure}from"@/lib/actions";
+import{describe,expect,it}from"vitest";import{ACTION_CATEGORIES,ACTION_SOURCE_TYPES,actionDaysRemaining,actionProgressValue,actionReadiness,assertActionWriteScope,effectiveActionStatus,makeActionReference,sourcePath,validateActionClosure,validateActionCompletion}from"@/lib/actions";
 describe("action workflow",()=>{
   it("creates readable references",()=>expect(makeActionReference(new Date("2026-07-25T00:00:00Z"),4)).toBe("ACT-20260725-004"));
   it("marks active past-due work overdue",()=>expect(effectiveActionStatus("IN_PROGRESS",new Date("2026-07-01"),new Date("2026-07-25"))).toBe("OVERDUE"));
@@ -13,4 +13,16 @@ describe("action workflow",()=>{
   it("keeps verified work in assurance review until a separate closure decision",()=>expect(actionReadiness({status:"AWAITING_VERIFICATION",progressPercent:100,evidenceRequired:true,evidenceCount:1,verifiedById:"manager",verificationDate:new Date()})).toBe("ASSURANCE_REVIEW_REQUIRED"));
   it("covers care plans and observed workforce practice as action sources",()=>expect(ACTION_SOURCE_TYPES).toEqual(expect.arrayContaining(["CARE_PLAN","SPOT_CHECK","SUPERVISION","APPRAISAL","COMPETENCY","TRAINING"])));
   it("covers regulated and operational responsibility areas",()=>expect(ACTION_CATEGORIES).toEqual(expect.arrayContaining(["Care planning and reviews","Assessments and changing needs","Spot checks and observed practice","Audits and inspection readiness","Notifications and statutory reporting"])));
+  it("lets a location-restricted manager edit only Actions in their authorised locations",()=>{
+    const context={allLocations:false,locations:[{id:"branch-a"}]};
+    expect(()=>assertActionWriteScope(context,"branch-a")).not.toThrow();
+    expect(()=>assertActionWriteScope(context,"branch-b")).toThrow(/authorised editing locations/);
+    expect(()=>assertActionWriteScope(context,null)).toThrow(/authorised editing locations/);
+    expect(()=>assertActionWriteScope({allLocations:true,locations:[]},null)).not.toThrow();
+  });
+  it("submits completion only with a factual account and Completion Evidence",()=>{
+    expect(()=>validateActionCompletion("Done",1)).toThrow(/Describe the work/);
+    expect(()=>validateActionCompletion("Control implemented",0)).toThrow(/Completion Evidence/);
+    expect(()=>validateActionCompletion("Control implemented",1)).not.toThrow();
+  });
 });

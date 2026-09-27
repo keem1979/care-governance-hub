@@ -4,7 +4,7 @@ import { linkActionEvidence } from "@/lib/action-assurance";
 import { resolveActionSource } from "@/lib/action-sources";
 import { syncActionEvidence } from "@/lib/action-evidence";
 import { syncFindingFromAction } from "@/lib/assurance-improvement";
-import { ACTION_CATEGORIES, ACTION_PRIORITIES, ACTION_SOURCE_TYPES, ACTION_STATUSES, actionScopeWhere, makeActionReference } from "@/lib/actions";
+import { ACTION_CATEGORIES, ACTION_PRIORITIES, ACTION_SOURCE_TYPES, ACTION_STATUSES, actionScopeWhere, assertActionWriteScope, makeActionReference } from "@/lib/actions";
 import { lifecycleForAction, MEDICATION_ISSUE_TYPES, normaliseIssueKey, suggestActionMatches } from "@/lib/closure-loop";
 import { createDb } from "@/lib/db";
 import { clientScopeWhere } from "@/lib/clients";
@@ -17,6 +17,7 @@ export async function POST(request: Request) {
   try {
     const title = text(form, "title"), description = text(form, "description"), ownerId = text(form, "ownerId"), oversightOwnerId = text(form, "oversightOwnerId");
     const locationId = text(form, "locationId") || null, category = text(form, "category") || ACTION_CATEGORIES[0];
+    assertActionWriteScope(context, locationId);
     const priority = text(form, "priority") || "MEDIUM", status = text(form, "status") || "OPEN";
     const dueDate = parseOptionalDate(form.get("dueDate")), reviewDate = parseOptionalDate(form.get("reviewDate"));
     const progressPercent = number(form, "progressPercent", 0), expectedOutcome = text(form, "expectedOutcome"), successMeasure = text(form, "successMeasure");
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
     if (!ownerId || !oversightOwnerId || !dueDate) throw new Error("Choose a delivery owner, Registered Manager or senior oversight lead, and due date.");
     if (!ACTION_CATEGORIES.includes(category as never) || !ACTION_PRIORITIES.includes(priority as never) || !ACTION_STATUSES.filter((item) => !["OVERDUE", "ARCHIVED", "COMPLETED"].includes(item)).includes(status as never)) throw new Error("Choose valid action values. Closure is a separate authorised assurance decision.");
     if (progressPercent < 0 || progressPercent > 100) throw new Error("Progress must be between 0 and 100%.");
+    if (progressPercent === 100 || ["AWAITING_EVIDENCE", "AWAITING_VERIFICATION"].includes(status)) throw new Error("Create the Action first, then submit completed work with Completion Evidence.");
     if (locationId && !context.locations.some(({ id }) => id === locationId)) throw new Error("Choose an authorised location.");
     const [deliveryOwner, oversightOwner] = await Promise.all([
       db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: ownerId, status: "ACTIVE" } }),
@@ -73,6 +75,7 @@ export async function POST(request: Request) {
     if (matchDecision.startsWith("LINK:")) {
       const actionId = matchDecision.slice(5), match = suggestions.find((item) => item.actionId === actionId), existing = candidates.find((item) => item.id === actionId);
       if (!match || !existing) throw new Error("The selected match is no longer available. Review the current suggestions.");
+      assertActionWriteScope(context, existing.locationId);
       const recurrence = match.kind === "RECURRENCE";
       await db.$transaction(async (tx) => {
         const occurrence = occurrenceData({ organisationId: context.organisation.id, sourceType, rawId, source, locationId, clientId, staffMemberId, category, issueKey, medicationIssueType, description, actorId: context.user.id, decision: recurrence ? "RECURRENCE_CONFIRMED" : "LINK_CONFIRMED", score: match.score, rationale: match.rationale.join("; ") });

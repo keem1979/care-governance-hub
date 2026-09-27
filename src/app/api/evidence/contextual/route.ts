@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
-import { actionScopeWhere } from "@/lib/actions";
+import { actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { ACTION_EVIDENCE_ROLES, linkActionEvidence, type ActionEvidenceRole } from "@/lib/action-assurance";
 import { evidenceScopeWhere, titleFromFileName, validateEvidenceFile } from "@/lib/evidence";
 import { taxonomyLabels } from "@/lib/evidence-taxonomy";
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       ? await db.action.findFirst({ where: { id: sourceId, ...actionScopeWhere(context) }, select: { id: true, locationId: true, reference: true, status: true, closedAt: true, archivedAt: true, clientId: true, staffMemberId: true } })
       : await db.registerEntry.findFirst({ where: { id: sourceId, ...registerScopeWhere(context), definition: { key: REGISTER_KEYS[sourceType as RegisterSource] } }, select: { id: true, locationId: true, reference: true, status: true, clientId: true, staffMemberId: true } });
     if (!source) return NextResponse.json({ error: "Source record not found." }, { status: 404 });
+    if (isAction) assertActionWriteScope(context, source.locationId);
     if (!isAction) assertRegisterWriteScope(context, source.locationId);
     if (isAction
       ? "closedAt" in source && (source.closedAt || source.archivedAt || ["COMPLETED", "CANCELLED", "ARCHIVED"].includes(source.status))

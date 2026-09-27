@@ -4,7 +4,7 @@ import { linkActionEvidence } from "@/lib/action-assurance";
 import { resolveActionSource } from "@/lib/action-sources";
 import { syncActionEvidence } from "@/lib/action-evidence";
 import { syncFindingFromAction } from "@/lib/assurance-improvement";
-import { ACTION_CATEGORIES, ACTION_PRIORITIES, ACTION_SOURCE_TYPES, ACTION_STATUSES, actionScopeWhere } from "@/lib/actions";
+import { ACTION_CATEGORIES, ACTION_PRIORITIES, ACTION_SOURCE_TYPES, ACTION_STATUSES, actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { lifecycleForAction, MEDICATION_ISSUE_TYPES, normaliseIssueKey } from "@/lib/closure-loop";
 import { clientScopeWhere } from "@/lib/clients";
 import { createDb } from "@/lib/db";
@@ -17,10 +17,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) }, include: { evidenceLinks: true } });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
+    assertActionWriteScope(context, action.locationId);
+    if (action.closedAt) throw new Error("Closed Actions are read-only. Reopen the Action through its Assurance chronology first.");
     if (request.headers.get("content-type")?.includes("application/json")) {
       const body = await request.json() as { intent?: string };
       if (!["archive", "restore"].includes(body.intent ?? "")) throw new Error("Unknown action.");
       const archived = body.intent === "archive", status = archived ? "ARCHIVED" : "OPEN";
+      if (archived && (action.archivedAt || ["ARCHIVED", "CANCELLED"].includes(action.status))) throw new Error("This Action cannot be archived from its current state.");
+      if (!archived && (!action.archivedAt || action.status !== "ARCHIVED")) throw new Error("Only an archived Action can be restored.");
       await db.$transaction(async (tx) => {
         const updated = await tx.action.update({ where: { id }, data: { status, archivedAt: archived ? new Date() : null } });
         await syncFindingFromAction(tx, updated);
@@ -30,9 +34,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       });
       return NextResponse.json({ ok: true });
     }
-    if (action.closedAt) throw new Error("Closed Actions are read-only. Reopen the Action through its Assurance chronology first.");
     const form = await request.formData(), title = text(form, "title"), description = text(form, "description"), ownerId = text(form, "ownerId"), oversightOwnerId = text(form, "oversightOwnerId");
     const locationId = text(form, "locationId") || null, category = text(form, "category") || ACTION_CATEGORIES[0];
+    assertActionWriteScope(context, locationId);
     const priority = text(form, "priority") || "MEDIUM", status = text(form, "status") || "OPEN";
     const dueDate = parseOptionalDate(form.get("dueDate")), reviewDate = parseOptionalDate(form.get("reviewDate"));
     const progressPercent = Math.round(Number(form.get("progressPercent") ?? action.progressPercent));
@@ -41,6 +45,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!expectedOutcome || !successMeasure) throw new Error("Add the expected outcome and how success will be measured.");
     if (!ACTION_CATEGORIES.includes(category as never) || !ACTION_PRIORITIES.includes(priority as never) || !ACTION_STATUSES.filter((item) => !["OVERDUE", "ARCHIVED", "COMPLETED"].includes(item)).includes(status as never)) throw new Error("Choose valid action values. Closure is a separate authorised assurance decision.");
     if (!Number.isFinite(progressPercent) || progressPercent < 0 || progressPercent > 100) throw new Error("Progress must be between 0 and 100%.");
+    if (progressPercent === 100 && action.progressPercent < 100) throw new Error("Submit completed work with Completion Evidence through the Action completion step.");
+    if (status === "AWAITING_VERIFICATION" && action.progressPercent < 100) throw new Error("Submit completed work before requesting verification.");
     if (locationId && !context.locations.some(({ id }) => id === locationId)) throw new Error("Choose an authorised location.");
     if (!(await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: ownerId, status: "ACTIVE" } }))) throw new Error("Choose an active delivery owner.");
     const oversightOwner = await db.organisationMembership.findFirst({ where: { organisationId: context.organisation.id, userId: oversightOwnerId, status: "ACTIVE" }, include: { role: { select: { key: true } } } });
