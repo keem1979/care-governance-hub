@@ -71,7 +71,7 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await effectiveness.getByText("Add baseline or target details").click();
   await effectiveness.getByLabel("Baseline").fill("One fictional recurring medicines exception.");
   await effectiveness.getByLabel("Target").fill("No repeat exception in the next audit sample.");
-  await effectiveness.getByLabel("Observed result").fill("The subsequent audit sample found no repeat medicines exception.");
+  await effectiveness.getByRole("textbox", { name: "Observed result", exact: true }).fill("The subsequent audit sample found no repeat medicines exception.");
   await effectiveness.getByLabel("Evidence of the observed result").selectOption(setup.evidenceId);
   await effectiveness.getByLabel("Recurrence identified?").selectOption("false");
   await effectiveness.getByLabel("Management decision").fill("The observed result supports effectiveness and the Action can proceed to closure review.");
@@ -103,7 +103,7 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   const ineffectiveReview = section(rm, "5. Effectiveness and sustained improvement");
   await ineffectiveReview.getByLabel("Effectiveness outcome").selectOption("INEFFECTIVE");
   await ineffectiveReview.getByLabel("Recurrence identified?").selectOption("true");
-  await ineffectiveReview.getByLabel("Observed result").fill("The follow-up sample found the same fictional medicines exception again.");
+  await ineffectiveReview.getByRole("textbox", { name: "Observed result", exact: true }).fill("The follow-up sample found the same fictional medicines exception again.");
   await ineffectiveReview.getByLabel("Evidence of the observed result").selectOption(setup.evidenceId);
   await ineffectiveReview.getByLabel("Management decision").fill("Reopen the Action, review the failed control and assign further corrective work.");
   await ineffectiveReview.getByLabel("Immediate control").fill("Registered Manager reviews all current medicines records today.");
