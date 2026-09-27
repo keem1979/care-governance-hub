@@ -80,6 +80,26 @@ describe("inspection and commissioner readiness scope", () => {
     expect(requirement.assurance.status).not.toBe("ASSURED");
   });
 
+  it("never presents organisation-wide assurance as ready through a restricted-location view", async () => {
+    const verifiedAt = new Date("2026-09-20");
+    db.complianceRequirement.findMany.mockResolvedValue([{
+      id: "requirement-a", locationId: null, catalogueKey: "well-kpis",
+      expectedEvidenceCategories: ["OUTCOMES"], coveredEvidenceCategories: ["OUTCOMES"],
+      evidenceLinks: [{ decision: "SUITABLE", evidenceCategories: ["OUTCOMES"], evidenceId: "evidence-a", evidence: {
+        id: "evidence-a", title: "Verified fictional outcome", status: "ACTIVE", category: "KPI", reviewExpiryDate: null,
+        relatedModule: null, relatedRecordId: null, tags: [], updatedAt: new Date("2026-09-01"), currentVersionId: null,
+        currentnessMode: null, currentnessStatus: null,
+        verifications: [{ outcome: "VERIFIED", verifiedAt, evidenceVersionId: null, reviewDueAt: null }],
+      } }],
+      auditLinks: [], registerLinks: [], actionLinks: [], reviewDate: null,
+      managementDecision: "ASSURED", reviewedAt: verifiedAt, signedOffAt: verifiedAt,
+    }] as never);
+    const [requirement] = await getInspectionRequirements(context as never);
+    expect(requirement.scopeLimited).toBe(true);
+    expect(requirement.assurance.status).toBe("NOT_READY");
+    expect(requirement.assurance.blockers.join(" ")).toMatch(/location-scoped view/i);
+  });
+
   it("requires a scoped Evidence child before changing suitability, even on a visible parent", async () => {
     const form = new FormData(); form.set("decision", "SUITABLE"); form.set("rationale", "This item is suitable for the stated requirement.");
     const response = await reviewMapping(new Request("http://localhost/api/inspection/requirement-a/evidence-mappings/foreign-evidence", { method: "PATCH", body: form }), { params: Promise.resolve({ id: "requirement-a", evidenceId: "foreign-evidence" }) });

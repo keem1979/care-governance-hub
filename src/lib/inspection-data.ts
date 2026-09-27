@@ -58,7 +58,7 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
       // A title, tag or nearby operational record remains a review suggestion, not assurance.
       const mappedCategories = mappedDocuments.filter((x)=>x.support==="FULL").flatMap((x)=>x.link.evidenceCategories);
       const coveredCategories = [...new Set([...item.coveredEvidenceCategories, ...mappedCategories])];
-      const assurance = calculateInspectionAssurance({
+      const calculatedAssurance = calculateInspectionAssurance({
         reviewDate: item.reviewDate,
         expectedCategories: item.expectedEvidenceCategories,
         coveredCategories,
@@ -77,6 +77,12 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
         signedOffAt: item.signedOffAt,
         now,
       });
+      const scopeLimited = !context.allLocations && item.locationId === null;
+      const assurance = scopeLimited ? {
+        ...calculatedAssurance,
+        status: "NOT_READY" as const,
+        blockers: [...calculatedAssurance.blockers, "Full organisation-wide assurance cannot be established from this location-scoped view"],
+      } : calculatedAssurance;
       const connectedRecords: InspectionRecordLink[] = [
         ...mappedDocuments.map(({link,state}) => ({ id: link.evidence.id, label: link.evidence.title, href: `/evidence/${link.evidence.id}`, type: link.evidence.relatedModule ?? "Evidence", status: `${link.decision} · ${state}`, date: link.evidence.reviewExpiryDate })),
         ...automatic.filter((candidate)=>!item.evidenceLinks.some((link)=>link.evidenceId===candidate.id)).map((x)=>({id:x.id,label:x.title,href:`/evidence/${x.id}`,type:x.relatedModule??"Evidence suggestion",status:"UNMAPPED",date:x.reviewExpiryDate})),
@@ -85,7 +91,7 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
         ...actions.map((x) => ({ id: x.id, label: `${x.reference} - ${x.title}`, href: `/actions/${x.id}`, type: "Action", status: x.status, date: x.dueDate })),
         ...live.links,
       ];
-      return { ...item, documents, audits, registers, actions, coveredCategories, assurance, connectedRecords };
+      return { ...item, documents, audits, registers, actions, coveredCategories, assurance, scopeLimited, connectedRecords };
     });
   } finally { await db.$disconnect(); }
 }
