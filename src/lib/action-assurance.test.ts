@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { actionAssurancePolicy, actionAssuranceReadiness, currentAssuranceCycle, evaluateActionClosureAuthority } from "@/lib/action-assurance";
+import { actionAssurancePolicy, actionAssuranceReadiness, actionPriorityToRiskLevel, currentAssuranceCycle, evaluateActionClosureAuthority } from "@/lib/action-assurance";
 
 describe("role-aware Action assurance", () => {
+  it("maps every Action priority to a valid Risk closure policy level", () => {
+    expect(["LOW", "MEDIUM", "HIGH", "CRITICAL"].map(priority => actionPriorityToRiskLevel(priority as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"))).toEqual(["LOW", "MODERATE", "HIGH", "CRITICAL"]);
+  });
   it("keeps a low manual administration Action proportionate", () => {
     expect(actionAssurancePolicy("LOW", "MANUAL")).toMatchObject({ verificationRequired: false, effectivenessRequired: false, separateCloserRequired: false });
   });

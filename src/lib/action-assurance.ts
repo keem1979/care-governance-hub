@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient, RiskLevel } from "@/generated/prisma/client";
+import type { ActionPriority, Prisma, PrismaClient, RiskLevel } from "@/generated/prisma/client";
 import { ROLE_KEYS } from "@/lib/permissions";
 import { resolveCurrentClosureRule, stableRiskCategoryKey } from "@/lib/risk-framework";
 
@@ -22,6 +22,12 @@ export type ActionClosureAuthority = {
   policyVersionNumber: number | null;
 };
 
+// Action priority and Risk level use different names for their middle tier.
+// Translate explicitly before querying the provider's Risk closure policy.
+export function actionPriorityToRiskLevel(priority: ActionPriority): RiskLevel {
+  return priority === "MEDIUM" ? "MODERATE" : priority;
+}
+
 /** Technical capability and governance authority are deliberately evaluated
  * separately. A permission override may allow Action administration without
  * giving the member authority to make a provider-governed closure decision.
@@ -42,7 +48,7 @@ export function evaluateActionClosureAuthority(input: {
 
 export async function resolveActionClosureAuthority(db: PrismaClient, input: {
   organisationId: string;
-  priority: string;
+  priority: ActionPriority;
   sourceType: string;
   sourceRecordId: string | null;
 }): Promise<ActionClosureAuthority> {
@@ -52,7 +58,7 @@ export async function resolveActionClosureAuthority(db: PrismaClient, input: {
       select: { category: true },
     });
     if (risk) {
-      const resolved = await resolveCurrentClosureRule(db, input.organisationId, input.priority as RiskLevel, stableRiskCategoryKey(risk.category));
+      const resolved = await resolveCurrentClosureRule(db, input.organisationId, actionPriorityToRiskLevel(input.priority), stableRiskCategoryKey(risk.category));
       if (resolved.policyVersion) return {
         authorisedRoleKeys: resolved.rule.approverRoleKeys,
         source: "PROVIDER_RISK_POLICY",
