@@ -1,6 +1,6 @@
 # WP-007 — Audit Experience Simplification
 
-**Status:** Final full browser regression in progress; local merge pending.
+**Status:** Gate B and Gate C passed; final Release Manager review and local merge pending.
 **Branch:** `wp-007-audit-experience` from local `main` `f369cd00dd62c07110743af088accb76cc2dfcf3` (after WP-006).
 **Data boundary:** only fictional fixtures and the disposable `127.0.0.1:5432/care_governance_hub_test` database. No production access, remote push or deployment. No schema change or WP-007 migration.
 
@@ -18,6 +18,10 @@ WP-007 also closes security and integrity gaps found in specialist review. New r
 - An early broad Chromium assurance run returned HTTP 404 during a re-audit POST. The trace showed Next.js `x-nextjs-action-not-found: 1` rather than the Audit route's 404 response. A fresh server run passed **2/2**. Classified **ENVIRONMENT / DEV-SERVER STATE ISSUE**; the route and governance rule were not weakened.
 - A refreshed WP-007 browser run counted zero fieldsets before the newly navigated form rendered, then submitted a blank form and timed out waiting for a POST. The error snapshot showed all nine answers blank and a visible validation alert. Classified **TEST TIMING DEFECT**; the test now waits for the first fieldset. An unrelated mobile dashboard navigation timed out during that same failed run. Separate final Chromium and mobile experience runs passed **2/2** each.
 - Existing full Audit assurance release tests passed on Chromium and mobile after the eligible historical re-audit check: **4/4**. The separate mobile form check passed **1/1**. No product change was made to satisfy a brittle locator.
+- The first complete repository browser run finished **66 passed, 12 failed, 4 intentionally skipped**. The failures identified stale foundation and governed-status text assertions, a visual test still targeting the pre-WP-002 Evidence drawer, a `tsx` child startup error before visual fixture work, and one Windows `ERR_NETWORK_IO_SUSPENDED` during MFA sign-in. The corrected foundation/assurance cases passed **20/20**; the current visual flow passed **2/2** after switching that test fixture process to Node's native TypeScript support and adding cleanup after failures. The interrupted mobile Incident case passed in both focused and final full runs. Product security or assurance controls were not loosened.
+- A later full run exposed two test helpers creating a default Basingstoke Audit while selecting Guildford-scoped Evidence. The absence of that Evidence option was the correct WP-007 location control. The existing Audit assurance helper passed **4/4** and the WP-007 experience helper passed **4/4** after both explicitly selected the fixture's Guildford service. The Oxford cross-location negative assertions remain. These were **TEST FIXTURE / SCOPE DEFECTS**, not product defects.
+- The final complete Chromium/mobile repository browser run at `cddd8e7c66d7181b86eddac3dbe66cf9066ec6c1` passed **78**, intentionally skipped **4**, failed **0** across **82** listed cases. The four skips are two mobile-only Risk checks skipped in the desktop project and two server-boundary Quick Find checks skipped in the mobile project because their server paths run on desktop. Artifacts are under `outputs/WP-007_CONVERGENCE_FINAL`.
+- A subsequent direct request regression exposed **TEST-STATE / ISOLATION ISSUE** in the guarded fictional setup route. The visual fixture temporarily moved `E2E-SRC-001` to Guildford and restored its reference but not its location; repeated setup also failed to reset that field. An organisation-wide Action correctly rejected the remaining Guildford Evidence. Security/Tenancy review approved a test-only reset to `locationId: null` for that one fixture and restoration of the visual fixture's location. The setup endpoint's production flag and token guard, and every Action eligibility check, remain unchanged. The direct gate then passed **27/27**, assurance/reopening passed **18/18**, visual desktop/mobile passed **2/2**, and affected Audit desktop/mobile journeys passed **8/8**. The complete 82-case run preceded only these test-fixture corrections; the affected paths were rerun at the corrected source state, while unrelated full-suite evidence remains valid.
 
 ## Measured RM burden
 
@@ -44,9 +48,9 @@ On the 390×664 mobile viewport the first current-work item begins at document Y
 | UX Designer | PASS: current work precedes analytics and history; the contradictory form banner was corrected. |
 | Accessibility/Mobile Reviewer | PASS within rendered and browser-tested scope: stacked mobile layout, no observed horizontal overflow, keyboard focus to the missing control and `aria-invalid` marking. Screen-reader announcement of the inline reason remains unverified. |
 | Governance QA / CQC-style review | PASS for scoped changes: no score-to-assurance shortcut; Action requirement is a deliberate recorded choice; eligible latest re-audit Evidence and separate decisions remain. |
-| Security/Tenancy Reviewer | PASS static review after the legacy Evidence and re-audit eligibility corrections; no unresolved High/Critical new cross-location disclosure or mutation path identified. |
-| Test Engineer | PASS on targeted desktop/mobile Audit and assurance browser gates and the static/unit gates. The complete repository E2E run is recorded below when finished. |
-| Release Manager | Pending final full regression and evidence audit. |
+| Security/Tenancy Reviewer | PASS static review after the legacy Evidence and re-audit eligibility corrections; PASS on the guarded fictional-fixture reset, with no route guard or product authorization weakening. No unresolved High/Critical new cross-location disclosure or mutation path identified. |
+| Test Engineer | PASS: final full browser run 78 passed, 4 intentional skips, 0 failed; all fixture and stale assertion failures classified and corrected at the test layer. |
+| Release Manager | Pending final evidence audit and clean source review. |
 
 ## Gate B engineering evidence
 
@@ -55,24 +59,26 @@ On the 390×664 mobile viewport the first current-work item begins at document Y
 | Unit/integration | PASS, **392/392** in 78 files at final code. |
 | Prisma, TypeScript and ESLint | PASS through `npm.cmd run check`. |
 | Disposable migrations | PASS: all 65 existing migrations applied to an isolated temporary schema, canonical table checks 5/5, schema dropped. Existing disposable schema `public` is up to date. No WP-007 migration. |
-| Direct Action security/integrity regression | PASS, **27/27**. |
-| Direct assurance/reopening regression | PASS, **18/18**. |
+| Direct Action security/integrity regression | PASS, **27/27** after the deterministic fictional-fixture reset. |
+| Direct assurance/reopening regression | PASS, **18/18** after the deterministic fictional-fixture reset. |
 | 5,000-record Audit scoped fetch/current-work probe | PASS, fictional rows rolled back; **13.246, 9.878 and 9.192 ms**, each under 500 ms. This is a scoped query probe, not an end-to-end page load claim. |
-| Next.js production build | PASS on final code; 149 static pages generated. |
-| Sites/Vinext production build | PASS on final code; existing Vite native-config-loader and route-classification advisories remain. |
-| Full repository E2E | In progress: 82 listed tests, Chromium and mobile, 1 worker. |
+| Next.js production build | PASS after the guarded test-fixture reset; 149 static pages generated. |
+| Sites/Vinext production build | PASS after the guarded test-fixture reset; existing Vite native-config-loader and route-classification advisories remain. |
+| Full repository E2E | PASS at `cddd8e7c66d7181b86eddac3dbe66cf9066ec6c1`: **78 passed, 4 intentional skips, 0 failed** of 82 listed Chromium/mobile cases, 1 worker, 29.7 minutes. Subsequent test-fixture-only changes passed affected browser retests **2/2 visual** and **8/8 Audit**. |
 
 ## Gate C browser and visual evidence
 
-The final WP-007 experience tests passed **2/2 Chromium and 2/2 mobile**. The final Audit assurance release gate passed **4/4** across Chromium/mobile. The separate mobile fieldwork check passed **1/1**. Baseline burden and final burden measurements passed **2/2** each. The final screenshots below are authenticated, present and non-zero (paths relative to the parent workspace):
+The final WP-007 experience tests passed **2/2 Chromium and 2/2 mobile** in the complete run. The final Audit assurance release gate passed **4/4** across Chromium/mobile. The separate mobile fieldwork check passed **1/1**. Baseline burden and final burden measurements passed **2/2** each. The final screenshots below are authenticated, present and non-zero (paths relative to the parent workspace):
 
 | Surface | Desktop | Mobile |
 | --- | --- | --- |
-| Current work, viewport | `outputs/WP-007_EXPERIENCE_CHROMIUM_FINAL/wp007-audit-experience-unf-bf95c-fore-score-and-form-history-chromium/wp007-audit-current-work-viewport-chromium.png` | `outputs/WP-007_EXPERIENCE_MOBILE_FINAL/wp007-audit-experience-unf-bf95c-fore-score-and-form-history-mobile/wp007-audit-current-work-viewport-mobile.png` |
-| Current work, full page | `outputs/WP-007_EXPERIENCE_CHROMIUM_FINAL/wp007-audit-experience-unf-bf95c-fore-score-and-form-history-chromium/wp007-audit-current-work-chromium.png` | `outputs/WP-007_EXPERIENCE_MOBILE_FINAL/wp007-audit-experience-unf-bf95c-fore-score-and-form-history-mobile/wp007-audit-current-work-mobile.png` |
-| Finding and Evidence trail | `outputs/WP-007_EXPERIENCE_CHROMIUM_FINAL/wp007-audit-experience-Aud-2b098-and-rejects-another-service-chromium/wp007-audit-finding-chromium.png` | `outputs/WP-007_EXPERIENCE_MOBILE_FINAL/wp007-audit-experience-Aud-2b098-and-rejects-another-service-mobile/wp007-audit-finding-mobile.png` |
+| Current work, viewport | `outputs/WP-007_CONVERGENCE_FINAL/test-results/wp007-audit-experience-unf-bf95c-fore-score-and-form-history-chromium/wp007-audit-current-work-viewport-chromium.png` | `outputs/WP-007_CONVERGENCE_FINAL/test-results/wp007-audit-experience-unf-bf95c-fore-score-and-form-history-mobile/wp007-audit-current-work-viewport-mobile.png` |
+| Current work, full page | `outputs/WP-007_CONVERGENCE_FINAL/test-results/wp007-audit-experience-unf-bf95c-fore-score-and-form-history-chromium/wp007-audit-current-work-chromium.png` | `outputs/WP-007_CONVERGENCE_FINAL/test-results/wp007-audit-experience-unf-bf95c-fore-score-and-form-history-mobile/wp007-audit-current-work-mobile.png` |
+| Finding and Evidence trail | `outputs/WP-007_CONVERGENCE_FINAL/test-results/wp007-audit-experience-Aud-2b098-and-rejects-another-service-chromium/wp007-audit-finding-chromium.png` | `outputs/WP-007_CONVERGENCE_FINAL/test-results/wp007-audit-experience-Aud-2b098-and-rejects-another-service-mobile/wp007-audit-finding-mobile.png` |
 | Unanswered form burden | `outputs/WP-007_FINAL_BROWSER/wp007-audit-burden-measure-d4d23-out-a-time-saving-inference-chromium/wp007-measure-form-chromium.png` | `outputs/WP-007_FINAL_BROWSER/wp007-audit-burden-measure-d4d23-out-a-time-saving-inference-mobile/wp007-measure-form-mobile.png` |
 
 The existing wordmark aspect-ratio warning persists. The mobile hydration attribute warning remains cause unconfirmed. Existing Audit policy still gives closure to the `GOVERNANCE_EDIT` capability rather than a separate provider-configured independence rule, and permits an explicit `actionRequired=false` even for High/Critical findings; WP-007 does not imply otherwise or silently change these professional decisions. These are separately tracked governance refinements, not newly introduced WP-007 behavior.
 
-**Release verdict:** PENDING the full repository E2E result and clean source commit review. No remote push, Preview, deployment or production access occurred.
+The wider authenticated visual pass saved **29 non-zero desktop/mobile screenshots** under `outputs/WP-007_CONVERGENCE_FINAL/visual-screenshots`, including `09-evidence-drawer-desktop.png` and `m08-evidence-drawer-mobile.png` showing the current contextual Evidence preview. The full suite checks page load, network idle, overlay absence and horizontal overflow during that capture.
+
+**Release verdict:** PENDING final Release Manager review and clean source commit. No remote push, Preview, deployment or production access occurred.
