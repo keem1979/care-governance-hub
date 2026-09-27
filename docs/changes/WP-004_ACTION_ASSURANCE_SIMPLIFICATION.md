@@ -19,7 +19,7 @@ The server requires a substantive completion account and active, non-archived Co
 | Security/Tenancy | PASS | Code review after location, archived Evidence and closed-record corrections; lead ran direct-request gate. |
 | Governance QA and CQC-style evidence review | PASS, release gate pending | Attributable stages and history preserved; no regulator endorsement claimed. |
 | Accessibility/Mobile | PASS static, rendered pending | Labelled controls, text status, touch targets and responsive layout reviewed in code; native mobile multi-select requires live review. |
-| Test Engineer | Spec prepared | New owner-to-manager lifecycle E2E spec includes integrity assertions and screenshot capture; browser launch blocked in sandbox. |
+| Test Engineer | Chromium lifecycle PASS; wider gate rerun pending | New owner-to-manager lifecycle spec passed in the unrestricted browser and saved three desktop screenshots. The wider Action test's old error-message expectation was corrected without changing its governance intent. |
 | Release Manager | HOLD | Gate B browser and Gate C rendered evidence remain outstanding. |
 
 ## Burden evidence
@@ -34,9 +34,9 @@ These are source-inspected counts, **not rendered interaction measurements**. Th
 - Fresh migration path: **65/65 migrations PASS** in a temporary schema within the named disposable local PostgreSQL test database; the schema was dropped afterward. Existing named test database migration status is current. **WP-004 schema migration: no.**
 - Authenticated direct requests against the disposable test database: **27/27 PASS**, including tenant/location denial, archived and wrong-location Evidence denial, completion integrity, separate decisions, closed archive/restore protection and premature closure denial.
 - Evidence search performance: **5,000 fictional rows**, search **4.437 ms**, page **8.915 ms**, rolled back afterward.
-- Browser: `wp004-action-lifecycle.spec.ts` Chromium launched the local server but Playwright's browser process failed with `spawn EPERM` before assertions. **0 passed, 1 environment-blocked/failed**. Mobile and the existing Action browser regressions have not been run in the unrestricted runtime.
-- Screenshots and rendered burden measurements: **pending**. No screenshot file is claimed.
+- Browser: the first sandbox attempt failed at Chromium launch (`spawn EPERM`). An unrestricted Chromium run then executed four selected tests: **3 passed, 1 failed** on the former self-verification error wording. The passing WP-004 lifecycle test proved canonical completion, verification and effectiveness through the browser and database. The assertion was corrected in `e8dbf02`; the current HEAD needs a full Chromium rerun. Mobile stopped behind the Chromium failure and remains unrun.
+- Three authenticated first-run desktop screenshots are preserved under `outputs/WP-004_GATE_C/chromium-first-run/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/`. The completion screenshot exposed “Action completed: Not recorded” despite saved work; `5c069ff` now derives the displayed account from the latest 100% update, and the lifecycle test asserts it. The first verification/effectiveness captures ran before refreshed content was visible; `fffa530` waits for persisted decisions before recapture. Corrected desktop/mobile screenshots and rendered baseline burden measurements are **pending**.
 
 Known non-blocking follow-ups: existing `atom-wordmark.png` aspect-ratio warning; Vinext/Vite native-config warning; check the native Evidence multi-select on a real mobile viewport; ensure any use of “sustained improvement” reflects a meaningful observed period under provider policy. None is treated as a browser PASS.
 
-**Current verdict: BLOCKED — browser Gate B and rendered Gate C outstanding. No merge, push, deployment or production access.**
+**Current verdict: BLOCKED — current-HEAD browser rerun and rendered Gate C outstanding. No merge, push, deployment or production access.**
