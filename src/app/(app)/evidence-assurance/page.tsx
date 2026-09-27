@@ -19,6 +19,7 @@ export default async function EvidenceAssurancePage({ searchParams }: { searchPa
         include: {
           location: { select: { name: true } },
           evidenceLinks: {
+            where: { evidence: evidenceScopeWhere(context) },
             include: {
               evidence: {
                 include: {
@@ -28,6 +29,7 @@ export default async function EvidenceAssurancePage({ searchParams }: { searchPa
             },
           },
           policyMappings: {
+            where: { policy: { organisationId: context.organisation.id } },
             include: {
               policy: {
                 select: { title: true, status: true, approvalStatus: true, nextReviewDate: true },
@@ -35,6 +37,7 @@ export default async function EvidenceAssurancePage({ searchParams }: { searchPa
             },
           },
           templateMappings: {
+            where: { template: { OR: [{ organisationId: null }, { organisationId: context.organisation.id }] } },
             include: {
               template: {
                 select: { title: true, status: true, reviewDate: true, version: true },
@@ -48,7 +51,7 @@ export default async function EvidenceAssurancePage({ searchParams }: { searchPa
       db.template.findMany({ where: { status: { not: "ARCHIVED" }, OR: [{ organisationId: null }, { organisationId: context.organisation.id }] }, select: { id: true, title: true }, orderBy: { title: "asc" } }),
       db.organisationMembership.findMany({ where: { organisationId: context.organisation.id, status: "ACTIVE", user: { isActive: true } }, select: { user: { select: { id: true, name: true } } }, orderBy: { user: { name: "asc" } } }),
       db.frameworkChangeReview.findMany({ where: { organisationId: context.organisation.id, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item)=>item.id) } }] }) }, include: { frameworkVersion: true, owner: { select: { name: true } }, location: { select: { name: true } } }, orderBy: [{ reviewDueAt: "asc" }, { createdAt: "desc" }] }),
-      db.mockInspection.findMany({ where: { organisationId: context.organisation.id, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item)=>item.id) } }] }) }, include: { lead: { select: { name: true } }, location: { select: { name: true } }, samples: { select: { outcome: true } } }, orderBy: [{ plannedAt: "desc" }] }),
+      db.mockInspection.findMany({ where: { organisationId: context.organisation.id, samples: { every: { requirement: inspectionScopeWhere(context) } }, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((item)=>item.id) } }] }) }, include: { lead: { select: { name: true } }, location: { select: { name: true } }, samples: { select: { outcome: true } } }, orderBy: [{ plannedAt: "desc" }] }),
     ]);
     const now = new Date();
     const evidenceRows = evidence.map((item) => ({ item, state: evidenceAssuranceState({ status: item.status, reviewExpiryDate: item.reviewExpiryDate, updatedAt: item.updatedAt, currentVersionId: item.currentVersionId, verification: item.verifications[0] }) }));

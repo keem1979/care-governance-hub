@@ -8,7 +8,7 @@ import { evidenceScopeWhere } from "@/lib/evidence";
 import { calculateInspectionAssurance } from "@/lib/inspection-assurance";
 import { ensureInspectionBaseline } from "@/lib/inspection-baseline";
 import { inspectionScopeWhere } from "@/lib/inspection";
-import { evidenceCategoriesFor, evidenceRequirementKeys } from "@/lib/inspection-sync";
+import { evidenceRequirementKeys } from "@/lib/inspection-sync";
 import { registerScopeWhere } from "@/lib/registers";
 import { evidenceAssuranceState, mappingSupportsClaim } from "@/lib/evidence-assurance";
 
@@ -25,27 +25,27 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
         where: scope,
         include: {
           owner: { select: { id: true, name: true } }, location: { select: { id: true, name: true } }, reviewedBy: { select: { name: true } }, signedOffBy: { select: { name: true } },
-          evidenceLinks: { include: { evidence: { select: { id: true, title: true, category: true, status: true, reviewExpiryDate: true, relatedModule: true, relatedRecordId: true, tags: true, updatedAt: true, currentVersionId: true, verifications: { orderBy: { verifiedAt: "desc" }, take: 1 } } } } },
-          auditLinks: { include: { audit: { select: { id: true, title: true, status: true, reviewDate: true, findings: { where: { resolvedAt: null }, select: { id: true } } } } } },
-          registerLinks: { include: { registerEntry: { select: { id: true, reference: true, title: true, status: true, eventDate: true, definition: { select: { key: true } } } } } },
-          actionLinks: { include: { action: { select: { id: true, reference: true, title: true, status: true, dueDate: true } } } },
+          evidenceLinks: { where: { evidence: evidenceScope }, include: { evidence: { select: { id: true, locationId: true, title: true, category: true, status: true, reviewExpiryDate: true, relatedModule: true, relatedRecordId: true, tags: true, updatedAt: true, currentVersionId: true, currentnessMode: true, currentnessStatus: true, verifications: { orderBy: { verifiedAt: "desc" }, take: 1 } } } } },
+          auditLinks: { where: { audit: auditScopeWhere(context) }, include: { audit: { select: { id: true, title: true, status: true, reviewDate: true, findings: { where: { resolvedAt: null }, select: { id: true } } } } } },
+          registerLinks: { where: { registerEntry: registerScopeWhere(context) }, include: { registerEntry: { select: { id: true, reference: true, title: true, status: true, eventDate: true, definition: { select: { key: true } } } } } },
+          actionLinks: { where: { action: actionScopeWhere(context) }, include: { action: { select: { id: true, reference: true, title: true, status: true, dueDate: true } } } },
         },
         orderBy: [{ keyQuestion: "asc" }, { title: "asc" }],
       }),
-      db.evidence.findMany({ where: evidenceScope, select: { id: true, title: true, category: true, status: true, reviewExpiryDate: true, relatedModule: true, relatedRecordId: true, tags: true, evidenceDate: true }, orderBy: { updatedAt: "desc" }, take: 3000 }),
+      db.evidence.findMany({ where: evidenceScope, select: { id: true, locationId: true, title: true, category: true, status: true, reviewExpiryDate: true, relatedModule: true, relatedRecordId: true, tags: true, evidenceDate: true }, orderBy: { updatedAt: "desc" } }),
       db.policy.findMany({ where: { organisationId: context.organisation.id, archivedAt: null }, select: { id: true, title: true, status: true, approvalStatus: true, nextReviewDate: true } }),
       db.risk.findMany({ where: { organisationId: context.organisation.id, archivedAt: null, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((x) => x.id) } }] }) }, select: { id: true, reference: true, title: true, status: true, residualLevel: true, nextReviewDate: true } }),
-      db.kpiEntry.findMany({ where: { organisationId: context.organisation.id, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((x) => x.id) } }] }) }, select: { id: true, reportingMonth: true, ragStatus: true, kpi: { select: { name: true } } }, orderBy: { reportingMonth: "desc" }, take: 500 }),
-      db.governanceMeeting.findMany({ where: { organisationId: context.organisation.id, status: { not: "ARCHIVED" }, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((x) => x.id) } }] }) }, select: { id: true, reference: true, title: true, status: true, meetingDate: true }, orderBy: { meetingDate: "desc" }, take: 200 }),
-      db.staffComplianceRecord.findMany({ where: { organisationId: context.organisation.id, staffMember: { archivedAt: null, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((x) => x.id) } }] }) } }, select: { id: true, type: true, outcome: true, expiryDate: true, nextDueDate: true }, take: 3000 }),
+      db.kpiEntry.findMany({ where: { organisationId: context.organisation.id, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((x) => x.id) } }] }) }, select: { id: true, reportingMonth: true, ragStatus: true, kpi: { select: { name: true } } }, orderBy: { reportingMonth: "desc" } }),
+      db.governanceMeeting.findMany({ where: { organisationId: context.organisation.id, status: { not: "ARCHIVED" }, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((x) => x.id) } }] }) }, select: { id: true, reference: true, title: true, status: true, meetingDate: true }, orderBy: { meetingDate: "desc" } }),
+      db.staffComplianceRecord.findMany({ where: { organisationId: context.organisation.id, staffMember: { archivedAt: null, ...(context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: context.locations.map((x) => x.id) } }] }) } }, select: { id: true, type: true, outcome: true, expiryDate: true, nextDueDate: true } }),
     ]);
 
     const autoByKey = new Map<string, typeof automaticEvidence>();
     for (const evidence of automaticEvidence) for (const key of evidenceRequirementKeys(evidence)) autoByKey.set(key, [...(autoByKey.get(key) ?? []), evidence]);
 
     return requirements.map((item) => {
-      const automatic = item.catalogueKey ? autoByKey.get(item.catalogueKey) ?? [] : [];
-      const mappedDocuments = item.evidenceLinks.map((link) => { const state=evidenceAssuranceState({status:link.evidence.status,reviewExpiryDate:link.evidence.reviewExpiryDate,updatedAt:link.evidence.updatedAt,currentVersionId:link.evidence.currentVersionId,verification:link.evidence.verifications[0]},now); return {link,state,support:mappingSupportsClaim(link.decision,state)}; });
+      const automatic = item.catalogueKey ? (autoByKey.get(item.catalogueKey) ?? []).filter((evidence) => !item.locationId || !evidence.locationId || evidence.locationId === item.locationId) : [];
+      const mappedDocuments = item.evidenceLinks.map((link) => { const state=evidenceAssuranceState({status:link.evidence.status,reviewExpiryDate:link.evidence.reviewExpiryDate,updatedAt:link.evidence.updatedAt,currentVersionId:link.evidence.currentVersionId,currentnessMode:link.evidence.currentnessMode,currentnessStatus:link.evidence.currentnessStatus,verification:link.evidence.verifications[0]},now); return {link,state,support:mappingSupportsClaim(link.decision,state)}; });
       const documents = uniqueById([...item.evidenceLinks.map((x) => x.evidence), ...automatic]);
       const currentDocuments = mappedDocuments.filter((x) => x.support === "FULL").map((x)=>x.link.evidence);
       const expiredDocuments = mappedDocuments.filter((x) => ["EXPIRED","ARCHIVED"].includes(x.state)).map((x)=>x.link.evidence);
@@ -54,12 +54,11 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
       const openActions = actions.filter((x) => !["COMPLETED", "CANCELLED", "ARCHIVED"].includes(x.status));
       const overdueActions = openActions.filter((x) => x.dueDate < now);
       const live = liveModuleSignals(item.catalogueKey, { policies, risks, kpis, meetings, workforce }, now);
-      const inferredCategories = mappedDocuments.filter((x)=>x.support==="FULL").flatMap((x)=>x.link.evidenceCategories.length?x.link.evidenceCategories:evidenceCategoriesFor(x.link.evidence));
-      if (audits.length) inferredCategories.push("OBSERVATION", "PROCESSES");
-      if (registers.length) inferredCategories.push("PEOPLES_EXPERIENCE", "PROCESSES");
-      if (actions.length) inferredCategories.push("OUTCOMES");
-      const coveredCategories = [...new Set([...item.coveredEvidenceCategories, ...inferredCategories, ...live.categories])];
-      const assurance = calculateInspectionAssurance({
+      // Only a human-recorded category or a current, suitable Evidence mapping proves coverage.
+      // A title, tag or nearby operational record remains a review suggestion, not assurance.
+      const mappedCategories = mappedDocuments.filter((x)=>x.support==="FULL").flatMap((x)=>x.link.evidenceCategories);
+      const coveredCategories = [...new Set([...item.coveredEvidenceCategories, ...mappedCategories])];
+      const calculatedAssurance = calculateInspectionAssurance({
         reviewDate: item.reviewDate,
         expectedCategories: item.expectedEvidenceCategories,
         coveredCategories,
@@ -78,6 +77,12 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
         signedOffAt: item.signedOffAt,
         now,
       });
+      const scopeLimited = !context.allLocations && item.locationId === null;
+      const assurance = scopeLimited ? {
+        ...calculatedAssurance,
+        status: "NOT_READY" as const,
+        blockers: [...calculatedAssurance.blockers, "Full organisation-wide assurance cannot be established from this location-scoped view"],
+      } : calculatedAssurance;
       const connectedRecords: InspectionRecordLink[] = [
         ...mappedDocuments.map(({link,state}) => ({ id: link.evidence.id, label: link.evidence.title, href: `/evidence/${link.evidence.id}`, type: link.evidence.relatedModule ?? "Evidence", status: `${link.decision} · ${state}`, date: link.evidence.reviewExpiryDate })),
         ...automatic.filter((candidate)=>!item.evidenceLinks.some((link)=>link.evidenceId===candidate.id)).map((x)=>({id:x.id,label:x.title,href:`/evidence/${x.id}`,type:x.relatedModule??"Evidence suggestion",status:"UNMAPPED",date:x.reviewExpiryDate})),
@@ -86,7 +91,7 @@ export async function getInspectionRequirements(context: AuthorisedContext) {
         ...actions.map((x) => ({ id: x.id, label: `${x.reference} - ${x.title}`, href: `/actions/${x.id}`, type: "Action", status: x.status, date: x.dueDate })),
         ...live.links,
       ];
-      return { ...item, documents, audits, registers, actions, coveredCategories, assurance, connectedRecords };
+      return { ...item, documents, audits, registers, actions, coveredCategories, assurance, scopeLimited, connectedRecords };
     });
   } finally { await db.$disconnect(); }
 }
