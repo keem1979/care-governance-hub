@@ -1,102 +1,98 @@
-# WP-004 — Gate B / Gate C Product Owner evidence pack
+# WP-004 — final Gate B and Gate C evidence
 
-**Branch:** `wp-004-action-assurance-simplification`  
-**Validated code HEAD:** `fffa530e41f2f53884408a4c4c96dfb4a9bec882`; the final documentation commit is listed by Git and in the delivery message.  
-**Base:** approved local WP-003 merge `4080eeac880ce3f4f05841dee6caaf5a8cf1da3e`  
-**Working tree:** clean at report preparation  
-**Status:** **BLOCKED — corrected Chromium and mobile Gate B/Gate C remain outstanding because Chromium cannot launch in this sandbox.**
+**Branch:** `wp-004-action-assurance-simplification`
+**Validated implementation and test HEAD:** `b865eaf8c0d5936b9ba575ea76c053786104957d`
+**Base:** approved local WP-003 merge `4080eeac880ce3f4f05841dee6caaf5a8cf1da3e`
+**Final verdict:** **READY FOR PRODUCT OWNER REVIEW — NOT DEPLOYED**. No merge, remote push, deployment, production database or production data access occurred.
 
-## Delivered
+## Delivered and governed boundaries
 
-Commits since the WP-003 merge:
+The Action detail page presents the owner's current work as **What did you do? + Completion Evidence → Submit for verification**. Routine progress is separate. Verification displays the saved completion account and linked Evidence, then asks an authorised manager for an explicit outcome, Evidence checked, result against the success measure and rationale. Effectiveness asks for an explicit outcome, observed result, Evidence, recurrence choice and management decision. Baseline and target details are available under disclosure. A recurrence requires immediate-control and escalation accounts. Closure remains a later, independently authorised decision.
 
-1. `eb41b77` — Simplify Action completion and assurance forms.
-2. `f29d82a` — Add owner-to-manager Action lifecycle browser spec.
-3. `e99ca2d` — Enforce Action assurance stages and Evidence eligibility; add disposable local gates and change record.
-4. `9e556c6` — Record the initial Gate B/Gate C hold report.
-5. `5c069ff` — Display the submitted completion account before verification, with browser regression assertion.
-6. `e8dbf02` — Match the existing self-verification test to provider-policy wording without changing its intent.
-7. `fffa530` — Wait for persisted verification/effectiveness content before screenshot capture.
+The canonical Action, Evidence, ActionEvidence, Verification, EffectivenessReview and ActivityLog records remain in use. The server enforces tenant, location, permission, active Evidence, closed/archived-record and role-separation rules. High/Critical verification and closure cannot be performed by an ineligible owner/verifier. Completion, verification, effectiveness and closure are distinct, attributable states. **WP-004 adds no schema migration.** WP-002 Evidence and WP-003 initial capture remain available.
 
-The visible current-work area now offers **What did you do? + Completion Evidence → Submit for verification**. Progress is separate. Verification has an explicit outcome, evidence selection, result against the success measure and rationale, with the completion account and Evidence titles derived from canonical records. Effectiveness has an explicit outcome, observed result, Evidence, recurrence choice and management decision. A recurrence requires a real immediate-control and escalation account. Authorised closure remains separate.
+Implementation commits since the approved base, in order: `eb41b77`, `f29d82a`, `e99ca2d`, `9e556c6`, `5c069ff`, `e8dbf02`, `fffa530`, `2718ea5`, `c58e32a`, `e84b896`, `ac2aca4`, `d89fc69`, `b865eaf`. The later commits correct browser assertions and fixture isolation; no duplicate-action safeguard was weakened.
 
-Changed product areas: Action detail and assurance pages, Action controls and advanced edit form, Action create/update/Evidence-link/verification/effectiveness/closure/root-cause/dependency routes, contextual Action Evidence route, and shared Action validation. Changed tests/harness: Action helper unit tests, existing Action browser selectors reflecting the new UI, new WP-004 lifecycle E2E spec, named disposable database migration gate, direct-request gate and 5,000-record Evidence probe. The exact tracked file list is available with `git diff --name-only 4080eea HEAD`. No generated Playwright or build output is committed.
+Tracked files changed in the package:
 
-## Gate B — engineering assurance
+- `src/app/(app)/actions/[id]/page.tsx`; `src/app/(app)/actions/[id]/assurance/page.tsx`
+- `src/components/action-controls.tsx`; `src/components/action-form.tsx`; `src/components/assurance-workflow-controls.tsx`
+- `src/lib/actions.ts`; `src/lib/actions.test.ts`
+- `src/app/api/actions/route.ts`; `src/app/api/actions/[id]/route.ts`; `src/app/api/actions/[id]/updates/route.ts`; `src/app/api/actions/[id]/evidence-links/route.ts`
+- `src/app/api/actions/[id]/assurance/{closure,dependencies,effectiveness,root-cause,verification}/route.ts`; `src/app/api/actions/[id]/assurance/dependencies/[dependencyId]/route.ts`
+- `src/app/api/evidence/contextual/route.ts`; `src/app/api/test/e2e/setup/route.ts`
+- `tests/e2e/{action-assurance-mobile,action-assurance-release-gate,wp004-action-lifecycle}.spec.ts`
+- `scripts/{wp004-direct-request-gate.ts,wp004-disposable-migration-gate.mjs,wp004-evidence-performance-gate.mjs}`
+- `docs/changes/{WP-004_ACTION_ASSURANCE_SIMPLIFICATION,WP-004_FINAL_GATE_B_GATE_C}.md`
 
-| Check | Result | Evidence |
-| --- | --- | --- |
-| Unit/integration | **PASS — 385/385**, 77 files | Final `npm.cmd run test` on current code. |
-| TypeScript | **PASS** | Final `npm.cmd run typecheck`. |
-| ESLint | **PASS** | Final `npm.cmd run lint`. |
-| Prisma validation | **PASS** | `npm.cmd run db:validate`. |
-| Fresh disposable migration path | **PASS — 65/65** | Temporary schema inside `127.0.0.1:5432/care_governance_hub_test`; verified five canonical Action/assurance tables and dropped the schema. |
-| Existing test DB migration status | **PASS** | 65 migrations found; disposable database schema up to date. WP-004 has **no new migration**. |
-| Next.js production build | **PASS** | Final `npm.cmd run build:next`. |
-| Sites/Vinext production build | **PASS** | Final `npm.cmd run site:build`. |
-| Authenticated direct-request security/integrity | **PASS — 27/27** | Fictional accounts and data in the named disposable PostgreSQL database; no production access. |
-| Evidence search scale | **PASS — 5,000 fictional records** | Latest search 4.417 ms; paged listing 8.417 ms; fixture transaction rolled back. |
-| Browser regression | **BLOCKED at current HEAD** | First unrestricted Chromium run: 3 passed, 1 failed on obsolete self-verification message expectation. Second run: 2 passed, 2 failed on obsolete Evidence drawer locators and test-state collision. Third run at `e84b896`: **3 passed, 1 failed** on a broad Observed result test locator. Fourth run at `d89fc69`: **3 passed, 1 failed** on a wrong readiness expectation while still signed in as the High Action's verifier. The lifecycle test passed in both later runs and saved corrected authenticated screenshots. Test assertion corrected; final Chromium/mobile rerun pending. The sandbox cannot launch Chromium (`spawn EPERM`). |
+The exact list is reproducible with `git diff --name-only 4080eeac880ce3f4f05841dee6caaf5a8cf1da3e HEAD`. No generated test or build output is tracked.
 
-### Focused browser failure triage after the first unrestricted run
+## Gate B — engineering assurance: PASS
 
-The later unrestricted Chromium output in `outputs/WP-004_GATE_C/chromium` executed four tests: two passed and two failed. The Action assurance trace shows the authenticated Registered Manager, an open Action, its Completion Evidence and an enabled **Add Evidence** button in section **3. Role-aware Evidence**. The test still sought the old **Link Evidence** trigger and old drawer labels. **Classification: TEST DEFECT.** The test now follows the existing WP-002 Add Evidence → Use existing Evidence → Search → Preview flow. The first-run self-verification message mismatch was also a **TEST DEFECT**: the server correctly rejected self-verification, and the assertion was corrected in `e8dbf02`.
+| Check | Exact result |
+| --- | --- |
+| Unit/integration | **385/385 passed**, 77 files, at validated implementation/test HEAD |
+| TypeScript, ESLint, Prisma validation | **PASS** each |
+| Fresh migration path | **65/65 migrations passed** in a temporary schema within the named disposable local PostgreSQL test database; temporary schema removed |
+| Existing disposable database | Migration status current; **no WP-004 migration** |
+| Next.js production build | **PASS** |
+| Sites/Vinext production build | **PASS** |
+| Authenticated direct-request security/integrity | **27/27 passed** against fictional records in disposable `127.0.0.1:5432/care_governance_hub_test` |
+| Evidence search scale | **5,000 fictional rows**; search **4.417 ms**, paged listing **8.417 ms**; probe transaction rolled back |
+| Chromium targeted browser suite | **4/4 passed**, 2.0 minutes, at `b865eaf`; persisted `outputs/WP-004_GATE_C/chromium-post-b865eaf/.last-run.json` reports passed and no failed tests |
+| Mobile targeted browser suite | **2/2 passed**, 47.4 seconds, at `b865eaf`; persisted `outputs/WP-004_GATE_C/mobile-post-b865eaf/.last-run.json` reports passed and no failed tests |
 
-The lifecycle test's Action POST received a governed `409 POSSIBLE_MATCH`. A previous WP-004 fictional MANUAL Action survived E2E reset, and the duplicate scorer can also suggest recent seeded Actions with the same location, category and empty staff field. A changing timestamp in the title and issue key alone cannot prevent that suggestion. **Classification: TEST-STATE / ISOLATION ISSUE.** The test-only setup cleanup now includes WP-004 fictional Actions; the test gives new Actions an `E2E-ACT-WP004-` reference and associates them with the authorised `E2E-CLI-0001` fictional Client. The disposable database had no other Actions for that Client at review. The server's matcher excludes the unrelated null-Client fixtures, and any genuine match still fails the test with `409`; the test does not automatically reject a suggested match. The duplicate-detection product rule was not changed.
+The direct-request gate covered tenant concealment; authorised versus wrong-location Action writes; wrong-branch, archived and unlinked Evidence; missing completion account/Evidence; general create/edit bypasses; canonical completion Evidence without automatic assurance; explicit recurrence choice; owner self-verification denial; premature closure denial; and closed Action archive/restore denial. No Critical/High security or isolation issue remains open.
 
-The mobile Action assurance spec also contained the old Evidence drawer labels and was corrected in the same test-only change. Security/Tenancy review challenged and rejected an intermediate test auto-rejection of duplicate suggestions; it was removed before a corrected browser run. The setup route's token/runtime guard, Action and Evidence scopes, server-authorised search and role separation remain intact. A separate contextual UI limitation was observed: an Evidence record already linked to an Action under one role is labelled “Already linked to this record” if another role is chosen in the contextual dialog. The assurance forms and server can use that canonical Evidence under distinct roles. This did not cause either browser failure and is tracked as a non-blocking role-aware contextual UI follow-up.
+Earlier browser failures were classified and resolved as test assertion/layout drift or disposable fixture isolation. The server correctly rejected self-verification, and the test now expects the provider-policy wording. Evidence-link tests now use the existing **Add Evidence → Use existing → Search → Preview** control. The WP-004 lifecycle fixture receives a unique fictional reference and authorised fictional Client; test-only cleanup removes previous WP-004 Actions. A genuine duplicate suggestion still fails the test; it is not silently rejected. The readiness test now waits for a separate closer. These changes did not weaken product controls.
 
-After these corrections, local non-browser gates passed again: **385/385 tests**, TypeScript, ESLint, Prisma validation, **27/27** direct-request checks, fresh **65/65** migrations in a disposed temporary schema, Next.js and Sites/Vinext builds, and 5,000-record search probes at **4.417 ms** and **8.417 ms**. The sandbox Chromium attempt failed at process launch (`spawn EPERM`), before any assertion; a final Chromium run with the latest test locators and the mobile run remain pending.
+**Artifact provenance:** A fresh unrestricted run restored both current-HEAD output directories after an earlier sandbox retry had overwritten the first Chromium artifacts. The new terminal log, both `.last-run.json` markers and all six current-HEAD screenshots agree on PASS. The mobile log contains a React hydration attribute warning with `caret-color: transparent` on form fields, an attribute absent from the application source. This did not fail either mobile test; the exact injector was not established and is recorded as a non-blocking environment/visual follow-up.
 
-The fresh third Chromium run at `e84b896` is preserved in `outputs/WP-004_GATE_C/chromium-post-e84b896/`: three tests passed, including the WP-004 lifecycle. Its sole failure was **TEST DEFECT**: `getByLabel("Observed result")` matched both the correctly labelled result textbox and “Evidence of the observed result” selector. The test now uses the exact textbox role in both effectiveness paths. Static review also found an obsolete “Ready for closure” phrase; the next run showed that readiness itself should not yet be expected for the current verifier. Product markup and assurance rules did not change. Security/Tenancy review passed the test-only correction.
+## Gate C — RM experience: PASS with measured limits
 
-The fourth Chromium run at `d89fc69` is preserved in `outputs/WP-004_GATE_C/chromium-post-d89fc69/`: three tests passed, including the WP-004 lifecycle. Its sole failure was also **TEST DEFECT**. The test expected closure readiness immediately after the Effective review while still signed in as the Registered Manager who made the verification decision. The rendered page correctly shows a **Sustained** stage and the saved Effective result, but keeps **Closure evidence identified** and **Closer is separate from owner and verifier** outstanding. The later test step uses a third authorised person and selects closure Evidence. The assertion now checks the saved effectiveness and those outstanding boundaries; server readiness and role separation remain unchanged. Security/Tenancy and Governance reviews approved this correction.
+The approved pre-WP-004 UI at `4080eea` was opened in a separate local checkout against the disposable fictional environment. Rendered accessibility snapshots showed the visible primary-form control counts below. The new counts were checked against the implemented rendered workflow and passing authenticated lifecycle test.
 
-The direct-request gate checked tenant concealment; location-restricted writes to branch and organisation-wide Actions; wrong-branch and archived Evidence rejection for completion and role links; missing completion account/Evidence; general create/edit bypasses; accepted canonical Completion Evidence without automatic verification or closure; explicit recurrence choice; owner self-verification denial; premature closure denial; and closed Action archive/restore denial. This is 27 checks total, including four fictional sign-ins.
+| Stage | Previous visible controls | New primary controls | Measured change |
+| --- | ---: | ---: | --- |
+| Completion | 3: update note, progress percentage, Evidence | 2: completion account, Evidence | 1 fewer visible control (33%) |
+| Verification | 7: outcome, date, Evidence, completed-work narrative, Evidence summary, success-measure result, rationale | 5: outcome, date, Evidence, result, rationale | 2 fewer visible controls (29%) |
+| Effectiveness | 11: outcome, date, baseline, target, observed result, Evidence, recurrence, decision, next-review date, immediate control, escalation | 6 primary: outcome, date, observed result, Evidence, recurrence, decision | 5 fewer primary controls (45%); additional details remain available when needed |
 
-The fresh migration script used a new temporary PostgreSQL schema within the named disposable test database and removed that schema afterward. The full independent PostgreSQL release-gate wrapper could not start a second cluster inside this sandbox (`pg_ctl` restricted-token error); its database-only option was discarded. The successful isolated-schema migration run is the WP-004 fresh-path evidence. The existing test DB is disposable and contains fictional fixtures only.
+An actual old-UI fictional completion used **four direct UI actions**: enter the work account, set progress to 100%, choose canonical Evidence and submit. The rendered page then showed **Manager verification required**. The passing new Chromium lifecycle used **three direct UI actions**: enter the account, choose Evidence and submit. This is **one fewer action (25%)** for that completion scenario. The old verification/effectiveness forms were rendered and counted, but an old verification attempt did not persist because shared disposable E2E fixtures were reset during the comparison. Therefore this report claims **no completed legacy verification/effectiveness comparison, click reduction or time saving** for those stages. New explicit outcome/recurrence choices can increase minimum steps while making the human judgement deliberate.
 
-## Gate C — RM experience
+The new browser lifecycle confirmed that completion saved one canonical Completion Evidence relationship and left verification/closure outstanding; verification saved a separate manager decision; effectiveness saved a separate observed result and did not automatically close the Action. The mobile test checked for horizontal overflow. The rendered desktop and mobile review found the current-work action discoverable and the three stages distinct. Accessibility/Mobile review is a focused review, not a complete WCAG audit.
 
-**Burden evidence:** previous completion used three source-inspected visible inputs (note, percentage, Evidence); the new routine completion form uses two (account, Evidence), or one entry if eligible Completion Evidence is already linked. The successful Chromium lifecycle test actually performed three completion interactions: fill account, select Evidence, submit. Previous verification used eight source-inspected interactive controls, including two duplicate narratives; the new primary form has five interactive controls plus a read-only verifier. Previous effectiveness showed eleven controls; the new primary form shows six, with explicit outcome and recurrence choices. The baseline has not been measured in a rendered browser, so **no actual before/after reduction is claimed**.
+### Authenticated screenshots
 
-**Rendered desktop review:** the unrestricted Chromium lifecycle test passed and persisted three non-zero screenshots from the first run, preserved in `outputs/WP-004_GATE_C/chromium-first-run/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/`:
+Each file exists and has non-zero size. Desktop and mobile captures are from the final validated implementation/test HEAD.
 
-- `wp004-completion-submitted.png` — 162,324 bytes.
-- `wp004-verification-recorded.png` — 464,414 bytes.
-- `wp004-effectiveness-reviewed.png` — 505,233 bytes.
-
-The completion screenshot exposed a genuine display defect: the detail page said “Action completed: Not recorded” before verification despite a saved completion account. `5c069ff` now displays the latest 100% completion update in that summary and chronology, and the lifecycle test asserts it. The first verification and effectiveness screenshots were captured before refreshed server content was visible; `fffa530` reloads and waits for the persisted decision/review before capture. The separate failed Action gate trace is preserved at `outputs/WP-004_GATE_C/chromium-first-run/action-assurance-release-g-4c9a5-ness-and-closure-boundaries-chromium/trace.zip`.
-
-The passing third Chromium lifecycle saved corrected non-zero desktop screenshots under `outputs/WP-004_GATE_C/chromium-post-e84b896/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/`: `wp004-completion-submitted.png` (167,292 bytes), `wp004-verification-recorded.png` (486,983 bytes), and `wp004-effectiveness-reviewed.png` (490,950 bytes). Rendered review confirms the submitted completion account, a persisted current verification decision, and the persisted partially effective observed result. These are desktop evidence; mobile and final release-gate screenshots are pending.
-
-The fourth run refreshed the same three desktop captures under `outputs/WP-004_GATE_C/chromium-post-d89fc69/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/` at 167,800, 487,499 and 491,538 bytes respectively. No mobile capture exists yet.
+| View | Completion | Verification | Effectiveness |
+| --- | --- | --- | --- |
+| Desktop | `../../outputs/WP-004_GATE_C/chromium-post-b865eaf/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/wp004-completion-submitted.png` (168,030 B) | `../../outputs/WP-004_GATE_C/chromium-post-b865eaf/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/wp004-verification-recorded.png` (487,711 B) | `../../outputs/WP-004_GATE_C/chromium-post-b865eaf/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/wp004-effectiveness-reviewed.png` (491,771 B) |
+| Mobile | `../../outputs/WP-004_GATE_C/mobile-post-b865eaf/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-mobile/wp004-completion-submitted.png` (658,756 B) | `../../outputs/WP-004_GATE_C/mobile-post-b865eaf/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-mobile/wp004-verification-recorded.png` (2,324,321 B) | `../../outputs/WP-004_GATE_C/mobile-post-b865eaf/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-mobile/wp004-effectiveness-reviewed.png` (2,368,610 B) |
 
 ## Specialist verdicts
 
 | Specialist | Verdict |
 | --- | --- |
-| RM Advocate | PASS on stage separation in first-run desktop; corrected final capture pending. |
-| UX Designer | HOLD on screenshot timing; no confirmed layout defect. |
-| Form Simplicity Specialist | PASS on compact rendered primary forms; actual baseline measurement pending. |
-| Plain Language Reviewer | PASS on source and first-run desktop wording. |
-| Evidence Experience Specialist | PASS, source review of canonical Evidence and purpose-specific links. |
-| Security/Tenancy Reviewer | PASS after correction; read-only code review plus lead's 27/27 direct gate. |
-| Governance QA Consultant | PASS on code, release gate pending. |
-| CQC-style Inspector review | PASS on evidence design with observation-period caution; no regulatory endorsement. |
-| Accessibility/Mobile Reviewer | CONDITIONAL desktop PASS; corrected screenshots and mobile verdict pending. |
-| Test Engineer | Fourth Chromium run 3/4 PASS; the remaining wrong-actor readiness expectation was corrected in the test. Final Chromium/mobile rerun pending. |
-| Release Manager | **HOLD — NOT READY FOR PRODUCT OWNER REVIEW.** |
+| RM Advocate | **PASS** — owner completion is in current work; later judgements remain separate |
+| UX Designer | **PASS** — rendered hierarchy and distinct decisions reviewed |
+| Form Simplicity Specialist | **PASS** — comparable rendered field counts and executed completion burden recorded |
+| Plain Language Reviewer | **PASS** — no wording treats Evidence upload as proof of sufficiency or closure |
+| Evidence Experience Specialist | **PASS** — canonical Evidence reused with role-specific relationships |
+| Governance QA Consultant | **PASS** — accountable decisions and history preserved |
+| CQC-style Inspector review | **PASS for product review** — Evidence and observation-period caution recorded; no regulatory endorsement claimed |
+| Accessibility/Mobile Reviewer | **PASS for focused desktop/mobile scope** — rendered layout and no-overflow assertions; full WCAG audit not claimed |
+| Security/Tenancy Reviewer | **PASS** — code review and 27/27 direct-request gate; no Critical/High blocker |
+| Test Engineer | **PASS** — 4/4 Chromium and 2/2 mobile targeted suite |
+| Release Manager | **READY FOR PRODUCT OWNER REVIEW — NOT DEPLOYED**, with the artifact provenance and burden limits above |
 
-## Known follow-ups and decision
+## Known non-blocking follow-ups
 
-- Existing `atom-wordmark.png` aspect-ratio console warning is a separate non-blocking issue.
-- Vinext reports an existing future native Vite-config compatibility warning, without failing the build.
-- Native multi-select Evidence controls need live mobile usability review.
-- The provider should ensure “sustained improvement” is backed by a meaningful observation period; the code does not impose a universal interval.
+- Existing `atom-wordmark.png` aspect-ratio console warning; track separately.
+- Mobile run hydration attribute warning involving `caret-color: transparent`; no matching application source was found, tests passed, and the specific browser-side injector is unconfirmed.
+- Existing Vinext future native Vite-config compatibility warning; Sites build passed.
+- Native mobile Evidence multi-select warrants later usability review.
+- Any claim of “sustained improvement” must use a meaningful observation period under provider policy; no universal interval was invented.
 
-**Gate B: BLOCKED** until the current-HEAD Chromium rerun and mobile tests pass.  
-**Gate C: BLOCKED** until corrected desktop/mobile screenshots and actual before/after burden measurements are recorded.  
-**Final WP-004 verdict: BLOCKED — NOT READY FOR PRODUCT OWNER REVIEW.**  
-No merge, remote push, deployment, production database or production data access occurred.
-
+**Gate B: PASS. Gate C: PASS for the reviewed scope. Final WP-004 verdict: READY FOR PRODUCT OWNER REVIEW — NOT DEPLOYED.**
