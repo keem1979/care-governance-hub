@@ -140,6 +140,21 @@ export function actionAssurancePolicy(priority: string, sourceType: string): Act
 
 export type ActionAssuranceCheck = { key: string; label: string; met: boolean; reason: string };
 
+// Earlier decisions remain in the audit history, but a reopened Action needs a
+// fresh completion and subsequent decisions before it can be closed again.
+export function currentAssuranceCycle<T extends { createdAt: Date }, U extends { createdAt: Date }>(input: {
+  reopenedAt: Date | null;
+  completionDate: Date | null;
+  verifications: T[];
+  effectivenessReviews: U[];
+}) {
+  if (!input.reopenedAt) return { verification: input.verifications[0] ?? null, effectiveness: input.effectivenessReviews[0] ?? null };
+  const completedAgain = input.completionDate && input.completionDate > input.reopenedAt;
+  const verification = completedAgain ? input.verifications.find(item => item.createdAt >= input.completionDate!) ?? null : null;
+  const effectiveness = verification ? input.effectivenessReviews.find(item => item.createdAt >= verification.createdAt) ?? null : null;
+  return { verification, effectiveness };
+}
+
 export function actionAssuranceReadiness(input: {
   priority: string;
   sourceType: string;

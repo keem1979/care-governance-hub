@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
-import { actionAssuranceReadiness, evaluateActionClosureAuthority, linkActionEvidence, resolveActionAssurancePolicy, resolveActionClosureAuthority } from "@/lib/action-assurance";
+import { actionAssuranceReadiness, currentAssuranceCycle, evaluateActionClosureAuthority, linkActionEvidence, resolveActionAssurancePolicy, resolveActionClosureAuthority } from "@/lib/action-assurance";
 import { syncFindingFromAction } from "@/lib/assurance-improvement";
 import { actionEligibleEvidenceWhere, actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { createDb } from "@/lib/db";
@@ -13,32 +13,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       where: { id, ...actionScopeWhere(context) },
       include: {
         evidenceLinks: { where: { retiredAt: null } },
-        verifications: { where: { verificationType: "CLOSURE" }, orderBy: { verifiedAt: "desc" }, take: 1 },
-        effectivenessReviews: { orderBy: [{ reviewDate: "desc" }, { createdAt: "desc" }], take: 1 },
+        verifications: { where: { verificationType: "CLOSURE" }, orderBy: { createdAt: "desc" } },
+        effectivenessReviews: { orderBy: { createdAt: "desc" } },
         externalDependencies: { where: { status: { notIn: ["RESOLVED", "CANCELLED"] } }, select: { id: true } },
         rootCauseReview: { select: { status: true } },
       },
     });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
     assertActionWriteScope(context, action.locationId);
+    const lastReopen = await db.activityLog.findFirst({ where: { organisationId: context.organisation.id, locationId: action.locationId, recordType: "ActionClosure", recordId: id, action: "STATUS_CHANGE" }, orderBy: { createdAt: "desc" }, select: { createdAt: true } });
+    const currentCycle = currentAssuranceCycle({ reopenedAt: lastReopen?.createdAt ?? null, completionDate: action.completionDate, verifications: action.verifications, effectivenessReviews: action.effectivenessReviews });
+    const closureAuthority = await resolveActionClosureAuthority(db, { organisationId: context.organisation.id, priority: action.priority, sourceType: action.sourceType, sourceRecordId: action.sourceRecordId });
+    const authority = evaluateActionClosureAuthority({ hasActionCapability: context.permissions.includes(PERMISSIONS.ACTIONS_MANAGE), actorRoleKey: context.role.key, authorisedRoleKeys: closureAuthority.authorisedRoleKeys });
+    if (!authority.allowed) throw new Error(authority.configurationIssue ? "Your provider role has governance authority but is missing the technical Action-management capability. An organisation administrator must correct the permission configuration." : "Your current provider role is not authorised by the applicable Action closure policy.");
     const intent = String(form.get("intent") ?? "close");
     if (intent === "reopen") {
       if (!action.closedAt) throw new Error("This Action is not closed.");
+      const reopenReason = String(form.get("rationale") ?? "").trim();
+      if (reopenReason.length < 12) throw new Error("Record why this Action requires renewed governance review.");
       await db.$transaction(async (tx) => {
-        const updated = await tx.action.update({ where: { id }, data: { status: "IN_PROGRESS", lifecycleStatus: "REOPENED_REPEAT_FINDING", closedById: null, closedAt: null, closureAssuranceRationale: null, sustainedImprovementAt: null } });
+        const updated = await tx.action.update({ where: { id }, data: { status: "IN_PROGRESS", lifecycleStatus: "REOPENED_REPEAT_FINDING", progressPercent: 0, completionDate: null, verifiedById: null, verificationDate: null, closedById: null, closedAt: null, closureAssuranceRationale: null, sustainedImprovementAt: null } });
         await syncFindingFromAction(tx, updated);
-        await tx.actionUpdate.create({ data: { actionId: id, userId: context.user.id, note: "Authorised manager reopened the Action for further governance review.", status: "IN_PROGRESS" } });
-        await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId: action.locationId, userId: context.user.id, action: "STATUS_CHANGE", recordType: "ActionClosure", recordId: id, summary: `Reopened Action ${action.reference}`, beforeValue: { status: action.status, closedAt: action.closedAt }, afterValue: { status: "IN_PROGRESS", reopenedById: context.user.id } } });
+        await tx.actionUpdate.create({ data: { actionId: id, userId: context.user.id, note: `Authorised manager reopened the Action: ${reopenReason}`, status: "IN_PROGRESS" } });
+        await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId: action.locationId, userId: context.user.id, action: "STATUS_CHANGE", recordType: "ActionClosure", recordId: id, summary: `Reopened Action ${action.reference}: ${reopenReason}`, beforeValue: { status: action.status, closedAt: action.closedAt, closureRationale: action.closureAssuranceRationale }, afterValue: { status: "IN_PROGRESS", reopenedById: context.user.id, rationale: reopenReason } } });
       });
       return NextResponse.json({ ok: true });
     }
     if (intent !== "close") throw new Error("Unknown closure decision.");
     if (action.closedAt) throw new Error("This Action is already closed.");
     if (action.archivedAt || ["ARCHIVED", "CANCELLED"].includes(action.status)) throw new Error("Archived or cancelled Actions cannot be closed.");
-    const closureAuthority = await resolveActionClosureAuthority(db, { organisationId: context.organisation.id, priority: action.priority, sourceType: action.sourceType, sourceRecordId: action.sourceRecordId });
     const assurancePolicy = action.sourceType === "RISK" ? undefined : await resolveActionAssurancePolicy(db, { organisationId: context.organisation.id, priority: action.priority, sourceType: action.sourceType });
-    const authority = evaluateActionClosureAuthority({ hasActionCapability: context.permissions.includes(PERMISSIONS.ACTIONS_MANAGE), actorRoleKey: context.role.key, authorisedRoleKeys: closureAuthority.authorisedRoleKeys });
-    if (!authority.allowed) throw new Error(authority.configurationIssue ? "Your provider role has governance authority but is missing the technical Action-management capability. An organisation administrator must correct the permission configuration." : "Your current provider role is not authorised by the applicable Action closure policy.");
     const rationale = String(form.get("rationale") ?? "").trim();
     if (rationale.length < 12) throw new Error("Record the management assurance rationale for closure.");
     const closureEvidenceIds = [...new Set(form.getAll("evidenceIds").map(String).filter(Boolean))];
@@ -55,8 +59,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       completionDate: action.completionDate,
       ownerId: action.ownerId,
       closerId: context.user.id,
-      verification: action.verifications[0] ? { outcome: action.verifications[0].outcome, verifierId: action.verifications[0].verifierId } : null,
-      effectiveness: action.effectivenessReviews[0] ? { outcome: action.effectivenessReviews[0].outcome, recurrenceFound: action.effectivenessReviews[0].recurrenceFound } : null,
+      verification: currentCycle.verification ? { outcome: currentCycle.verification.outcome, verifierId: currentCycle.verification.verifierId } : null,
+      effectiveness: currentCycle.effectiveness ? { outcome: currentCycle.effectiveness.outcome, recurrenceFound: currentCycle.effectiveness.recurrenceFound } : null,
       roleCounts,
       unresolvedDependencies: action.externalDependencies.length,
       rootCauseComplete: ["COMPLETED", "APPROVED"].includes(action.rootCauseReview?.status ?? ""),

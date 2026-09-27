@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actionAssurancePolicy, actionAssuranceReadiness, evaluateActionClosureAuthority } from "@/lib/action-assurance";
+import { actionAssurancePolicy, actionAssuranceReadiness, currentAssuranceCycle, evaluateActionClosureAuthority } from "@/lib/action-assurance";
 
 describe("role-aware Action assurance", () => {
   it("keeps a low manual administration Action proportionate", () => {
@@ -27,5 +27,16 @@ describe("role-aware Action assurance", () => {
     expect(evaluateActionClosureAuthority({ hasActionCapability: true, actorRoleKey: "action-administrator", authorisedRoleKeys: ["registered-manager"] })).toMatchObject({ capability: true, governanceAuthority: false, allowed: false, configurationIssue: false });
     expect(evaluateActionClosureAuthority({ hasActionCapability: false, actorRoleKey: "nominated-individual", authorisedRoleKeys: ["nominated-individual"] })).toMatchObject({ capability: false, governanceAuthority: true, allowed: false, configurationIssue: true });
     expect(evaluateActionClosureAuthority({ hasActionCapability: true, actorRoleKey: "registered-manager", authorisedRoleKeys: ["registered-manager"] })).toMatchObject({ capability: true, governanceAuthority: true, allowed: true, configurationIssue: false });
+  });
+  it("does not reuse assurance decisions from before a reopening", () => {
+    const reopenedAt = new Date("2026-01-01T12:00:00.000Z");
+    const old = { createdAt: new Date("2026-01-01T11:00:00.000Z") };
+    const completionDate = new Date("2026-01-01T13:00:00.000Z");
+    expect(currentAssuranceCycle({ reopenedAt, completionDate: null, verifications: [old], effectivenessReviews: [old] })).toMatchObject({ verification: null, effectiveness: null });
+    expect(currentAssuranceCycle({ reopenedAt, completionDate, verifications: [old], effectivenessReviews: [old] })).toMatchObject({ verification: null, effectiveness: null });
+    const freshVerification = { createdAt: new Date("2026-01-01T14:00:00.000Z") };
+    expect(currentAssuranceCycle({ reopenedAt, completionDate, verifications: [freshVerification, old], effectivenessReviews: [old] })).toMatchObject({ verification: freshVerification, effectiveness: null });
+    const freshEffectiveness = { createdAt: new Date("2026-01-01T15:00:00.000Z") };
+    expect(currentAssuranceCycle({ reopenedAt, completionDate, verifications: [freshVerification, old], effectivenessReviews: [freshEffectiveness, old] })).toMatchObject({ verification: freshVerification, effectiveness: freshEffectiveness });
   });
 });
