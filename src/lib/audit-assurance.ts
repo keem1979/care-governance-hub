@@ -7,7 +7,7 @@ type FindingInput = {
   resolvedAt: Date | null;
   actionRequired: boolean;
   action: { closedAt: Date | null } | null;
-  reaudits: { outcome: string }[];
+  reaudits: { outcome: string; evidenceEligible?: boolean }[];
   immediateControl?: string | null;
   escalationRequired?: boolean;
 };
@@ -23,7 +23,7 @@ export function auditAssuranceReadiness(input: {
   const unresolvedActions = input.findings.filter((finding) => finding.actionRequired && !finding.action?.closedAt);
   const materialWithoutEffectiveReaudit = input.findings.filter((finding) => {
     if (!["HIGH", "CRITICAL"].includes(finding.severity)) return false;
-    return !finding.reaudits.some((review) => review.outcome === "RESOLVED");
+    return finding.reaudits[0]?.outcome !== "RESOLVED" || finding.reaudits[0]?.evidenceEligible === false;
   });
   const critical = input.findings.filter((finding) => finding.severity === "CRITICAL" && !finding.resolvedAt);
   const criticalSafetyGaps = input.findings.filter((finding) => finding.severity === "CRITICAL" && (!finding.immediateControl?.trim() || !finding.escalationRequired));
@@ -56,7 +56,7 @@ export function auditAssuranceReadiness(input: {
       key: "material-reaudit",
       label: "High and Critical findings passed targeted re-audit",
       met: materialWithoutEffectiveReaudit.length === 0,
-      reason: `${materialWithoutEffectiveReaudit.length} High/Critical finding(s) lack a targeted re-audit outcome of Resolved.`,
+      reason: `${materialWithoutEffectiveReaudit.length} High/Critical finding(s) lack a targeted re-audit outcome of Resolved with eligible Evidence.`,
     },
     {
       key: "findings",
@@ -77,6 +77,15 @@ export function auditAssuranceReadiness(input: {
 
 export function auditCriterionKey(templateKey: string, sectionOrder: number, questionOrder: number) {
   return `${templateKey}:S${sectionOrder}:Q${questionOrder}`;
+}
+
+export function auditFindingNextStep(finding: { resolvedAt: Date | null; evidenceLinks: unknown[]; actionRequired: boolean; action: { closedAt: Date | null } | null; severity: string; reaudits: { outcome: string; evidenceEligible?: boolean }[] }) {
+  if (finding.resolvedAt) return "Resolution recorded";
+  if (!finding.evidenceLinks.length) return "Link supporting Evidence";
+  if (finding.actionRequired && !finding.action) return "Create the corrective Action";
+  if (finding.actionRequired && !finding.action?.closedAt) return "Complete separate Action assurance";
+  if (["HIGH", "CRITICAL"].includes(finding.severity) && (finding.reaudits[0]?.outcome !== "RESOLVED" || finding.reaudits[0]?.evidenceEligible === false)) return "Record a targeted re-audit with eligible Evidence";
+  return "Record a finding resolution decision";
 }
 
 export function auditDenominator(responses: Array<{ answer: string | null; score: number | null; weighting: number }>) {

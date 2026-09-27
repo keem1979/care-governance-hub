@@ -1,5 +1,5 @@
 import { describe,expect,it } from "vitest";
-import { AUDIT_EVIDENCE_SOURCE_OPTIONS, auditEvidenceSourceLabel, auditQuickStartSample, auditStatusLabel, calculateAuditScore, hasTraceableAuditEvidence, scoreAnswer } from "./audits";
+import { AUDIT_EVIDENCE_SOURCE_OPTIONS, auditEligibleEvidenceWhere, auditEvidenceSourceLabel, auditQuickStartSample, auditStatusLabel, calculateAuditScore, hasTraceableAuditEvidence, scoreAnswer } from "./audits";
 import { auditEvidenceRequirementKeys, auditKeyFromEvidenceTags } from "./audit-evidence";
 describe("audit scoring", () => {
   it("scores compliance answers", () => { expect(scoreAnswer("COMPLIANT")).toBe(100); expect(scoreAnswer("PARTIALLY_COMPLIANT")).toBe(50); expect(scoreAnswer("NON_COMPLIANT")).toBe(0); expect(scoreAnswer("NOT_APPLICABLE")).toBeNull(); });
@@ -7,6 +7,9 @@ describe("audit scoring", () => {
   it("formats workflow labels", () => { expect(auditStatusLabel("AWAITING_REVIEW")).toBe("Awaiting review"); });
 });
 describe("audit evidence sources", () => {
+  it("limits controlled Evidence to the audit service or organisation-wide records while retaining actor scope", () => {
+    expect(auditEligibleEvidenceWhere({ organisation: { id: "org" }, allLocations: false, locations: [{ id: "guildford" }] }, "guildford")).toEqual({ AND: [{ organisationId: "org", OR: [{ locationId: null }, { locationId: { in: ["guildford"] } }] }, { status: "ACTIVE", archivedAt: null, OR: [{ locationId: null }, { locationId: "guildford" }] }] });
+  });
   it("covers the principal QCGMS and external evidence routes", () => {
     const values = AUDIT_EVIDENCE_SOURCE_OPTIONS.map((item) => item.value);
     expect(values.length).toBeGreaterThanOrEqual(20);

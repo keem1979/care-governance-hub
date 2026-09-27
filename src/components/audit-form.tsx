@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { AUDIT_EVIDENCE_SOURCE_OPTIONS, COMPLIANCE_ANSWERS } from "@/lib/audits";
+import { AUDIT_EVIDENCE_SOURCE_OPTIONS, COMPLIANCE_ANSWERS, hasTraceableAuditEvidence } from "@/lib/audits";
 
 type Question = {
   id: string;
@@ -13,6 +13,7 @@ type Question = {
   options: string[];
   mandatory: boolean;
   requiresEvidence: boolean;
+  requiresCommentNonCompliant: boolean;
   weighting: number;
 };
 type Section = { id: string; title: string; description: string | null; questions: Question[] };
@@ -21,6 +22,14 @@ type ResponseValue = { answer: string; comment: string; evidenceId: string; evid
 type EvidenceOption = { id: string; title: string; category: string; evidenceType: string; sourceName: string | null; sourceReference: string | null };
 
 const EMPTY_RESPONSE: ResponseValue = { answer: "", comment: "", evidenceId: "", evidenceSourceType: "", evidenceSourceReference: "" };
+
+function missingRequirement(question: Question, value: ResponseValue): "answer" | "comment" | "evidence" | null {
+  if (question.mandatory && !value.answer) return "answer";
+  if (question.requiresCommentNonCompliant && value.answer === "NON_COMPLIANT" && !value.comment.trim()) return "comment";
+  if (question.requiresEvidence && value.answer && value.answer !== "NOT_APPLICABLE" && !hasTraceableAuditEvidence(value)) return "evidence";
+  if (["COMPLIANCE", "YES_NO"].includes(question.responseType) && value.answer && value.answer !== "NOT_APPLICABLE" && !hasTraceableAuditEvidence(value) && value.comment.trim().length < 8) return "evidence";
+  return null;
+}
 
 export function AuditAssessmentForm({ auditId, sections, saved, evidence, summary, readOnly }: {
   auditId: string;
@@ -40,9 +49,11 @@ export function AuditAssessmentForm({ auditId, sections, saved, evidence, summar
   }]));
   const [values, setValues] = useState<Record<string, ResponseValue>>(initial);
   const [error, setError] = useState("");
+  const [showBlockers, setShowBlockers] = useState(false);
   const [busy, setBusy] = useState(false);
   const questions = useMemo(() => sections.flatMap((section) => section.questions), [sections]);
   const answered = questions.filter((question) => Boolean(values[question.id]?.answer)).length;
+  const blockers = questions.filter((question) => missingRequirement(question, values[question.id] ?? EMPTY_RESPONSE));
   const completion = questions.length ? Math.round(answered / questions.length * 100) : 0;
 
   const update = (id: string, key: keyof ResponseValue, value: string) => setValues((current) => ({ ...current, [id]: { ...(current[id] ?? EMPTY_RESPONSE), [key]: value } }));
@@ -52,6 +63,16 @@ export function AuditAssessmentForm({ auditId, sections, saved, evidence, summar
   });
 
   async function save(intent: "save" | "submit", form: HTMLFormElement) {
+    if (intent === "submit" && blockers.length) {
+      setShowBlockers(true);
+      setError(`${blockers.length} check(s) need an answer, finding detail or traceable Evidence before review. The first is shown below.`);
+      const first = document.getElementById(`audit-question-${blockers[0].id}`);
+      first?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const requirement = missingRequirement(blockers[0], values[blockers[0].id] ?? EMPTY_RESPONSE);
+      const focusTarget = requirement === "answer" ? "[data-audit-answer]" : requirement === "comment" || (requirement === "evidence" && !blockers[0].requiresEvidence) ? "[data-audit-comment]" : (values[blockers[0].id]?.evidenceSourceType ? "[data-audit-evidence-reference]" : "[data-audit-evidence-type]");
+      first?.querySelector<HTMLElement>(focusTarget)?.focus({ preventScroll: true });
+      return;
+    }
     setBusy(true);
     setError("");
     const data = new FormData(form);
@@ -74,7 +95,7 @@ export function AuditAssessmentForm({ auditId, sections, saved, evidence, summar
 
   return <form id="audit-form" onSubmit={(event) => { event.preventDefault(); void save("save", event.currentTarget); }} className="space-y-6">
     <section className="rounded-2xl border border-emerald-200 bg-emerald-950 p-5 text-white shadow-sm">
-      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-200">{readOnly ? "Completed record" : "Complete this audit form"}</p><h2 className="mt-1 text-2xl font-bold">{answered} of {questions.length} questions answered</h2><p className="mt-1 text-sm text-emerald-50/75">{readOnly ? "The form is read-only because this audit has progressed beyond assessment." : "Save at any time. Mandatory questions and required evidence locators are checked before review."}</p></div><strong className="text-3xl">{completion}%</strong></div>
+      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-200">{readOnly ? "Completed record" : "Complete this audit form"}</p><h2 className="mt-1 text-2xl font-bold">{answered} of {questions.length} questions answered</h2><p className="mt-1 text-sm text-emerald-50/75">{readOnly ? "The form is read-only because this audit has progressed beyond assessment." : blockers.length ? `${blockers.length} check(s) still need an answer, finding detail or Evidence before submission. Save progress at any time.` : "All current checks have enough information to submit for review. An authorised person still makes the assurance decision."}</p></div><strong className="text-3xl">{completion}%</strong></div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-emerald-300 transition-all" style={{ width: `${completion}%` }} /></div>
     </section>
 
@@ -84,20 +105,23 @@ export function AuditAssessmentForm({ auditId, sections, saved, evidence, summar
       <div className="border-b border-slate-200 pb-4"><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Section {sectionIndex + 1}</p><h2 className="mt-1 text-xl font-bold">{section.title}</h2>{section.description ? <p className="mt-1 text-sm text-slate-600">{section.description}</p> : null}</div>
       <div className="divide-y divide-slate-200">{section.questions.map((question, index) => {
         const value = values[question.id] ?? EMPTY_RESPONSE;
-        return <fieldset key={question.id} className="py-6">
+        const missing = showBlockers ? missingRequirement(question, value) : null;
+        const showEvidence = Boolean((value.answer && value.answer !== "NOT_APPLICABLE") || value.evidenceId || value.evidenceSourceType || value.evidenceSourceReference);
+        return <fieldset id={`audit-question-${question.id}`} key={question.id} className="py-6">
           <legend className="flex w-full gap-3"><span className="grid size-8 shrink-0 place-items-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">{index + 1}</span><span><span className="font-semibold">{question.text}{question.mandatory ? <span className="text-red-600"> *</span> : null}</span>{question.guidance ? <span className="mt-1 block text-sm font-normal text-slate-500">{question.guidance}</span> : null}<span className="mt-1 block text-xs font-normal text-slate-400">Evidence to check: {question.evidenceExpected ?? "Relevant supporting records"}</span></span></legend>
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <label className="text-sm font-medium">Finding or response<AnswerControl question={question} value={value.answer} onChange={(answer) => update(question.id, "answer", answer)} disabled={readOnly} /></label>
-            <label className="text-sm font-medium lg:col-span-2">What you checked and found<textarea disabled={readOnly} value={value.comment} onChange={(event) => update(question.id, "comment", event.target.value)} className="mt-1 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100" placeholder="State the sample, result, good practice, gap, immediate control and required action. Avoid people's names." /><span className="mt-1 block text-xs font-normal text-slate-500">Record what was tested and the conclusion; keep the exact source locator below.</span></label>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 lg:col-span-3">
+            <label className="text-sm font-medium">Finding or response<AnswerControl question={question} value={value.answer} onChange={(answer) => update(question.id, "answer", answer)} disabled={readOnly} invalid={missing === "answer"} /></label>
+            <label className="text-sm font-medium lg:col-span-2">What you checked and found<textarea data-audit-comment aria-invalid={missing === "comment" || (missing === "evidence" && !question.requiresEvidence)} disabled={readOnly} value={value.comment} onChange={(event) => update(question.id, "comment", event.target.value)} className="mt-1 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100" placeholder="State the sample, result, good practice, gap, immediate control and required action. Avoid people's names." /><span className="mt-1 block text-xs font-normal text-slate-500">Record what was tested and the conclusion; keep the exact source locator below.</span></label>
+            {showEvidence ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 lg:col-span-3">
               <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-bold text-emerald-950">Supporting evidence source</p><p className="mt-0.5 text-xs font-normal text-emerald-900">Choose the source used, record the exact locator and link the controlled Evidence Library item where available.</p></div>{question.requiresEvidence ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-900">Traceable evidence required</span> : null}</div>
               <div className="mt-3 grid gap-3 lg:grid-cols-3">
-                <label className="text-xs font-bold text-slate-700">Source type<select disabled={readOnly} value={value.evidenceSourceType} onChange={(event) => update(question.id, "evidenceSourceType", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal disabled:bg-slate-100"><option value="">Choose evidence source</option>{sourceGroups().map(([group, options]) => <optgroup key={group} label={group}>{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</optgroup>)}</select></label>
-                <label className="text-xs font-bold text-slate-700">Source reference or exact location<input disabled={readOnly} value={value.evidenceSourceReference} onChange={(event) => update(question.id, "evidenceSourceReference", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal disabled:bg-slate-100" maxLength={220} placeholder="e.g. BCP exercise BCP-2026-03, page 7" /></label>
+                <label className="text-xs font-bold text-slate-700">Source type<select data-audit-evidence-type aria-invalid={missing === "evidence" && question.requiresEvidence && !value.evidenceSourceType} disabled={readOnly} value={value.evidenceSourceType} onChange={(event) => update(question.id, "evidenceSourceType", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal disabled:bg-slate-100"><option value="">Choose evidence source</option>{sourceGroups().map(([group, options]) => <optgroup key={group} label={group}>{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</optgroup>)}</select></label>
+                <label className="text-xs font-bold text-slate-700">Source reference or exact location<input data-audit-evidence-reference aria-invalid={missing === "evidence" && question.requiresEvidence && Boolean(value.evidenceSourceType)} disabled={readOnly} value={value.evidenceSourceReference} onChange={(event) => update(question.id, "evidenceSourceReference", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal disabled:bg-slate-100" maxLength={220} placeholder="e.g. BCP exercise BCP-2026-03, page 7" /></label>
                 <label className="text-xs font-bold text-slate-700">Controlled Evidence Library record<select disabled={readOnly} value={value.evidenceId} onChange={(event) => linkEvidence(question.id, event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal disabled:bg-slate-100"><option value="">No controlled record linked</option>{evidenceGroups(evidence).map(([group, options]) => <optgroup key={group} label={group}>{options.map((item) => <option key={item.id} value={item.id}>{item.title}{item.sourceReference ? ` · ${item.sourceReference}` : ""}</option>)}</optgroup>)}</select></label>
               </div>
               <p className="mt-2 text-[11px] leading-5 text-slate-500">If the source is outside QCGMS, select its type and enter a precise reference that another authorised reviewer can retrieve. Do not enter passwords or unnecessary personal data.</p>
-            </div>
+            </div> : null}
+            {missing ? <p className="text-sm font-semibold text-red-700 lg:col-span-3">{missing === "answer" ? "Choose a response for this check." : missing === "comment" ? "Describe the non-compliant finding." : question.requiresEvidence ? "Link controlled Evidence or record a traceable source and exact reference." : "Describe what you checked (at least 8 characters), or link Evidence with a traceable source."}</p> : null}
           </div>
         </fieldset>;
       })}</div>
@@ -109,11 +133,11 @@ export function AuditAssessmentForm({ auditId, sections, saved, evidence, summar
   </form>;
 }
 
-function AnswerControl({ question, value, onChange, disabled }: { question: Question; value: string; onChange: (value: string) => void; disabled: boolean }) {
+function AnswerControl({ question, value, onChange, disabled, invalid }: { question: Question; value: string; onChange: (value: string) => void; disabled: boolean; invalid: boolean }) {
   const options = question.responseType === "COMPLIANCE" ? COMPLIANCE_ANSWERS : question.responseType === "YES_NO" ? ["YES", "NO", "NOT_APPLICABLE"] : question.responseType === "MULTIPLE_CHOICE" ? question.options : null;
   const className = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-100";
-  if (options) return <select disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} className={className}><option value="">Choose response</option>{options.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ").toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase())}</option>)}</select>;
-  return <input disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} type={question.responseType === "NUMBER" ? "number" : question.responseType === "DATE" ? "date" : "text"} className={className} placeholder="Enter response" />;
+  if (options) return <select data-audit-answer aria-invalid={invalid} disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} className={className}><option value="">Choose response</option>{options.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ").toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase())}</option>)}</select>;
+  return <input data-audit-answer aria-invalid={invalid} disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} type={question.responseType === "NUMBER" ? "number" : question.responseType === "DATE" ? "date" : "text"} className={className} placeholder="Enter response" />;
 }
 
 function sourceGroups() {
