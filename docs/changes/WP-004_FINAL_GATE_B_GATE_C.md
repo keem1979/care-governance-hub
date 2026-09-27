@@ -36,7 +36,7 @@ Changed product areas: Action detail and assurance pages, Action controls and ad
 | Sites/Vinext production build | **PASS** | Final `npm.cmd run site:build`. |
 | Authenticated direct-request security/integrity | **PASS — 27/27** | Fictional accounts and data in the named disposable PostgreSQL database; no production access. |
 | Evidence search scale | **PASS — 5,000 fictional records** | Latest search 4.417 ms; paged listing 8.417 ms; fixture transaction rolled back. |
-| Browser regression | **BLOCKED at current HEAD** | First unrestricted Chromium run: 3 passed, 1 failed on obsolete self-verification message expectation. Second run: 2 passed, 2 failed on obsolete Evidence drawer locators and test-state collision. Third run at `e84b896`: **3 passed, 1 failed** on a broad Observed result test locator; the lifecycle test passed and saved three corrected authenticated screenshots. The locator and one stale ready-for-closure wording assertion are corrected for the next run. Mobile has not run. The sandbox cannot launch Chromium (`spawn EPERM`). |
+| Browser regression | **BLOCKED at current HEAD** | First unrestricted Chromium run: 3 passed, 1 failed on obsolete self-verification message expectation. Second run: 2 passed, 2 failed on obsolete Evidence drawer locators and test-state collision. Third run at `e84b896`: **3 passed, 1 failed** on a broad Observed result test locator. Fourth run at `d89fc69`: **3 passed, 1 failed** on a wrong readiness expectation while still signed in as the High Action's verifier. The lifecycle test passed in both later runs and saved corrected authenticated screenshots. Test assertion corrected; final Chromium/mobile rerun pending. The sandbox cannot launch Chromium (`spawn EPERM`). |
 
 ### Focused browser failure triage after the first unrestricted run
 
@@ -48,7 +48,9 @@ The mobile Action assurance spec also contained the old Evidence drawer labels a
 
 After these corrections, local non-browser gates passed again: **385/385 tests**, TypeScript, ESLint, Prisma validation, **27/27** direct-request checks, fresh **65/65** migrations in a disposed temporary schema, Next.js and Sites/Vinext builds, and 5,000-record search probes at **4.417 ms** and **8.417 ms**. The sandbox Chromium attempt failed at process launch (`spawn EPERM`), before any assertion; a final Chromium run with the latest test locators and the mobile run remain pending.
 
-The fresh third Chromium run at `e84b896` is preserved in `outputs/WP-004_GATE_C/chromium-post-e84b896/`: three tests passed, including the WP-004 lifecycle. Its sole failure was **TEST DEFECT**: `getByLabel("Observed result")` matched both the correctly labelled result textbox and “Evidence of the observed result” selector. The test now uses the exact textbox role in both effectiveness paths. Static review also found that the next assertion used an obsolete “Ready for closure” phrase; it now checks the exact **Ready for authorised closure review** heading. Product markup and assurance rules did not change. Security/Tenancy review passed these test-only locator changes.
+The fresh third Chromium run at `e84b896` is preserved in `outputs/WP-004_GATE_C/chromium-post-e84b896/`: three tests passed, including the WP-004 lifecycle. Its sole failure was **TEST DEFECT**: `getByLabel("Observed result")` matched both the correctly labelled result textbox and “Evidence of the observed result” selector. The test now uses the exact textbox role in both effectiveness paths. Static review also found an obsolete “Ready for closure” phrase; the next run showed that readiness itself should not yet be expected for the current verifier. Product markup and assurance rules did not change. Security/Tenancy review passed the test-only correction.
+
+The fourth Chromium run at `d89fc69` is preserved in `outputs/WP-004_GATE_C/chromium-post-d89fc69/`: three tests passed, including the WP-004 lifecycle. Its sole failure was also **TEST DEFECT**. The test expected closure readiness immediately after the Effective review while still signed in as the Registered Manager who made the verification decision. The rendered page correctly shows a **Sustained** stage and the saved Effective result, but keeps **Closure evidence identified** and **Closer is separate from owner and verifier** outstanding. The later test step uses a third authorised person and selects closure Evidence. The assertion now checks the saved effectiveness and those outstanding boundaries; server readiness and role separation remain unchanged. Security/Tenancy and Governance reviews approved this correction.
 
 The direct-request gate checked tenant concealment; location-restricted writes to branch and organisation-wide Actions; wrong-branch and archived Evidence rejection for completion and role links; missing completion account/Evidence; general create/edit bypasses; accepted canonical Completion Evidence without automatic verification or closure; explicit recurrence choice; owner self-verification denial; premature closure denial; and closed Action archive/restore denial. This is 27 checks total, including four fictional sign-ins.
 
@@ -68,6 +70,8 @@ The completion screenshot exposed a genuine display defect: the detail page said
 
 The passing third Chromium lifecycle saved corrected non-zero desktop screenshots under `outputs/WP-004_GATE_C/chromium-post-e84b896/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/`: `wp004-completion-submitted.png` (167,292 bytes), `wp004-verification-recorded.png` (486,983 bytes), and `wp004-effectiveness-reviewed.png` (490,950 bytes). Rendered review confirms the submitted completion account, a persisted current verification decision, and the persisted partially effective observed result. These are desktop evidence; mobile and final release-gate screenshots are pending.
 
+The fourth run refreshed the same three desktop captures under `outputs/WP-004_GATE_C/chromium-post-d89fc69/wp004-action-lifecycle-an--ed7f5-nce-decisions-stay-separate-chromium/` at 167,800, 487,499 and 491,538 bytes respectively. No mobile capture exists yet.
+
 ## Specialist verdicts
 
 | Specialist | Verdict |
@@ -81,7 +85,7 @@ The passing third Chromium lifecycle saved corrected non-zero desktop screenshot
 | Governance QA Consultant | PASS on code, release gate pending. |
 | CQC-style Inspector review | PASS on evidence design with observation-period caution; no regulatory endorsement. |
 | Accessibility/Mobile Reviewer | CONDITIONAL desktop PASS; corrected screenshots and mobile verdict pending. |
-| Test Engineer | Third Chromium run 3/4 PASS; remaining broad locator and next stale wording assertion corrected in the test. Final Chromium/mobile rerun pending. |
+| Test Engineer | Fourth Chromium run 3/4 PASS; the remaining wrong-actor readiness expectation was corrected in the test. Final Chromium/mobile rerun pending. |
 | Release Manager | **HOLD — NOT READY FOR PRODUCT OWNER REVIEW.** |
 
 ## Known follow-ups and decision

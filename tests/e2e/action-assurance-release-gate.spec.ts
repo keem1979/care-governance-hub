@@ -79,7 +79,9 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await effectiveness.getByRole("button", { name: "Record effectiveness review" }).click();
   expect((await effectivenessResponse).status()).toBe(200);
   await rm.reload({ waitUntil: "domcontentloaded" });
-  await expect(rm.getByRole("region", { name: "Record attention summary" }).getByRole("heading", { name: "Ready for authorised closure review" })).toBeVisible();
+  await expect(section(rm, "5. Effectiveness and sustained improvement")).toContainText("The subsequent audit sample found no repeat medicines exception.");
+  await expect(rm.getByRole("region", { name: "Record attention summary" })).toContainText("Closure evidence identified");
+  await expect(rm.getByRole("region", { name: "Record attention summary" })).toContainText("Closer is separate from owner and verifier");
 
   // A third person makes the High Action closure decision.
   const ownerContext = await browser.newContext({ baseURL: origin });
