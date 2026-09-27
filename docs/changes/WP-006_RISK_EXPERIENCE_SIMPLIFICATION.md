@@ -1,8 +1,10 @@
 # WP-006 — Risk Experience Simplification
 
-**Status:** Gate B and Gate C passed; ready for the authorised local merge.  
-**Branch:** `wp-006-risk-experience`  
-**Approved base:** local `main` at `2e715af5cbd70183a43a5135d2dcd1146f1e100f` (WP-005 merge).  
+**Status:** Gate B and Gate C passed; locally merged.
+**Branch:** `wp-006-risk-experience`.
+**Approved base:** local `main` at `2e715af5cbd70183a43a5135d2dcd1146f1e100f` (WP-005 merge).
+**Source SHA:** `898c158b913bbc61ee5aa104d4112a00507848ef`.
+**Local non-fast-forward merge SHA:** `c5e527dd73292b2f5afadf9201e928526cc86978` (approved base first parent, exact source second parent).
 **Data boundary:** only the disposable `127.0.0.1:5432/care_governance_hub_test` database and fictional E2E fixtures. No production access, remote push, or deployment. No schema change or new migration.
 
 ## Purpose and architecture
@@ -80,4 +82,4 @@ Final non-zero screenshots (paths relative to the repository's parent workspace)
 
 All six files were verified present and non-zero. The wordmark aspect-ratio warning and mobile hydration attribute warning (cause unconfirmed) remain separate, non-blocking follow-ups in `docs/NON_BLOCKING_UI_FOLLOWUPS.md`. The existing framework-change statistic label is narrower than the detail page's broader changed-framework warning; it is a non-blocking wording follow-up. No production database, push or deployment was used.
 
-**Release verdict:** READY FOR PRODUCT OWNER REVIEW. The continuous programme authorises a local non-fast-forward merge after this schema-neutral, fully green gate; it does not authorise a remote push or deployment.
+**Release verdict:** PASS — READY FOR PRODUCT OWNER REVIEW. The continuous programme's schema-neutral green-gate rule authorised this local non-fast-forward merge. No remote push or deployment occurred.
