@@ -42,7 +42,7 @@
 | Evidence search performance | PASS, 5,000 fictional rows: search **4.552 ms**, page **9.111 ms**, both below 250 ms gate |
 | Next.js production build | PASS |
 | Sites/Vinext build | PASS |
-| Chromium Playwright | BLOCKED: `browserType.launch` returned `spawn EPERM` before an application assertion. Three attempted tests cannot be counted as application failures or passes. |
+| Chromium Playwright | BLOCKED: `browserType.launch` returned `spawn EPERM` before an application assertion. The final local attempt reported four test failures at launch (three assurance tests and one WP-004 regression), with **0 application assertions executed**. They cannot be counted as product failures or passes. |
 | Mobile Playwright | NOT RUN in this sandbox; same Chromium launcher is restricted. |
 
 No WP-005 Prisma schema change or migration was required. The earlier WP-004 migration evidence is preserved. No production database was used.
@@ -63,7 +63,7 @@ The rendered High Action showed **Needs attention** and linked blockers; the Low
 
 ## Remaining browser gate
 
-Run the targeted Action assurance and WP-004 regression specs in an unrestricted local Windows terminal, against the repository's already configured disposable database. The Playwright config loads root `.env`; do not print the URL or credentials. Use a free test port and preserve outputs under `../../outputs/WP-005_GATE_C`. Expected tests to execute: release gate 3 per project, mobile assurance 1 on mobile, WP-004 lifecycle 1 per project = **9**. Do not infer PASS from expected counts. The release-gate desktop spec saves `wp005-ready-desktop.png` and `wp005-closed-desktop.png`; the mobile spec saves `wp005-needs-attention-mobile.png` and `wp005-ready-mobile.png`.
+Run `scripts/wp005-browser-gate.ps1` in an unrestricted local Windows terminal. The script checks only the disposable database destination, then runs the targeted Action assurance and WP-004 regression specs and verifies persisted screenshots. It avoids inline PowerShell/Node quoting and never prints the URL or credentials. Outputs remain under `../../outputs/WP-005_GATE_C`. Expected tests to execute: release gate 3 per project, mobile assurance 1 on mobile, WP-004 lifecycle 1 per project = **9**. Do not infer PASS from expected counts. The release-gate desktop spec saves `wp005-ready-desktop.png` and `wp005-closed-desktop.png`; the mobile spec saves `wp005-needs-attention-mobile.png` and `wp005-ready-mobile.png`.
 
 ## Known non-blocking follow-ups
 
