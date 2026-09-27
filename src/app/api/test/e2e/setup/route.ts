@@ -192,6 +192,7 @@ export async function POST(request: Request) {
       ? await db.evidence.update({
           where: { id: existingEvidence.id },
           data: {
+            locationId: null,
             title: "E2E verified governance source",
             category: "Audits",
             evidenceType: "Record",
@@ -217,6 +218,7 @@ export async function POST(request: Request) {
       : await db.evidence.create({
           data: {
             organisationId: organisation.id,
+            locationId: null,
             title: "E2E verified governance source",
             description: "Fictional governed source used to test source linking and closure assurance.",
             category: "Audits",

@@ -72,7 +72,9 @@ try {
   check("missing completion account rejected", (await post(owner, `/api/actions/${id}/updates`, { intent: "complete", note: "", evidenceId: fixture.evidenceId })).status === 400);
   check("missing completion Evidence rejected", (await post(owner, `/api/actions/${id}/updates`, { intent: "complete", note: "Fictional work has been completed." })).status === 400);
   check("general edit cannot assert 100% completion", (await fetch(`${base}/api/actions/${id}`, { method: "PATCH", headers: { Cookie: manager }, body: new URLSearchParams({ progressPercent: "100" }) })).status === 400);
-  check("valid completion accepted", (await post(owner, `/api/actions/${id}/updates`, { intent: "complete", note: "The fictional medicines control was implemented.", evidenceId: fixture.evidenceId })).status === 200);
+  const validCompletion = await post(owner, `/api/actions/${id}/updates`, { intent: "complete", note: "The fictional medicines control was implemented.", evidenceId: fixture.evidenceId });
+  if (validCompletion.status !== 200) { const body = await validCompletion.json() as { error?: string }; throw new Error(`valid completion accepted failed (${validCompletion.status}): ${body.error ?? "unspecified"}`); }
+  check("valid completion accepted", true);
   const state = (await db.query('SELECT a."progressPercent",a."lifecycleStatus",a."completionDate",a."verifiedById",a."closedAt",(SELECT count(*)::int FROM "ActionEvidence" WHERE "actionId"=a.id AND role=\'COMPLETION\' AND "retiredAt" IS NULL) AS evidence FROM "Action" a WHERE a.id=$1', [id])).rows[0];
   check("canonical completion Evidence and open assurance", state?.progressPercent === 100 && state.lifecycleStatus === "AWAITING_VERIFICATION" && state.completionDate && !state.verifiedById && !state.closedAt && state.evidence === 1);
   check("premature closure rejected", (await post(manager, `/api/actions/${id}/assurance/closure`, { intent: "close", rationale: "A fictional premature closure attempt", evidenceIds: fixture.evidenceId })).status === 409);
