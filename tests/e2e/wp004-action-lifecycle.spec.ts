@@ -118,6 +118,7 @@ async function createFictionalAction(page: Page, locationId: string, runKey: num
     const dueDate = new Date(); dueDate.setUTCDate(dueDate.getUTCDate() + 30);
     const form = new FormData();
     form.set("title", `WP004 fictional compact completion ${runKey}`);
+    form.set("reference", `E2E-ACT-WP004-${runKey}`);
     form.set("description", "Implement a fictional medicines handover checklist for test purposes.");
     form.set("expectedOutcome", "The fictional handover checklist is used consistently.");
     form.set("successMeasure", "The next sample finds the fictional checklist in use.");
@@ -129,8 +130,18 @@ async function createFictionalAction(page: Page, locationId: string, runKey: num
     form.set("priority", "HIGH");
     form.set("source", "MANUAL:");
     form.set("issueKey", `wp004-fictional-${runKey}`);
-    const response = await fetch("/api/actions", { method: "POST", body: form });
-    const body = await response.json() as { id?: string; error?: string };
+    let response = await fetch("/api/actions", { method: "POST", body: form });
+    let body = await response.json() as { id?: string; error?: string; code?: string; matches?: { actionId: string; title: string; issueKey: string | null }[] };
+    if (response.status === 409 && body.code === "POSSIBLE_MATCH") {
+      const suggested = body.matches?.[0];
+      if (!suggested || body.matches?.some(match => match.title === form.get("title") || match.issueKey === form.get("issueKey"))) {
+        return { status: response.status, id: "", error: "The fictional Action matched the same test run; refusing to reject it." };
+      }
+      // The server requires an explicit decision when unrelated fictional fixtures look similar.
+      form.set("matchDecision", `REJECT:${suggested.actionId}`);
+      response = await fetch("/api/actions", { method: "POST", body: form });
+      body = await response.json() as typeof body;
+    }
     return { status: response.status, id: body.id ?? "", error: body.error ?? "" };
   }, { locationId, runKey, ownerName: E2E_USERS.riskOwner.name, managerName: E2E_USERS.registeredManager.name });
   expect(result, result.error).toMatchObject({ status: 201 });

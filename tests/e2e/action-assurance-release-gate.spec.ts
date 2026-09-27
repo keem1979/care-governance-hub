@@ -36,15 +36,16 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await expect(rm.getByRole("heading", { name: "Role-aware Evidence" })).toBeVisible();
   await expect(rm.getByText("Completion", { exact: true }).first()).toBeVisible();
   const evidenceSection = section(rm, "3. Role-aware Evidence");
-  await evidenceSection.getByRole("button", { name: "Link Evidence" }).click();
-  const evidenceDrawer = rm.getByRole("dialog", { name: "Find, preview and link Evidence" });
+  await evidenceSection.getByRole("button", { name: "Add Evidence" }).click();
+  const evidenceDrawer = rm.getByRole("dialog", { name: "Add Evidence" });
   await expect(evidenceDrawer).toBeVisible();
-  await evidenceDrawer.getByLabel("Search Evidence Library").fill("E2E verified governance source");
-  await evidenceDrawer.getByRole("button", { name: "Search authorised Evidence" }).click();
-  await expect(evidenceDrawer.getByText("E2E verified governance source").first()).toBeVisible();
-  await evidenceDrawer.getByText("Preview governance metadata").first().click();
+  await evidenceDrawer.getByRole("button", { name: "Use existing Evidence" }).click();
+  await evidenceDrawer.getByRole("textbox", { name: "Search Evidence" }).fill("E2E verified governance source");
+  await evidenceDrawer.getByRole("button", { name: "Search", exact: true }).click();
+  await evidenceDrawer.getByRole("button", { name: /E2E verified governance source/ }).first().click();
+  await expect(evidenceDrawer.getByRole("heading", { name: "Preview" })).toBeVisible();
   await expect(evidenceDrawer).toContainText("E2E-SRC-001");
-  await evidenceDrawer.getByRole("button", { name: "Close Evidence drawer" }).click();
+  await evidenceDrawer.getByRole("button", { name: "Close", exact: true }).click();
   await expect(evidenceDrawer).not.toBeVisible();
 
   const verification = section(rm, "4. Verification");

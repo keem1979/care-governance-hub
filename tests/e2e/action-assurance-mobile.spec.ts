@@ -33,16 +33,17 @@ test("Action assurance remains usable on a mobile viewport", async ({ page, requ
   await expectNoOverflow(page);
   await expect(page.getByRole("heading", { name: "3. Role-aware Evidence" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Link Evidence" }).click();
-  const evidenceDrawer = page.getByRole("dialog", { name: "Find, preview and link Evidence" });
+  await page.getByRole("button", { name: "Add Evidence" }).click();
+  const evidenceDrawer = page.getByRole("dialog", { name: "Add Evidence" });
   await expect(evidenceDrawer).toBeVisible();
-  const search = evidenceDrawer.getByLabel("Search Evidence Library");
+  await evidenceDrawer.getByRole("button", { name: "Use existing Evidence" }).click();
+  const search = evidenceDrawer.getByRole("textbox", { name: "Search Evidence" });
   await search.fill("E2E");
-  await evidenceDrawer.getByRole("button", { name: "Search authorised Evidence" }).click();
-  await expect(evidenceDrawer.getByText("E2E corrected completion evidence").first()).toBeVisible();
+  await evidenceDrawer.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(evidenceDrawer.getByRole("button", { name: /E2E corrected completion evidence/ }).first()).toBeVisible();
   await expectNoOverflow(page);
-  await expectPracticalTouchTarget(evidenceDrawer.getByRole("button", { name: "Close Evidence drawer" }));
-  await evidenceDrawer.getByRole("button", { name: "Close Evidence drawer" }).click();
+  await expectPracticalTouchTarget(evidenceDrawer.getByRole("button", { name: "Close", exact: true }));
+  await evidenceDrawer.getByRole("button", { name: "Close", exact: true }).click();
   await expect(evidenceDrawer).not.toBeVisible();
 
   await expect(page.getByLabel("Verification outcome")).toBeVisible();

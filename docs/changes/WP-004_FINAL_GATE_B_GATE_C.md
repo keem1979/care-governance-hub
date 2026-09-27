@@ -4,7 +4,7 @@
 **Validated code HEAD:** `fffa530e41f2f53884408a4c4c96dfb4a9bec882`; the final documentation commit is listed by Git and in the delivery message.  
 **Base:** approved local WP-003 merge `4080eeac880ce3f4f05841dee6caaf5a8cf1da3e`  
 **Working tree:** clean at report preparation  
-**Status:** **BLOCKED — focused Chromium rerun and mobile Gate B/Gate C remain outstanding.**
+**Status:** **BLOCKED — corrected Chromium and mobile Gate B/Gate C remain outstanding because Chromium cannot launch in this sandbox.**
 
 ## Delivered
 
@@ -35,8 +35,18 @@ Changed product areas: Action detail and assurance pages, Action controls and ad
 | Next.js production build | **PASS** | Final `npm.cmd run build:next`. |
 | Sites/Vinext production build | **PASS** | Final `npm.cmd run site:build`. |
 | Authenticated direct-request security/integrity | **PASS — 27/27** | Fictional accounts and data in the named disposable PostgreSQL database; no production access. |
-| Evidence search scale | **PASS — 5,000 fictional records** | Search 4.437 ms; paged listing 8.915 ms; fixture transaction rolled back. |
-| Browser regression | **BLOCKED at current HEAD** | The first sandbox attempt failed at Chromium launch (`spawn EPERM`). The unrestricted Chromium run then executed four selected tests: three passed, one failed on the old self-verification error-text expectation. The WP-004 lifecycle spec passed and saved three authenticated screenshots. The failing expectation and a screenshot-exposed detail-page defect were corrected in `e8dbf02`/`5c069ff`; Chromium must be rerun at this HEAD. Mobile did not run because the command stopped on the Chromium failure. |
+| Evidence search scale | **PASS — 5,000 fictional records** | Latest search 4.417 ms; paged listing 8.417 ms; fixture transaction rolled back. |
+| Browser regression | **BLOCKED at current HEAD** | First unrestricted Chromium run: 3 passed, 1 failed on obsolete self-verification message expectation. Second unrestricted Chromium run: 2 passed, 2 failed on obsolete Evidence drawer locators and test-state collision. These have test-only corrections; final Chromium/mobile rerun is pending. The sandbox cannot launch Chromium (`spawn EPERM`). |
+
+### Focused browser failure triage after the first unrestricted run
+
+The later unrestricted Chromium output in `outputs/WP-004_GATE_C/chromium` executed four tests: two passed and two failed. The Action assurance trace shows the authenticated Registered Manager, an open Action, its Completion Evidence and an enabled **Add Evidence** button in section **3. Role-aware Evidence**. The test still sought the old **Link Evidence** trigger and old drawer labels. **Classification: TEST DEFECT.** The test now follows the existing WP-002 Add Evidence → Use existing Evidence → Search → Preview flow. The first-run self-verification message mismatch was also a **TEST DEFECT**: the server correctly rejected self-verification, and the assertion was corrected in `e8dbf02`.
+
+The lifecycle test's Action POST received a governed `409 POSSIBLE_MATCH`. A previous WP-004 fictional MANUAL Action survived E2E reset, and the duplicate scorer can also suggest recent seeded Actions with the same location, category and empty staff field. A changing timestamp in the title and issue key alone cannot prevent that suggestion. **Classification: TEST-STATE / ISOLATION ISSUE.** The test-only setup cleanup now includes WP-004 fictional Actions; the test gives new Actions an `E2E-ACT-WP004-` reference. If unrelated seeded fixtures are suggested, the test explicitly records the existing `REJECT:<id>` review decision after checking that no suggestion is the same test run. The duplicate-detection product rule was not changed.
+
+The mobile Action assurance spec also contained the old Evidence drawer labels and was corrected in the same test-only change. Security/Tenancy review approved the test-only corrections: the setup route's token/runtime guard, Action and Evidence scopes, server-authorised search and role separation remain intact. A separate contextual UI limitation was observed: an Evidence record already linked to an Action under one role is labelled “Already linked to this record” if another role is chosen in the contextual dialog. The assurance forms and server can use that canonical Evidence under distinct roles. This did not cause either browser failure and is tracked as a non-blocking role-aware contextual UI follow-up.
+
+After these corrections, local non-browser gates passed again: **385/385 tests**, TypeScript, ESLint, Prisma validation, **27/27** direct-request checks, fresh **65/65** migrations in a disposed temporary schema, Next.js and Sites/Vinext builds, and 5,000-record search probes at **4.417 ms** and **8.417 ms**. A current-code sandbox Chromium attempt again failed at process launch (`spawn EPERM`), before any assertion; the corrected Chromium and mobile tests have not run in an unrestricted browser.
 
 The direct-request gate checked tenant concealment; location-restricted writes to branch and organisation-wide Actions; wrong-branch and archived Evidence rejection for completion and role links; missing completion account/Evidence; general create/edit bypasses; accepted canonical Completion Evidence without automatic verification or closure; explicit recurrence choice; owner self-verification denial; premature closure denial; and closed Action archive/restore denial. This is 27 checks total, including four fictional sign-ins.
 
@@ -67,7 +77,7 @@ The completion screenshot exposed a genuine display defect: the detail page said
 | Governance QA Consultant | PASS on code, release gate pending. |
 | CQC-style Inspector review | PASS on evidence design with observation-period caution; no regulatory endorsement. |
 | Accessibility/Mobile Reviewer | CONDITIONAL desktop PASS; corrected screenshots and mobile verdict pending. |
-| Test Engineer | WP-004 lifecycle Chromium PASS; wider Chromium Action gate had one stale error-message expectation, now corrected; rerun pending. |
+| Test Engineer | Both later Chromium failures classified from traces and disposable test state; test-only corrections made. Corrected Chromium/mobile rerun pending. |
 | Release Manager | **HOLD — NOT READY FOR PRODUCT OWNER REVIEW.** |
 
 ## Known follow-ups and decision
