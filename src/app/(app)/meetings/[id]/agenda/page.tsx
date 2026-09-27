@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { actionScopeWhere } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
 import { meetingScopeWhere } from "@/lib/meetings";
@@ -11,7 +12,7 @@ export default async function AgendaPage({ params }: {
     const meeting = await db.governanceMeeting.findFirst({ where: { id, ...meetingScopeWhere(context) }, include: { chair: { select: { name: true } }, attendees: { include: { user: { select: { name: true } } } }, agendaItems: { orderBy: { sortOrder: "asc" } } } });
     if (!meeting)
         notFound();
-    const actions = await db.action.findMany({ where: { id: { in: meeting.previousActionIds }, organisationId: context.organisation.id }, include: { owner: { select: { name: true } } } });
+    const actions = await db.action.findMany({ where: { id: { in: meeting.previousActionIds }, ...actionScopeWhere(context) }, include: { owner: { select: { name: true } } } });
     return <Print title="Meeting agenda" organisation={context.organisation.name} meeting={meeting}><section><h2 className="text-xl font-bold">Attendance</h2><p className="mt-2"><strong>Chair:</strong> {meeting.chair.name}</p><p><strong>Invited:</strong> {meeting.attendees.filter((item) => item.attendance !== "APOLOGY").map((item) => item.user.name).join(", ") || "None"}</p><p><strong>Apologies:</strong> {meeting.attendees.filter((item) => item.attendance === "APOLOGY").map((item) => item.user.name).join(", ") || "None"}</p></section>{actions.length > 0 && <section className="mt-6"><h2 className="text-xl font-bold">Previous actions</h2><ol className="mt-2 list-decimal pl-5">{actions.map((action) => <li key={action.id}>{action.reference} · {action.title} · {action.owner.name}</li>)}</ol></section>}<section className="mt-6"><h2 className="text-xl font-bold">Agenda</h2><ol className="mt-3 space-y-4">{meeting.agendaItems.map((item) => <li key={item.id} className="border-b pb-3"><p className="text-xs font-bold uppercase text-emerald-800">{item.sortOrder}. {item.topic}</p><p className="font-bold">{item.title}</p>{item.notes && <p className="mt-1 text-sm">{item.notes}</p>}</li>)}</ol></section></Print>;
 }
 finally {

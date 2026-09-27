@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectAgenda, makeMeetingReference, meetingAttention, meetingReadiness, validateMeetingApproval } from "@/lib/meetings";
+import { collectAgenda, makeMeetingReference, meetingAttention, meetingCurrentWork, meetingReadiness, validateMeetingApproval } from "@/lib/meetings";
 
 const base = { status: "IN_PROGRESS", meetingDate: new Date("2026-07-25T10:00:00Z"), attendeeCount: 2, agendaCount: 2, decisionCount: 1, minutes: "Minutes", approvedById: null, approvalDate: null };
 
@@ -11,4 +11,8 @@ describe("governance meetings", () => {
   it("shows a five-part readiness checklist", () => expect(meetingReadiness(base)).toMatchObject({ completed: 4, total: 5, percent: 80 }));
   it("identifies missing minutes after a meeting", () => expect(meetingAttention({ ...base, minutes: null }, new Date("2026-07-26T10:00:00Z"))).toBe("Minutes need completing"));
   it("identifies missing agendas before a meeting", () => expect(meetingAttention({ ...base, meetingDate: new Date("2026-07-27T10:00:00Z"), agendaCount: 0 }, new Date("2026-07-26T10:00:00Z"))).toBe("Agenda needed"));
+  it("points a future meeting without an agenda to preparation", () => expect(meetingCurrentWork({ ...base, meetingDate: new Date("2026-07-27T10:00:00Z"), agendaCount: 0 }, new Date("2026-07-26T10:00:00Z"))).toMatchObject({ title: "Prepare the agenda", target: "agenda" }));
+  it("points completed discussion without minutes to the minutes section", () => expect(meetingCurrentWork({ ...base, minutes: null }, new Date("2026-07-26T10:00:00Z"))).toMatchObject({ title: "Complete the minutes", target: "minutes" }));
+  it("keeps human approval separate from completed minutes", () => expect(meetingCurrentWork(base, new Date("2026-07-26T10:00:00Z"))).toMatchObject({ title: "Review the minutes for approval", target: "approval" }));
+  it("does not offer editing work for archived meetings", () => expect(meetingCurrentWork({ ...base, status: "ARCHIVED" })).toMatchObject({ target: null }));
 });
