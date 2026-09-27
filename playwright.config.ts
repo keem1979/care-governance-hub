@@ -4,6 +4,7 @@ import { E2E_MFA_SECRET, E2E_SESSION_SECRET, E2E_SETUP_TOKEN, E2E_USER, E2E_USER
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3000);
 const baseURL = `http://127.0.0.1:${port}`;
+const chromiumChannel = process.env.PLAYWRIGHT_CHROMIUM_CHANNEL === "chrome" ? "chrome" : undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -54,10 +55,10 @@ export default defineConfig({
     },
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"], channel: chromiumChannel } },
     {
       name: "mobile",
-      use: { ...devices["iPhone 13"], browserName: "chromium" },
+      use: { ...devices["iPhone 13"], browserName: "chromium", channel: chromiumChannel },
     },
   ],
 });

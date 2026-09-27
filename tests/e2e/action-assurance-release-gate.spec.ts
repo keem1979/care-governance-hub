@@ -102,6 +102,8 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await owner.reload({ waitUntil: "domcontentloaded" });
   await expect(section(owner, "Management assurance and closure")).toContainText(E2E_USERS.organisationOwner.name);
   await expect(owner.getByRole("region", { name: "Management assurance decision" })).toContainText("Closed by an authorised decision");
+  await expect(owner.getByRole("region", { name: "Management assurance decision" })).toContainText("The medicines control and follow-up audit process were implemented.");
+  await expect(owner.getByRole("region", { name: "Management assurance decision" })).not.toContainText("Management assurance completed and Action closed");
   await owner.screenshot({ path: testInfo.outputPath("wp005-closed-desktop.png"), fullPage: true });
   const adminReopenContext = await browser.newContext({ baseURL: origin });
   const adminReopenPage = await adminReopenContext.newPage();

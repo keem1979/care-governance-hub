@@ -30,6 +30,7 @@ test("Action assurance remains usable on a mobile viewport", async ({ page, requ
   await expectNoOverflow(page);
 
   await page.goto(`/actions/${high.id}/assurance`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: /Chat with Abi/ })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Management assurance decision" })).toContainText("Needs attention");
   await page.screenshot({ path: testInfo.outputPath("wp005-needs-attention-mobile.png"), fullPage: true });
   await expectNoOverflow(page);

@@ -1,6 +1,6 @@
 # WP-005 — Management Assurance Decision Experience
 
-**Status:** BLOCKED at the automated browser gate; no Product Owner merge request yet.
+**Status:** READY FOR PRODUCT OWNER REVIEW; no merge or deployment authorised.
 **Branch:** `wp-005-management-assurance`
 **Base:** `94201c3827323de50db82be58bee30f4e5fe03c0` (local main after approved WP-004 merge)
 **Environment:** fictional fixtures in `127.0.0.1:5432/care_governance_hub_test` only. No production access, remote push, merge, deployment, or schema migration.
@@ -24,32 +24,33 @@
 | Governance QA Consultant | PASS | Reopened work needs fresh completion, verification, and (where required) effectiveness. |
 | CQC-style reviewer | PASS | Earlier decisions remain traceable and cannot silently become current assurance. |
 | Security/Tenancy Reviewer | PASS | Existing scope and permission checks remain; reopen now also enforces provider role authority. |
-| Test Engineer | PASS for code review; execution pending | Targeted browser assertions are coherent, but Chromium/mobile cannot be certified in this sandbox. |
-| Accessibility/Mobile Reviewer | PASS for code review; execution pending | Labelled status, full text, 44px links, mobile overflow checks and screenshot assertions added. |
-| Release Manager | HOLD | Automated browser/mobile gate and persisted screenshots remain outstanding. |
+| Test Engineer | PASS | Existing governance assertions were preserved; focused regression assertions now check the true completed-work account and the absence of an obstructing assistant. Chromium 4/4 and mobile 5/5 passed. |
+| Accessibility/Mobile Reviewer | PASS | The decision region is labelled by its visible title. Fresh mobile screenshots show the Ready and Needs attention headings, links and actions without assistant overlap or horizontal clipping. The missing work account is stated transparently. |
+| Release Manager | READY FOR PRODUCT OWNER REVIEW | Gate B and Gate C evidence is complete; no unresolved WP-005 blocker. |
 
 ## Gate B evidence
 
 | Check | Result |
 | --- | --- |
-| Automated unit/integration suite | PASS **386/386**, 77 files; rerun after the decision-region accessibility correction |
-| TypeScript | PASS after the correction |
-| ESLint | PASS after the correction |
+| Automated unit/integration suite | PASS **386/386**, 77 files; rerun after the final visual corrections |
+| TypeScript | PASS at final state |
+| ESLint | PASS at final state |
 | Prisma schema validation | PASS |
 | Disposable fresh migrations | PASS, 65 migrations, temporary schema removed |
 | Existing direct security/integrity gate | PASS **27/27** |
 | WP-005 direct assurance gate | PASS **18/18**: guarded fictional setup, role/tenant denial, closure/reopen, reason, reset, immediate stale reclosure denial, renewed work and fresh Low closure, append-only events. Its High Action is manually put into a closed state solely to probe role authority; this is not a complete High lifecycle proof. |
 | Evidence search performance | PASS, 5,000 fictional rows: search **4.552 ms**, page **9.111 ms**, both below 250 ms gate |
-| Next.js production build | PASS after the correction |
-| Sites/Vinext build | PASS after the correction |
-| Chromium Playwright | The unrestricted local run reached the application: **3 passed, 1 failed**. The failure exposed an accessibility-name mismatch on the new decision region. Its accessible name was the status heading (“Needs attention”), while the visible section label and test intent were “Management assurance decision.” The component now labels the region with that visible section label; the unchanged targeted spec requires a rerun. The earlier sandbox attempt failed four launches with `spawn EPERM` and executed no application assertions. |
-| Mobile Playwright | NOT RUN in this sandbox; same Chromium launcher is restricted. |
+| Next.js production build | PASS on the final corrected files |
+| Sites/Vinext build | PASS on the final corrected files |
+| Chromium Playwright | PASS **4/4** on final state: three Action assurance release-gate cases and the WP-004 lifecycle regression. The previously failing region-name assertion and actual completed-work regression passed. |
+| Mobile Playwright | PASS **5/5** on final state: mobile usability, three Action assurance release-gate cases, and the WP-004 lifecycle regression. The mobile assistant-overlap regression passed. |
+| Browser launcher | Playwright's bundled headless shell returned `spawn EPERM` in this process sandbox. The installed Google Chrome executable launched successfully. An optional `PLAYWRIGHT_CHROMIUM_CHANNEL=chrome` config switch ran the same Chromium-engine projects and unchanged assertions; the default launcher remains unchanged. |
 
 No WP-005 Prisma schema change or migration was required. The earlier WP-004 migration evidence is preserved. No production database was used.
 
 ## Gate C rendered review and measured burden
 
-An authenticated fictional Registered Manager viewed the actual production Next.js build at 1280px desktop and 390px mobile through the in-app browser. A separate checkout of the pre-WP-005 baseline used the same fictional fixture state and role. Measurements are document positions from the top of the Action assurance page; they are not click counts. The unrestricted Chromium error context confirmed the decision region rendered with its blockers and Evidence; it exposed the region naming defect, since corrected in the component.
+An authenticated fictional Registered Manager viewed the actual production Next.js build at 1280px desktop and 390px mobile through the in-app browser. A separate checkout of the pre-WP-005 baseline used the same fictional fixture state and role. Measurements are document positions from the top of the Action assurance page; they are not click counts. The targeted browser suites then exercised the corrected decision region on desktop and mobile.
 
 | Measure | Before | After | Change |
 | --- | ---: | ---: | ---: |
@@ -59,14 +60,21 @@ An authenticated fictional Registered Manager viewed the actual production Next.
 | Link jump to closure | 1 click | 1 click | No claimed click reduction |
 | Horizontal overflow, desktop/mobile | None | None | Maintained |
 
-The rendered High Action showed **Needs attention** and linked blockers; the Low Action showed **Ready for management review**, named linked Evidence, and the nearby human closure form. These were visually inspected on desktop and mobile. Playwright screenshots are not yet persisted, so Gate C is not complete.
+The rendered High Action showed **Needs attention** and linked blockers; the Low Action showed **Ready for management review**, named linked Evidence, and the nearby human closure form. Fresh screenshots were visually inspected on desktop and mobile. The mobile assurance page no longer displays the floating assistant over the decision heading. The closed desktop decision shows the actual medicines work account instead of the later closure bookkeeping note. The Low fixture has no separate completion account and now says so explicitly. Playwright confirmed the region by accessible role/name and persisted the following non-empty authenticated screenshots:
 
-## Remaining browser gate
+| Review image | Exact path | Size |
+| --- | --- | ---: |
+| Desktop ready | `C:\Users\jkeem\Documents\Codex\2026-09-26\referenced-chatgpt-conversation-this-is-an\outputs\WP-005_GATE_C\chromium\action-assurance-release-g-4c9a5-ness-and-closure-boundaries-chromium\wp005-ready-desktop.png` | 487,561 bytes |
+| Desktop closed | `C:\Users\jkeem\Documents\Codex\2026-09-26\referenced-chatgpt-conversation-this-is-an\outputs\WP-005_GATE_C\chromium\action-assurance-release-g-4c9a5-ness-and-closure-boundaries-chromium\wp005-closed-desktop.png` | 335,135 bytes |
+| Mobile needs attention | `C:\Users\jkeem\Documents\Codex\2026-09-26\referenced-chatgpt-conversation-this-is-an\outputs\WP-005_GATE_C\mobile\action-assurance-mobile-Ac-bb401-usable-on-a-mobile-viewport-mobile\wp005-needs-attention-mobile.png` | 2,789,649 bytes |
+| Mobile ready | `C:\Users\jkeem\Documents\Codex\2026-09-26\referenced-chatgpt-conversation-this-is-an\outputs\WP-005_GATE_C\mobile\action-assurance-mobile-Ac-bb401-usable-on-a-mobile-viewport-mobile\wp005-ready-mobile.png` | 1,934,570 bytes |
 
-Run `scripts/wp005-browser-gate.ps1` in an unrestricted local Windows terminal. The script checks only the disposable database destination, then runs the targeted Action assurance and WP-004 regression specs and verifies persisted screenshots. It avoids inline PowerShell/Node quoting and never prints the URL or credentials. Outputs remain under `../../outputs/WP-005_GATE_C`. Expected tests to execute: release gate 3 per project, mobile assurance 1 on mobile, WP-004 lifecycle 1 per project = **9**. Do not infer PASS from expected counts. The release-gate desktop spec saves `wp005-ready-desktop.png` and `wp005-closed-desktop.png`; the mobile spec saves `wp005-needs-attention-mobile.png` and `wp005-ready-mobile.png`.
+## Browser-gate execution
+
+`scripts/wp005-browser-gate.ps1` verified only the disposable database destination, then ran the targeted Action assurance and WP-004 regression specs with `PLAYWRIGHT_CHROMIUM_CHANNEL=chrome` against installed Chrome. It never printed database credentials. The two project runs completed **9/9**, and its artifact check confirmed all four named screenshots are non-zero. Existing governance expectations were preserved; focused assertions were added for the two screenshot-review corrections.
 
 ## Known non-blocking follow-ups
 
-The pre-existing wordmark aspect-ratio warning and mobile hydration attribute warning (cause unconfirmed) are tracked separately in `docs/NON_BLOCKING_UI_FOLLOWUPS.md`. They are not WP-005 product changes.
+The pre-existing wordmark aspect-ratio warning and mobile hydration attribute warning (cause unconfirmed) are tracked separately in `docs/NON_BLOCKING_UI_FOLLOWUPS.md`. The Sites/Vinext build also emitted its existing Vite native config-loader advisory. None blocked WP-005 validation.
 
-**Final verdict:** BLOCKED — automated desktop/mobile browser results and persisted screenshots are required before Product Owner review.
+**Final verdict:** READY FOR PRODUCT OWNER REVIEW — NOT MERGED OR DEPLOYED.

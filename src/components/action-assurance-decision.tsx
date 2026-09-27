@@ -65,7 +65,7 @@ export function ActionAssuranceDecision({
     </div> : null}
 
     <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-      <div className="rounded-lg bg-white/80 p-3"><dt className="font-semibold text-slate-600">{completionAccount ? "Work account" : "Completed work"}</dt><dd className="mt-1 break-words">{completionAccount?.trim() || "Not recorded"}</dd></div>
+      <div className="rounded-lg bg-white/80 p-3"><dt className="font-semibold text-slate-600">{completionAccount ? "Work account" : "Completed work"}</dt><dd className="mt-1 break-words">{completionAccount?.trim() || "No separate account recorded; review linked Evidence and the Action detail."}</dd></div>
       <div className="rounded-lg bg-white/80 p-3"><dt className="font-semibold text-slate-600">Verification</dt><dd className="mt-1 capitalize">{decisionLabel(verificationOutcome)}</dd></div>
       <div className="rounded-lg bg-white/80 p-3"><dt className="font-semibold text-slate-600">Effectiveness</dt><dd className="mt-1 capitalize">{decisionLabel(effectivenessOutcome)}</dd></div>
       <div className="rounded-lg bg-white/80 p-3"><dt className="font-semibold text-slate-600">Dependencies</dt><dd className="mt-1">{unresolvedDependencies} unresolved dependenc{unresolvedDependencies === 1 ? "y" : "ies"}</dd></div>
