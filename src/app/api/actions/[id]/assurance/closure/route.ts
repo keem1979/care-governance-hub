@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
 import { actionAssuranceReadiness, evaluateActionClosureAuthority, linkActionEvidence, resolveActionAssurancePolicy, resolveActionClosureAuthority } from "@/lib/action-assurance";
 import { syncFindingFromAction } from "@/lib/assurance-improvement";
-import { actionScopeWhere } from "@/lib/actions";
+import { actionEligibleEvidenceWhere, actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -20,6 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
     });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
+    assertActionWriteScope(context, action.locationId);
     const intent = String(form.get("intent") ?? "close");
     if (intent === "reopen") {
       if (!action.closedAt) throw new Error("This Action is not closed.");
@@ -33,6 +34,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     if (intent !== "close") throw new Error("Unknown closure decision.");
     if (action.closedAt) throw new Error("This Action is already closed.");
+    if (action.archivedAt || ["ARCHIVED", "CANCELLED"].includes(action.status)) throw new Error("Archived or cancelled Actions cannot be closed.");
     const closureAuthority = await resolveActionClosureAuthority(db, { organisationId: context.organisation.id, priority: action.priority, sourceType: action.sourceType, sourceRecordId: action.sourceRecordId });
     const assurancePolicy = action.sourceType === "RISK" ? undefined : await resolveActionAssurancePolicy(db, { organisationId: context.organisation.id, priority: action.priority, sourceType: action.sourceType });
     const authority = evaluateActionClosureAuthority({ hasActionCapability: context.permissions.includes(PERMISSIONS.ACTIONS_MANAGE), actorRoleKey: context.role.key, authorisedRoleKeys: closureAuthority.authorisedRoleKeys });
@@ -40,9 +42,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const rationale = String(form.get("rationale") ?? "").trim();
     if (rationale.length < 12) throw new Error("Record the management assurance rationale for closure.");
     const closureEvidenceIds = [...new Set(form.getAll("evidenceIds").map(String).filter(Boolean))];
-    const authorisedEvidence = new Set(action.evidenceLinks.map((item) => item.evidenceId));
+    const eligibleRows = await db.evidence.findMany({ where: { id: { in: action.evidenceLinks.map(item => item.evidenceId) }, ...actionEligibleEvidenceWhere(context, action.locationId) }, select: { id: true } });
+    const eligibleEvidence = new Set(eligibleRows.map(item => item.id));
+    const authorisedEvidence = new Set(action.evidenceLinks.filter(item => eligibleEvidence.has(item.evidenceId)).map((item) => item.evidenceId));
     if (!closureEvidenceIds.length || closureEvidenceIds.some((evidenceId) => !authorisedEvidence.has(evidenceId))) throw new Error("Choose closure evidence already linked to this Action and within your authorised scope.");
-    const roleCounts = action.evidenceLinks.reduce<Record<string, number>>((counts, item) => ({ ...counts, [item.role]: (counts[item.role] ?? 0) + 1 }), {});
+    const roleCounts = action.evidenceLinks.filter(item => eligibleEvidence.has(item.evidenceId)).reduce<Record<string, number>>((counts, item) => ({ ...counts, [item.role]: (counts[item.role] ?? 0) + 1 }), {});
     roleCounts.CLOSURE = Math.max(roleCounts.CLOSURE ?? 0, closureEvidenceIds.length);
     const readiness = actionAssuranceReadiness({
       priority: action.priority,

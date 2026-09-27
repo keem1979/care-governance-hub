@@ -26,7 +26,7 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   const signedInOwnerId = await page.locator('input[name="verifierId"]').inputValue();
   const selfVerification = await verificationRequest(page, high.id, setup.evidenceId, signedInOwnerId);
   expect(selfVerification.status).toBe(400);
-  expect(selfVerification.body.error).toMatch(/other than the action owner/i);
+  expect(selfVerification.body.error).toMatch(/verifier separate from the delivery owner|other than the action owner/i);
 
   const origin = new URL(page.url()).origin;
   const rmContext = await browser.newContext({ baseURL: origin });
@@ -36,22 +36,24 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await expect(rm.getByRole("heading", { name: "Role-aware Evidence" })).toBeVisible();
   await expect(rm.getByText("Completion", { exact: true }).first()).toBeVisible();
   const evidenceSection = section(rm, "3. Role-aware Evidence");
-  await evidenceSection.getByRole("button", { name: "Link Evidence" }).click();
-  const evidenceDrawer = rm.getByRole("dialog", { name: "Find, preview and link Evidence" });
+  await evidenceSection.getByRole("button", { name: "Add Evidence" }).click();
+  const evidenceDrawer = rm.getByRole("dialog", { name: "Add Evidence" });
   await expect(evidenceDrawer).toBeVisible();
-  await evidenceDrawer.getByLabel("Search Evidence Library").fill("E2E verified governance source");
-  await evidenceDrawer.getByRole("button", { name: "Search authorised Evidence" }).click();
-  await expect(evidenceDrawer.getByText("E2E verified governance source").first()).toBeVisible();
-  await evidenceDrawer.getByText("Preview governance metadata").first().click();
+  await evidenceDrawer.getByRole("button", { name: "Use existing Evidence" }).click();
+  await evidenceDrawer.getByRole("textbox", { name: "Search Evidence" }).fill("E2E verified governance source");
+  await evidenceDrawer.getByRole("button", { name: "Search", exact: true }).click();
+  await evidenceDrawer.getByRole("button", { name: /E2E verified governance source/ }).first().click();
+  await expect(evidenceDrawer.getByRole("heading", { name: "Preview" })).toBeVisible();
   await expect(evidenceDrawer).toContainText("E2E-SRC-001");
-  await evidenceDrawer.getByRole("button", { name: "Close Evidence drawer" }).click();
+  await evidenceDrawer.getByRole("button", { name: "Close", exact: true }).click();
   await expect(evidenceDrawer).not.toBeVisible();
 
   const verification = section(rm, "4. Verification");
   await verification.getByLabel("Verification outcome").selectOption("VERIFIED");
   await verification.getByLabel("Evidence checked").selectOption(setup.evidenceId);
-  await verification.getByLabel("Work completed").fill("The medicines control and follow-up audit process were implemented.");
-  await verification.getByLabel("Evidence summary").fill("The governed completion record was reviewed in the Evidence Library.");
+  await verification.getByText("Correct legacy completion or Evidence summary").click();
+  await verification.getByLabel("Corrected work completed").fill("The medicines control and follow-up audit process were implemented.");
+  await verification.getByLabel("Corrected Evidence summary").fill("The governed completion record was reviewed in the Evidence Library.");
   await verification.getByLabel("Result against the predefined success measure").fill("Implementation is confirmed; effectiveness still requires later observation.");
   await verification.getByLabel("Verification rationale").fill("The evidence confirms completion but does not yet prove that the control worked.");
   const verificationResponse = rm.waitForResponse(response => response.url().endsWith(`/api/actions/${high.id}/assurance/verification`) && response.request().method() === "POST");
@@ -66,16 +68,20 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
 
   const effectiveness = section(rm, "5. Effectiveness and sustained improvement");
   await effectiveness.getByLabel("Effectiveness outcome").selectOption("EFFECTIVE");
+  await effectiveness.getByText("Add baseline or target details").click();
   await effectiveness.getByLabel("Baseline").fill("One fictional recurring medicines exception.");
   await effectiveness.getByLabel("Target").fill("No repeat exception in the next audit sample.");
-  await effectiveness.getByLabel("Observed result").fill("The subsequent audit sample found no repeat medicines exception.");
-  await effectiveness.getByLabel("Effectiveness evidence").selectOption(setup.evidenceId);
+  await effectiveness.getByRole("textbox", { name: "Observed result", exact: true }).fill("The subsequent audit sample found no repeat medicines exception.");
+  await effectiveness.getByLabel("Evidence of the observed result").selectOption(setup.evidenceId);
+  await effectiveness.getByLabel("Recurrence identified?").selectOption("false");
   await effectiveness.getByLabel("Management decision").fill("The observed result supports effectiveness and the Action can proceed to closure review.");
   const effectivenessResponse = rm.waitForResponse(response => response.url().endsWith(`/api/actions/${high.id}/assurance/effectiveness`) && response.request().method() === "POST");
   await effectiveness.getByRole("button", { name: "Record effectiveness review" }).click();
   expect((await effectivenessResponse).status()).toBe(200);
   await rm.reload({ waitUntil: "domcontentloaded" });
-  await expect(rm.getByText("Ready for closure", { exact: false }).first()).toBeVisible();
+  await expect(section(rm, "5. Effectiveness and sustained improvement")).toContainText("The subsequent audit sample found no repeat medicines exception.");
+  await expect(rm.getByRole("region", { name: "Record attention summary" })).toContainText("Closure evidence identified");
+  await expect(rm.getByRole("region", { name: "Record attention summary" })).toContainText("Closer is separate from owner and verifier");
 
   // A third person makes the High Action closure decision.
   const ownerContext = await browser.newContext({ baseURL: origin });
@@ -98,11 +104,12 @@ test("role-aware Action Evidence preserves completion, verification, effectivene
   await rm.goto(`/actions/${ineffective.id}/assurance`, { waitUntil: "domcontentloaded" });
   const ineffectiveReview = section(rm, "5. Effectiveness and sustained improvement");
   await ineffectiveReview.getByLabel("Effectiveness outcome").selectOption("INEFFECTIVE");
-  await ineffectiveReview.getByLabel("Observed result").fill("The follow-up sample found the same fictional medicines exception again.");
-  await ineffectiveReview.getByLabel("Effectiveness evidence").selectOption(setup.evidenceId);
+  await ineffectiveReview.getByLabel("Recurrence identified?").selectOption("true");
+  await ineffectiveReview.getByRole("textbox", { name: "Observed result", exact: true }).fill("The follow-up sample found the same fictional medicines exception again.");
+  await ineffectiveReview.getByLabel("Evidence of the observed result").selectOption(setup.evidenceId);
   await ineffectiveReview.getByLabel("Management decision").fill("Reopen the Action, review the failed control and assign further corrective work.");
-  await ineffectiveReview.getByLabel("Immediate control if recurrence").fill("Registered Manager reviews all current medicines records today.");
-  await ineffectiveReview.getByLabel("Management escalation if recurrence").fill("Escalate the failed control to provider governance oversight.");
+  await ineffectiveReview.getByLabel("Immediate control").fill("Registered Manager reviews all current medicines records today.");
+  await ineffectiveReview.getByLabel("Management escalation").fill("Escalate the failed control to provider governance oversight.");
   const ineffectiveResponse = rm.waitForResponse(response => response.url().endsWith(`/api/actions/${ineffective.id}/assurance/effectiveness`) && response.request().method() === "POST");
   await ineffectiveReview.getByRole("button", { name: "Record effectiveness review" }).click();
   expect((await ineffectiveResponse).status()).toBe(200);

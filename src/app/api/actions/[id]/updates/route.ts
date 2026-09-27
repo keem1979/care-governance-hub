@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth/dal";
 import { linkActionEvidence } from "@/lib/action-assurance";
 import { syncActionEvidence } from "@/lib/action-evidence";
-import { ACTION_STATUSES, actionScopeWhere } from "@/lib/actions";
+import { ACTION_STATUSES, actionEligibleEvidenceWhere, actionScopeWhere, assertActionWriteScope, validateActionCompletion } from "@/lib/actions";
 import { createDb } from "@/lib/db";
 import { lifecycleForAction } from "@/lib/closure-loop";
-import { evidenceScopeWhere } from "@/lib/evidence";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -14,23 +13,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) } });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
+    assertActionWriteScope(context, action.locationId);
     if (action.closedAt) throw new Error("Closed Actions are read-only. Reopen the Action through its Assurance chronology first.");
+    if (["ARCHIVED", "CANCELLED"].includes(action.status)) throw new Error("Archived or cancelled Actions cannot receive delivery updates.");
     if (!hasPermission(context.permissions, PERMISSIONS.ACTIONS_MANAGE) && action.ownerId !== context.user.id) return NextResponse.json({ error: "You can update only actions assigned to you." }, { status: 403 });
     const note = String(form.get("note") ?? "").trim(), status = String(form.get("status") ?? "IN_PROGRESS");
-    const progressPercent = Math.round(Number(form.get("progressPercent") ?? action.progressPercent));
+    const intent = String(form.get("intent") ?? "progress");
+    if (!["progress", "complete"].includes(intent)) throw new Error("Choose a valid Action update.");
+    const progressPercent = intent === "complete" ? 100 : Math.round(Number(form.get("progressPercent") ?? action.progressPercent));
     const nextStep = String(form.get("nextStep") ?? "").trim() || null, blocker = String(form.get("blocker") ?? "").trim() || null;
     const evidenceId = String(form.get("evidenceId") ?? "") || null;
     if (note.length < 3) throw new Error("Describe what has changed since the last update.");
-    if (!ACTION_STATUSES.filter((item) => !["OVERDUE", "ARCHIVED", "COMPLETED"].includes(item)).includes(status as never)) throw new Error("Verified closure must be completed by a manager using the action verification form.");
+    if (!ACTION_STATUSES.filter((item) => ["OPEN", "IN_PROGRESS", "BLOCKED"].includes(item)).includes(status as never)) throw new Error("Progress updates cannot make verification or closure decisions.");
     if (!Number.isFinite(progressPercent) || progressPercent < 0 || progressPercent > 100) throw new Error("Progress must be between 0 and 100%.");
     if (status === "BLOCKED" && !blocker) throw new Error("Record what is blocking the action.");
-    if (evidenceId && !(await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context) } }))) throw new Error("The selected evidence could not be found.");
+    if (evidenceId && !(await db.evidence.findFirst({ where: { id: evidenceId, ...actionEligibleEvidenceWhere(context, action.locationId) } }))) throw new Error("Choose active Evidence in this Action's authorised location or organisation-wide scope.");
+    const completedWork = progressPercent === 100;
+    if (completedWork) {
+      const existingCompletionEvidence = await db.actionEvidence.count({ where: { actionId: id, role: "COMPLETION", retiredAt: null, evidence: actionEligibleEvidenceWhere(context, action.locationId) } });
+      validateActionCompletion(note, existingCompletionEvidence + (evidenceId ? 1 : 0));
+    }
     await db.$transaction(async (tx) => {
       await tx.actionUpdate.create({ data: { actionId: id, userId: context.user.id, note, status: status as never, progressPercent, nextStep, blocker, evidenceId } });
       if (evidenceId) await linkActionEvidence(tx, { actionId: id, organisationId: action.organisationId, evidenceIds: [evidenceId], role: "COMPLETION", actorId: context.user.id });
       const evidenceCount = await tx.actionEvidence.count({ where: { actionId: id, retiredAt: null } });
       const lifecycleStatus = lifecycleForAction({ actionStatus: status, managementResponse: action.managementResponse, evidenceCount, verified: false });
-      const completedWork = progressPercent === 100;
       const updated = await tx.action.update({ where: { id }, data: { status: completedWork ? "AWAITING_EVIDENCE" : status as never, lifecycleStatus: completedWork ? "AWAITING_VERIFICATION" : lifecycleStatus as never, progressPercent, progressNote: note, completionDate: completedWork ? new Date() : null, closedAt: null, closedById: null, closureAssuranceRationale: null } });
       await syncActionEvidence(tx, { actionId: id, organisationId: action.organisationId, locationId: action.locationId, reference: action.reference, title: action.title, description: action.description, category: action.category, sourceType: action.sourceType, sourceReference: action.sourceReference, ownerId: action.ownerId, actorId: context.user.id, dueDate: action.dueDate, reviewDate: action.reviewDate, status, priority: action.priority, progressPercent, expectedOutcome: action.expectedOutcome, successMeasure: action.successMeasure, archived: false });
       await tx.activityLog.create({ data: { organisationId: context.organisation.id, locationId: action.locationId, userId: context.user.id, action: "UPDATE", recordType: "ActionUpdate", recordId: id, summary: `Updated action progress: ${action.reference}`, afterValue: { requestedStatus: status, progressPercent, nextStep, blocker, evidenceId, evidenceRole: evidenceId ? "COMPLETION" : null, updatedStatus: updated.status } } });

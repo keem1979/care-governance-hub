@@ -1,4 +1,5 @@
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { evidenceScopeWhere } from "@/lib/evidence";
 
 export const ACTION_STATUSES = ["OPEN","IN_PROGRESS","BLOCKED","AWAITING_EVIDENCE","AWAITING_VERIFICATION","COMPLETED","OVERDUE","CANCELLED","ARCHIVED"] as const;
 export const ACTION_PRIORITIES = ["LOW","MEDIUM","HIGH","CRITICAL"] as const;
@@ -48,6 +49,16 @@ export function actionReadiness(input:{status:string;evidenceRequired:boolean;ev
 export function actionScopeWhere(context:{organisation:{id:string};allLocations:boolean;locations:{id:string}[];user:{id:string};permissions:string[]}){
   const locationScope=context.allLocations?{}:{OR:[{locationId:null},{locationId:{in:context.locations.map(({id})=>id)}}]};
   return{organisationId:context.organisation.id,...locationScope,...(hasPermission(context.permissions,PERMISSIONS.GOVERNANCE_VIEW)?{}:{ownerId:context.user.id})};
+}
+export function assertActionWriteScope(context:{allLocations:boolean;locations:{id:string}[]},locationId:string|null){
+  if(!context.allLocations&&(!locationId||!context.locations.some((item)=>item.id===locationId)))throw new Error("This Action is outside your authorised editing locations.");
+}
+export function actionEligibleEvidenceWhere(context:{organisation:{id:string};allLocations:boolean;locations:{id:string}[]},locationId:string|null){
+  return {AND:[evidenceScopeWhere(context),{status:"ACTIVE" as const,archivedAt:null,OR:[{locationId:null},{locationId}]}]};
+}
+export function validateActionCompletion(note:string,completionEvidenceCount:number){
+  if(note.trim().length<8)throw new Error("Describe the work completed before submitting it for verification.");
+  if(completionEvidenceCount<1)throw new Error("Link Completion Evidence before submitting the work for verification.");
 }
 export function validateActionClosure(input:{status:string;evidenceCount:number;waiver?:string;closureNote?:string;verifiedById?:string;verificationDate?:Date|null}){
   if(input.status!=="COMPLETED")return;

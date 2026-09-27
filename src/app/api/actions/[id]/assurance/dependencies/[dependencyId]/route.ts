@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
-import { actionScopeWhere } from "@/lib/actions";
+import { actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -9,7 +9,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) } });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
+    assertActionWriteScope(context, action.locationId);
     if (action.closedAt) throw new Error("Closed Actions are read-only. Reopen the Action before changing a dependency.");
+    if (action.archivedAt || ["ARCHIVED", "CANCELLED"].includes(action.status)) throw new Error("Archived or cancelled Actions cannot change dependencies.");
     const item = await db.externalDependency.findFirst({ where: { id: dependencyId, actionId: id, organisationId: context.organisation.id } });
     if (!item) return NextResponse.json({ error: "External dependency not found." }, { status: 404 });
     const intent = text(form, "intent"), summary = text(form, "summary");

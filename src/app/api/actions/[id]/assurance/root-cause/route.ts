@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
-import { actionScopeWhere } from "@/lib/actions";
+import { actionScopeWhere, assertActionWriteScope } from "@/lib/actions";
 import { validateRootCauseReview } from "@/lib/assurance-improvement";
 import { createDb } from "@/lib/db";
 import { PERMISSIONS, ROLE_KEYS } from "@/lib/permissions";
@@ -10,7 +10,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const action = await db.action.findFirst({ where: { id, ...actionScopeWhere(context) }, include: { rootCauseReview: true } });
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
+    assertActionWriteScope(context, action.locationId);
     if (action.closedAt) throw new Error("Closed Actions are read-only. Reopen the Action before changing its root-cause review.");
+    if (action.archivedAt || ["ARCHIVED", "CANCELLED"].includes(action.status)) throw new Error("Archived or cancelled Actions cannot change root-cause reviews.");
     const input = { method: text(form, "method"), problemStatement: text(form, "problemStatement"), immediateCauses: lines(form, "immediateCauses"), contributingFactors: lines(form, "contributingFactors"), systemCauses: lines(form, "systemCauses"), lessons: text(form, "lessons"), preventiveControls: text(form, "preventiveControls") };
     validateRootCauseReview(input);
     const approve = form.get("approve") === "true";

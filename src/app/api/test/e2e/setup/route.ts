@@ -36,6 +36,8 @@ async function removeGeneratedFixtures(db: ReturnType<typeof createDb>, organisa
       organisationId,
       OR: [
         { reference: { startsWith: "E2E-ACT-ASSURANCE-" } },
+        { reference: { startsWith: "E2E-ACT-WP004-" } },
+        { title: { startsWith: "WP004 fictional compact completion " }, issueKey: { startsWith: "wp004-fictional-" }, sourceType: "MANUAL" },
         ...(riskIds.length ? [{ sourceType: "RISK" as const, sourceRecordId: { in: riskIds } }] : []),
         ...(incidentIds.length ? [{ sourceType: "INCIDENT" as const, sourceRecordId: { in: incidentIds } }] : []),
         ...(complaintIds.length ? [{ sourceType: "COMPLAINT" as const, sourceRecordId: { in: complaintIds } }] : []),
