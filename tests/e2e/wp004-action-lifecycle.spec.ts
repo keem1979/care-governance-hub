@@ -42,6 +42,7 @@ test("an Action owner submits compact completed work while assurance decisions s
   expect((await submitted).status()).toBe(200);
   await expect(page.getByRole("region", { name: "Action lifecycle" })).toContainText("Completed");
   await expect(page.getByText("Manager verification required", { exact: true })).toBeVisible();
+  await expect(page.getByText(account, { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("wp004-completion-submitted.png"), fullPage: true });
 
   const afterCompletion = await readAction(id);
