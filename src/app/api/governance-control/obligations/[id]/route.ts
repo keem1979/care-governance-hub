@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/dal";
 import { createDb } from "@/lib/db";
+import { evidenceScopeWhere } from "@/lib/evidence";
 import { obligationTransitionAllowed, OBLIGATION_STATUSES, OBLIGATION_UPDATE_TYPES } from "@/lib/governance-control";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -16,7 +17,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (updateType === "SUBMISSION" && (!submissionReference || !evidenceId || nextStatus !== "SUBMITTED")) throw new Error("A submission requires its reference, linked evidence and Submitted status.");
     if (updateType === "ACCEPTANCE" && nextStatus !== "ACCEPTED") throw new Error("An acceptance update must move the obligation to Accepted.");
     if (updateType === "CLOSURE" && (obligation.status !== "ACCEPTED" || nextStatus !== "CLOSED")) throw new Error("Only an accepted obligation can be closed.");
-    if (evidenceId && !(await db.evidence.findFirst({ where: { id: evidenceId, organisationId: context.organisation.id, status: "ACTIVE" } }))) throw new Error("Choose active evidence in your organisation.");
+    if (evidenceId && !(await db.evidence.findFirst({ where: { id: evidenceId, ...evidenceScopeWhere(context), status: "ACTIVE", ...(obligation.locationId ? { OR: [{ locationId: null }, { locationId: obligation.locationId }] } : {}) } }))) throw new Error("Choose active Evidence within the authorised obligation location.");
     const now = new Date(), isChase = updateType === "CHASE";
     await db.$transaction(async (tx) => {
       await tx.governanceObligation.update({ where: { id }, data: { status: nextStatus as never, evidenceId: evidenceId ?? obligation.evidenceId, submissionReference: submissionReference ?? obligation.submissionReference, latestResponse: ["QUERY", "RESPONSE", "ACCEPTANCE"].includes(updateType) ? note : obligation.latestResponse, ...(isChase ? { lastChasedAt: now, chaseCount: { increment: 1 } } : {}), ...(nextStatus === "CLOSED" ? { closedAt: now } : {}) } });

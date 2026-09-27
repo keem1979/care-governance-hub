@@ -68,6 +68,8 @@ export async function POST(request: Request) {
             nextReviewDate,
             status: "DRAFT" as const,
             approvalStatus: "NOT_SUBMITTED" as const,
+            approvedById: null,
+            approvedAt: null,
             tags: ["policy studio", template.cqcKey.toLowerCase()],
             complianceAreas: template.complianceAreas,
             notes: "Prepared in Policy Studio for local review, consultation and approval.",

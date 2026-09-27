@@ -20,6 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     try {
       const policy = await db.policy.findFirst({ where: { id, organisationId: context.organisation.id } });
       if (!policy) return NextResponse.json({ error: "Policy not found." }, { status: 404 });
+      if (!['DRAFT', 'UNDER_REVIEW'].includes(policy.status)) throw new Error("Start a new review before replacing an approved policy document.");
       const bytes = await file.arrayBuffer();
       const checksum = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))).map((byte) => byte.toString(16).padStart(2, "0")).join("");
       await putPolicyFile(storageKey, bytes);
