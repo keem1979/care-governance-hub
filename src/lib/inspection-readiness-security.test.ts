@@ -58,6 +58,9 @@ describe("inspection and commissioner readiness scope", () => {
         actionLinks: { where: { action: { organisationId: "tenant-a", OR: [{ locationId: null }, { locationId: { in: ["branch-a"] } }] } } },
       },
     });
+    for (const source of [db.evidence.findMany, db.kpiEntry.findMany, db.governanceMeeting.findMany, db.staffComplianceRecord.findMany]) {
+      expect(source.mock.calls[0][0]).not.toHaveProperty("take");
+    }
   });
 
   it("keeps tagged suggestions and live signals out of evidenced category coverage", async () => {
@@ -155,8 +158,16 @@ describe("inspection and commissioner readiness scope", () => {
       id: "return-a", localAuthority: "Fictional Council", reportingMonth: new Date("2026-09-01"),
       status: "DRAFT", data: { serviceUserCancelledUnder24h: 2, serviceUserCancelledCalls: 1 }, location: { name: "Branch A" },
     }] as never);
+    db.risk.findMany.mockResolvedValue([{
+      id: "risk-a", reference: "RSK-FICTIONAL", title: "Fictional serious risk", status: "TREATMENT_IN_PROGRESS",
+      residualLevel: "CRITICAL", nextReviewDate: new Date("2026-09-10"), location: { name: "Branch A" },
+    }] as never);
     const rows = await getCommissionerReadinessExceptions(context as never);
     expect(rows).toContainEqual(expect.objectContaining({ id: "return-a", status: "DRAFT", dataCheckCount: 1, location: "Branch A" }));
+    expect(rows).toContainEqual(expect.objectContaining({
+      id: "risk-a", source: "High/Critical risk", href: "/risks/risk-a", status: "TREATMENT_IN_PROGRESS",
+      seriousRiskLevel: "CRITICAL", overdue: true, location: "Branch A",
+    }));
     expect(db.governanceObligation.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       organisationId: "tenant-a", OR: [{ locationId: null }, { locationId: { in: ["branch-a"] } }],
     }) }));
@@ -166,5 +177,23 @@ describe("inspection and commissioner readiness scope", () => {
     expect(db.registerEntry.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       organisationId: "tenant-a", OR: [{ locationId: null }, { locationId: { in: ["branch-a"] } }], definition: { key: "commissioner-contracts" },
     }) }));
+    expect(db.risk.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      organisationId: "tenant-a", OR: [{ locationId: null }, { locationId: { in: ["branch-a"] } }],
+      residualLevel: { in: ["HIGH", "CRITICAL"] }, status: { notIn: ["CLOSED", "ARCHIVED"] },
+    }) }));
+    for (const query of [db.governanceObligation.findMany, db.kpiReturn.findMany, db.registerEntry.findMany, db.risk.findMany]) {
+      expect(query.mock.calls[0][0]).not.toHaveProperty("take");
+    }
+  });
+
+  it("does not silently omit exceptions after the former 500-record cap", async () => {
+    db.governanceObligation.findMany.mockResolvedValue(Array.from({ length: 501 }, (_, index) => ({
+      id: `obligation-${index}`, reference: `OBL-${index}`, title: `Fictional obligation ${index}`,
+      status: "OPEN", dueAt: new Date("2026-10-01"), location: { name: "Branch A" },
+    })) as never);
+    const rows = await getCommissionerReadinessExceptions(context as never);
+    expect(rows).toHaveLength(501);
+    expect(rows[0].href).toBe("/governance-control#obligation-obligation-0");
+    expect(rows.at(-1)?.id).toBe("obligation-500");
   });
 });

@@ -6,10 +6,11 @@ import { obligationIsOverdue } from "@/lib/governance-control";
 import { type KpiReturnData, validateKpiReturn } from "@/lib/kpi-suite";
 import { monthKey } from "@/lib/kpis";
 import { registerScopeWhere } from "@/lib/registers";
+import { riskScopeWhere } from "@/lib/risks";
 
 export type CommissionerReadinessException = {
   id: string;
-  source: "Governance obligation" | "Monthly KPI return" | "Commissioner contract register";
+  source: "Governance obligation" | "Monthly KPI return" | "Commissioner contract register" | "High/Critical risk";
   href: string;
   title: string;
   status: string;
@@ -17,6 +18,7 @@ export type CommissionerReadinessException = {
   location: string;
   dataCheckCount: number;
   overdue: boolean;
+  seriousRiskLevel: "HIGH" | "CRITICAL" | null;
 };
 
 /** Source-linked work that may need review. No row is an assurance or compliance decision. */
@@ -25,7 +27,7 @@ export async function getCommissionerReadinessExceptions(context: AuthorisedCont
   const locationIds = context.locations.map((item) => item.id);
   const optionalLocationScope = context.allLocations ? {} : { OR: [{ locationId: null }, { locationId: { in: locationIds } }] };
   try {
-    const [obligations, returns, contracts] = await Promise.all([
+    const [obligations, returns, contracts, risks] = await Promise.all([
       db.governanceObligation.findMany({
         where: {
           organisationId: context.organisation.id,
@@ -34,25 +36,30 @@ export async function getCommissionerReadinessExceptions(context: AuthorisedCont
           status: { notIn: ["ACCEPTED", "CLOSED", "CANCELLED"] },
         },
         select: { id: true, reference: true, title: true, status: true, dueAt: true, location: { select: { name: true } } },
-        orderBy: { dueAt: "asc" }, take: 500,
+        orderBy: { dueAt: "asc" },
       }),
       db.kpiReturn.findMany({
         where: { organisationId: context.organisation.id, ...(context.allLocations ? {} : { locationId: { in: locationIds } }) },
         select: { id: true, localAuthority: true, reportingMonth: true, status: true, data: true, location: { select: { name: true } } },
-        orderBy: { reportingMonth: "desc" }, take: 500,
+        orderBy: { reportingMonth: "desc" },
       }),
       db.registerEntry.findMany({
         where: { ...registerScopeWhere(context), definition: { key: "commissioner-contracts" }, status: { notIn: ["CLOSED", "ARCHIVED"] } },
         select: { id: true, reference: true, title: true, status: true, location: { select: { name: true } } },
-        orderBy: { eventDate: "desc" }, take: 500,
+        orderBy: { eventDate: "desc" },
+      }),
+      db.risk.findMany({
+        where: { ...riskScopeWhere(context), archivedAt: null, status: { notIn: ["CLOSED", "ARCHIVED"] }, residualLevel: { in: ["HIGH", "CRITICAL"] } },
+        select: { id: true, reference: true, title: true, status: true, residualLevel: true, nextReviewDate: true, location: { select: { name: true } } },
+        orderBy: { nextReviewDate: "asc" },
       }),
     ]);
 
     const obligationRows = obligations.map((item) => ({
-      id: item.id, source: "Governance obligation" as const, href: "/governance-control",
+      id: item.id, source: "Governance obligation" as const, href: `/governance-control#obligation-${item.id}`,
       title: `${item.reference} · ${item.title}`, status: item.status, dueAt: item.dueAt,
       location: item.location?.name ?? "Organisation-wide", dataCheckCount: 0,
-      overdue: obligationIsOverdue(item, now),
+      overdue: obligationIsOverdue(item, now), seriousRiskLevel: null,
     }));
     const returnRows = returns.flatMap((item) => {
       const dataCheckCount = validateKpiReturn(item.data as KpiReturnData).length;
@@ -60,15 +67,22 @@ export async function getCommissionerReadinessExceptions(context: AuthorisedCont
       return [{
         id: item.id, source: "Monthly KPI return" as const, href: `/kpis/returns/${item.id}`,
         title: `${item.localAuthority} · ${monthKey(item.reportingMonth)}`, status: item.status,
-        dueAt: null, location: item.location.name, dataCheckCount, overdue: false,
+        dueAt: null, location: item.location.name, dataCheckCount, overdue: false, seriousRiskLevel: null,
       }];
     });
     const contractRows = contracts.map((item) => ({
       id: item.id, source: "Commissioner contract register" as const, href: `/registers/commissioner-contracts/${item.id}`,
       title: `${item.reference} · ${item.title}`, status: item.status, dueAt: null,
-      location: item.location?.name ?? "Organisation-wide", dataCheckCount: 0, overdue: false,
+      location: item.location?.name ?? "Organisation-wide", dataCheckCount: 0, overdue: false, seriousRiskLevel: null,
     }));
-    return [...obligationRows, ...returnRows, ...contractRows];
+    const riskRows = risks.map((item) => ({
+      id: item.id, source: "High/Critical risk" as const, href: `/risks/${item.id}`,
+      title: `${item.reference} · ${item.title}`, status: item.status,
+      dueAt: item.nextReviewDate, location: item.location?.name ?? "Organisation-wide",
+      dataCheckCount: 0, overdue: item.nextReviewDate < now,
+      seriousRiskLevel: item.residualLevel === "CRITICAL" ? "CRITICAL" as const : "HIGH" as const,
+    }));
+    return [...obligationRows, ...returnRows, ...contractRows, ...riskRows];
   } finally {
     await db.$disconnect();
   }
