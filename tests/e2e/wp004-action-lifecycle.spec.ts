@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import pg from "pg";
-import { e2eGoto, signIn } from "./auth";
+import { e2eGoto, e2eReload, signIn } from "./auth";
 import { E2E_SETUP_TOKEN, E2E_USERS } from "./fixtures";
 
 type Setup = {
@@ -78,6 +78,8 @@ test("an Action owner submits compact completed work while assurance decisions s
     await verification.getByRole("button", { name: "Record verification" }).click();
     expect((await verified).status()).toBe(200);
     await e2eGoto(manager, `/actions/${id}/assurance#verification`);
+    await e2eReload(manager);
+    await expect(verification.getByText("Current verification decision")).toBeVisible();
     await manager.screenshot({ path: testInfo.outputPath("wp004-verification-recorded.png"), fullPage: true });
     await e2eGoto(manager, `/actions/${id}/assurance#effectiveness`);
     const effectiveness = manager.locator("#effectiveness");
@@ -94,6 +96,8 @@ test("an Action owner submits compact completed work while assurance decisions s
     await effectiveness.getByRole("button", { name: "Record effectiveness review" }).click();
     expect((await reviewed).status()).toBe(200);
     await e2eGoto(manager, `/actions/${id}/assurance#effectiveness`);
+    await e2eReload(manager);
+    await expect(effectiveness).toContainText("The first follow-up sample shows partial uptake of the checklist.");
     await manager.screenshot({ path: testInfo.outputPath("wp004-effectiveness-reviewed.png"), fullPage: true });
     expect((await readAction(id)).lifecycleStatus).toBe("AWAITING_EFFECTIVENESS");
     expect((await readAction(id)).closedAt).toBeNull();
