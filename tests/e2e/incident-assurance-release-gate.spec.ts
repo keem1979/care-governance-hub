@@ -32,7 +32,7 @@ test("Incident Assurance preserves investigation, canonical Action, effectivenes
     return { status: response.status, body: await response.json() };
   }, ready.id);
   expect(genericClosure.status).toBe(400);
-  expect(genericClosure.body.error).toMatch(/Management Assurance Test/i);
+  expect(genericClosure.body.error).toMatch(/controlled lifecycle, not the general status field/i);
 
   const blockedClosure = await incidentDecision(page, blocked.id, setup.evidenceId, "ASSURED_CLOSED", "The Action is still open, so this closure must be rejected.");
   expect(blockedClosure.status).toBe(400);

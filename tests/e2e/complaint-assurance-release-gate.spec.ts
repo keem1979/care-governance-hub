@@ -39,7 +39,7 @@ test("Complaints Assurance keeps response, Action, effectiveness and closure as 
     return { status: response.status, body: await response.json() };
   }, ready.id);
   expect(genericClosure.status).toBe(400);
-  expect(genericClosure.body.error).toMatch(/Management Assurance Test/i);
+  expect(genericClosure.body.error).toMatch(/controlled lifecycle, not the general status field/i);
 
   const blockedClosure = await complaintDecision(page, blocked.id, setup.evidenceId, "ASSURED_CLOSED", "The unresolved central Action means the Complaint cannot yet be assured.");
   expect(blockedClosure.status).toBe(400);
