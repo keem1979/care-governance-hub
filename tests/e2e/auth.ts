@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Request } from "@playwright/test";
 import { generateTotp } from "@/lib/auth/mfa";
 import { E2E_USER, type E2EUser } from "./fixtures";
 
@@ -8,11 +8,13 @@ export async function signIn(page: Page, user:E2EUser=E2E_USER): Promise<void> {
   await page.getByLabel("Password").fill(user.password);
 
   async function submit() {
-    const response = page.waitForResponse((item) =>
-      item.url().endsWith("/api/auth/login") && item.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Sign in securely" }).click();
-    return response;
+    return retrySuspendedLoopback(page, async () => {
+      const response = page.waitForResponse((item) =>
+        item.url().endsWith("/api/auth/login") && item.request().method() === "POST",
+      );
+      await page.getByRole("button", { name: "Sign in securely" }).click();
+      return response;
+    });
   }
 
   let response = await submit();
@@ -53,15 +55,28 @@ export async function e2eReload(page: Page) {
   await retrySuspendedLoopback(page, () => page.reload({ waitUntil: "domcontentloaded" }));
 }
 
-async function retrySuspendedLoopback(page: Page, navigation: () => Promise<unknown>) {
+async function retrySuspendedLoopback<T>(page: Page, operation: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    try { await navigation(); return; }
+    let suspended = false;
+    const onRequestFailed = (request: Request) => {
+      if (request.failure()?.errorText.includes("ERR_NETWORK_IO_SUSPENDED")) suspended = true;
+    };
+    page.on("requestfailed", onRequestFailed);
+    try { return await operation(); }
     catch (error) {
       // Windows may briefly suspend a loopback navigation while a browser
-      // context is being switched. Retry only that explicit OS condition;
+      // context is being switched. A suspended request can also surface as a
+      // wait timeout. Retry only when the browser reported that OS condition;
       // server, authentication and HTTP failures remain visible.
-      if (!(error instanceof Error) || !error.message.includes("ERR_NETWORK_IO_SUSPENDED") || attempt === 2) throw error;
+      const transportFailure = error instanceof Error && (
+        error.message.includes("ERR_NETWORK_IO_SUSPENDED") ||
+        (suspended && error.message.includes("Timeout"))
+      );
+      if (!transportFailure || attempt === 2) throw error;
       await page.waitForTimeout(250 * (attempt + 1));
+    } finally {
+      page.off("requestfailed", onRequestFailed);
     }
   }
+  throw new Error("Unreachable loopback retry state");
 }
