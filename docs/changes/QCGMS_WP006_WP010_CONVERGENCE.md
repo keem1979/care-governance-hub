@@ -66,8 +66,8 @@ Known non-blocking follow-ups: existing `atom-wordmark.png` aspect-ratio warning
 
 ## Separate frozen release track
 
-The isolated local branch `release/qcgms-wp005-pilot-candidate` remains clean at exact WP-005 boundary `2e715af5cbd70183a43a5135d2dcd1146f1e100f`; WP-006 onward is **not** in that release candidate. GitHub authentication is unavailable in this local environment, and the connected Vercel account has no verified QCGMS project/team identity. Therefore the release-branch push and Preview have **not** occurred. Remote `main` has not been pushed. Production migration status has not been read, and no production migration or deployment occurred. A later release decision must retain the production migration gate for the existing WP-003 `UNASSESSED` migrations; this report grants no production authority.
+The isolated local branch `release/qcgms-wp005-pilot-candidate` remains clean at exact WP-005 boundary `2e715af5cbd70183a43a5135d2dcd1146f1e100f`; WP-006 onward is **not** in that release candidate. The local GitHub CLI is unauthenticated. The connected GitHub app can read `keem1979/care-governance-hub`, but its remote does not yet contain that exact local source SHA (commit lookup returned 422); reconstructing commits through the app would not be a verified exact-history push. The connected Vercel account lists only `carebook` and `finicky-care-flow-sync`, with no verified QCGMS project/team identity. Therefore the release-branch push and Preview have **not** occurred. Remote `main` has not been pushed. Production migration status has not been read, and no production migration or deployment occurred. A later release decision must retain the production migration gate for the existing WP-003 `UNASSESSED` migrations; this report grants no production authority.
 
 **Development verdict: READY FOR PRODUCT OWNER REVIEW.**
 
-**Frozen release-track verdict: BLOCKED pending human GitHub authentication and verified QCGMS Vercel project/team identity.**
+**Frozen release-track verdict: BLOCKED pending local GitHub CLI authentication for an exact-history release-branch push and access to the correct QCGMS Vercel project/team.**
